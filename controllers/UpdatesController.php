@@ -15,7 +15,7 @@
 		var $LIST_ITEM  = '
 					<div class="cnt-item">
 						<div class="title">
-							<span class="head"><span class="pull_left">[<a href="/{%root}/uptodate/{%id}">{%uptodate}</a>]</span><a href="/pages/id/{%pageid}">{%title}</a></span>
+							<span class="head"><span class="pull_left">[<a href="/{%root}/uptodate/{%id}">{%uptodate}</a>]</span><a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/id/{%pageid}">{%title}</a></span>
 							<span class="link">{%size}KB (<span style="{%diff}">{%delta}KB</span>)</span>
 							<span class="link size">{%time}</span>
 						</div>
@@ -36,7 +36,8 @@
 			</div>
 		</div>
 		';
-		const UPDATES_CHECK = '<span class="pull_right">[<a href=""></a>]</span>';
+		const UPDATES_CHECK = '<span class="pull_right">[<a href="/updates/check/">{%checkupdates}</a>]</span>';
+		const UPDATES_RSS = '<span class="pull_right">[<a href="/api.php?action=rss&channel={%uid}">{%rss}</a>]</span>';
 
 		var $diff_sign = array(-1 => 'color:red', 0 => '', 1 => 'color:green');
 
@@ -60,17 +61,22 @@
 		}
 
 		function actionPage($r) {
-			View::addKey('moder', self::UPDATES_CHECK);
+			$loc = array(
+				'checkupdates' => Loc::lget('checkupdates')
+			, 'rss' => Loc::lget('RSS')
+			, 'uid' => $this->user->ID()
+			);
+			View::addKey('moder', patternize(self::UPDATES_RSS . ' ' . self::UPDATES_CHECK, $loc));
 			$this->query = '`user` = ' . $this->user->ID();
 			$aggregator = $this->getAggregator();
 			$page = ($page = intval($r[0])) ? $page : 1;
 			$this->page = $page;
 			$params = array('page' => $page - 1, 'pagesize' => $aggregator->FETCH_PAGE, 'desc' => true);
-			$params['collumns'] = 'h.*, p.`title`, p.`description`, p.`size` as `new_size`, p.`time` as `updated`, (p.`size` <> h.`size`) as `upd`';
+			$params['collumns'] = 'h.*, p.`author`, a.`fio`, p.`title`, p.`description`, p.`size` as `new_size`, p.`time` as `updated`, (p.`size` <> h.`size`) as `upd`';
 			$params['filter'] = '`user` = ' . $this->user->ID();
 			$params['order'] = '`upd` desc, `time`';
 
-			$aggregator->TBL_FETCH = '`history` h left join `pages` p on p.`id` = h.`page`';
+			$aggregator->TBL_FETCH = '`history` h left join `pages` p on p.`id` = h.`page` left join `authors` a on a.`id` = p.`author`';
 			$this->data = $aggregator->fetch($this->prepareFetch($params));
 
 			$total = intval($this->data['total']);
@@ -100,7 +106,7 @@
 					$row['pageid'] = $row['page'];
 					$row['page'] = $page;
 					$delta = ($s = intval($row['new_size'])) - intval($row['size']);
-					$row['delta'] = (($delta < 0) ? '-' : '+') . $delta;
+					$row['delta'] = (($delta < 0) ? '' : '+') . $delta;
 					$row['size'] = $s;
 					$row['diff'] = $this->diff_sign[sign($delta)];
 					$row['uptodate'] = Loc::lget('uptodate');
@@ -179,6 +185,18 @@
 			$time = time();
 			foreach ($idx as $page_id)
 				$ha->add(array('user' => $uid, 'page' => $page_id, 'time' => $time));
+		}
+
+		function actionCheck($r) {
+			$h = $this->getAggregator();
+			$a = $h->authorsToUpdate($this->user->ID(), intval($r[0]));
+			if (count($a)) {
+				require_once 'core_updates.php';
+				$u = new AuthorWorker();
+				foreach ($a as $id)
+					$u->check($id);
+			} else
+				echo Loc::lget('nothing_to_update') . '<br />';
 		}
 	}
 ?>

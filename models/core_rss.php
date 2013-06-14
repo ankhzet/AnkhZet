@@ -32,8 +32,14 @@
 				}
 
 			$data['items'] = join('', $i);
-			echo patternize($tpl[0], $data);
-			if ($die) die();
+			if ($die) {
+				$rss = gzcompress(patternize($tpl[0], $data));
+				header("Content-Type: application/rss+xml");
+				header('Content-Length: '.strlen($rss));
+				header('Content-Encoding: gzip');
+				die($rss);
+			} else
+				echo patternize($tpl[0], $data);
 		}
 
 	}

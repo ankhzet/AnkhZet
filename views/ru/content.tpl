@@ -30,7 +30,7 @@
 	}
 
 	function content_utils($view) {
-		$l = '';
+		$l = '<script src="/theme/js/utils.js"></script>';
 
 		switch (User::ACL()) {
 		case ACL::ACL_USER:

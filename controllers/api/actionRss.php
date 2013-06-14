@@ -82,7 +82,7 @@
 					, 'group' => $i[$page_id]['group']
 					, 'author' => $i[$page_id]['author']
 					, 'size' => $row['size']
-					, 'delta' => (($delta < 0) ? '-' : '+') . $delta
+					, 'delta' => (($delta < 0) ? '' : '+') . $delta
 					, 'diff' => $diff
 					, 'samlib' => $at[$pa[$page_id]['author']]['link'] . '/' . $pa[$page_id]['link']
 					, 'link' => $i[$page_id]['link']
@@ -95,7 +95,7 @@
 			}
 
 			$data['items'] = $i;
-			$rss->output($data);
+			$rss->output($data, true);
 			return true;
 		}
 		function _404($text) {

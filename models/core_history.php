@@ -56,5 +56,25 @@
 			, 'h.`id` in (' . join(',', $idx) . ') and h.`page` = p.`id`'
 			);
 		}
+
+		function authorsToUpdate($uid, $force = 0) {
+			$t = time() - ($force ? 60 : 60 * 60); // 1 hour
+			if ($uid)
+				$s = $this->dbc->select('`history` h, `pages` p, `authors` a'
+				, 'h.`user` = ' . $uid . ' and h.`page` = p.`id` and a.`id` = p.`author` and a.`time` < ' . $t . ' group by a.`id`'
+				, 'a.`id` as `0`'
+				);
+			else
+				$s = $this->dbc->select('`authors` a'
+				, 'a.`time` < ' . $t
+				, 'a.`id` as `0`'
+				);
+			$a = array();
+			if ($s)
+				foreach($this->dbc->fetchrows($s) as $row)
+					$a[] = intval($row[0]);
+
+			return $a;
+		}
 	}
 ?>

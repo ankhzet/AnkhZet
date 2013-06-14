@@ -1,8 +1,8 @@
 <?php
-$document_root  = dirname(__FILE__);
-$requested_uri  = parse_url(urldecode($_SERVER['REQUEST_URI']), PHP_URL_PATH);
-$requested_file = basename($requested_uri);
-$source_file    = $document_root.$requested_uri;
+	$document_root  = dirname(__FILE__);
+	$requested_uri  = parse_url(urldecode($_SERVER['REQUEST_URI']), PHP_URL_PATH);
+	$requested_file = basename($requested_uri);
+	$source_file    = $document_root.$requested_uri;
 
 	if (is_file($source_file)) {
 		$extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));

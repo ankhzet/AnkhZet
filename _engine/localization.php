@@ -2,7 +2,7 @@
 	require_once 'config.php';
 	require_once 'session.php';
 
-	define('SPY_LOCALE', 1);
+	define('SPY_LOCALE', 0);
 
 	class Loc extends Config {
 		const LOC_RU  = 'ru';
