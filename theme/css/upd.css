@@ -1,0 +1,241 @@
+
+/* popup form */
+
+.up-back {
+	display: none;
+	position: fixed;
+	z-index: 1000;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0,0,0,0.8);
+	opacity: 0.8;
+}
+
+.up-form {
+	display: none;
+	position: fixed;
+	z-index: 1000;
+	left: 0;
+	top: -5%;
+	background: #ddd;
+	border: 1px solid #fff;
+	border-radius: 5px;
+	-webkit-border-radius: 5px;
+	width: 50%;
+	min-width: 400px;
+	margin: 25% 25%;
+	box-shadow: 0 0 15px #000, 0 0 10px #000, 0 0 10px #000, 0 0 5px #000;
+	-webkit-box-shadow: 0 0 15px #000, 0 0 10px #000, 0 0 10px #000, 0 0 5px #000;
+}
+.up-form.dialog {
+	width: 40%;
+	margin: 25% 30%;
+}
+.up-form .contents {
+	padding: 5px;
+}
+.up-form .title {
+	display: none;
+	padding: 5px 5px 0 5px;
+	text-align: center;
+	color: #340;
+	font-weight: bold;
+	text-shadow: 0 1px 1px #fff;
+}
+.up-form .ctls {
+	background: #eee;
+	border: 1px solid #fff;
+	border-radius: 3px;
+	-webkit-border-radius: 3px;
+	padding: 10px 5px;
+	text-align: right;
+	margin: -1px;
+	clear: both;
+}
+.up-form .button {
+	background: #ddd;
+	border: 1px solid #aaa;
+	border-radius: 4px;
+	-webkit-border-radius: 4px;
+	margin: 1px 0 1px 3px;
+	padding: 4px 15px;
+	color: #666;
+	text-decoration: none;
+	font-weight: bold;
+	text-shadow: 0 1px 1px #fff;
+}
+.up-form .button:hover {
+	background: #fff;
+	border-color: #444;
+	color: #000;
+}
+
+.up-form .banners-list {
+	margin: 5px;
+	border: 1px solid #aaa;
+	border-radius: 4px;
+	-webkit-border-radius: 4px;
+	background: #fff;
+}
+.up-form .banners-list li {
+	list-style: none;
+	display: inline;
+}
+
+.up-form .banners-list li img {
+	width: 23%;
+	margin: 5px 1% 0 1%;
+}
+.up-form input {
+	width: 98%;
+	margin-left: 1%;
+}
+
+
+/* ------------------------- Mail -------------------------------------------
+ */
+
+
+.mail {
+}
+
+.mail .msg_panel {
+	width:720px;
+	text-align:center;
+}
+
+.mail .msg_panel li {
+	display:inline;
+	margin-left:10px;
+}
+
+.mail .msg_list {
+}
+
+#content .mail a {
+	color: #574;
+	font-style: normal;
+	font-weight: normal;
+}
+
+#content .mail .msg_list .read>a {
+	color:gray;
+}
+#content .msg_list .read .sender>a {
+	color: silver;
+}
+
+.msg_list .sender {width: 30%;}
+.msg_list .sender span {float: right; color: gray; font-weight: normal;}
+.msg_list .title {width: 60%;}
+.msg_list .date {width: 10%; text-align: center;}
+
+.act {
+	margin: -2px 0 0 10px;
+	padding: 1px 5px;
+	background-color: #faa;
+	position: absolute;
+	border: 1px solid #611;
+	border-radius: 3px;
+ -webkit-border-radius: 3px;
+	z-index: 999;
+	display: none;
+}
+#content .act a, #content .msg_list .act a {
+	color: #611;
+	text-shadow: 0 1px 1px #fee;
+	font-weight: bold;
+	text-decoration: none;
+}
+
+#content .act a:hover {
+	color: #200;
+}
+
+tr:hover .act {
+	float: right;
+	display: inline;
+}
+
+.mail_content {
+	margin: 0;
+	margin-bottom: 5px;
+	padding: 5px;
+	color: #222;
+	border: 1px solid silver;
+	min-height: 50px;
+}
+
+#content .head a.normal {
+	font-weight: normal;
+	text-decoration: underline;
+}
+#content .head a.bold {
+	font-weight: bold;
+	text-decoration: none;
+}
+#content .head a:hover {
+	text-decoration: none;
+}
+
+
+/* */
+
+.preview-mod {
+	float: left;
+	margin-top: 260px;
+	margin-left: -250px;
+}
+
+.ap-admin>a {
+}
+.ap-admin.selected>a {
+	background: #999;
+	border-radius: 3px;
+	-webkit-border-radius: 3px;
+	-moz-border-radius: 3px;
+	color: #fff;
+	text-shadow: 0 1px 0 #000;
+}
+
+.ap-admin .ap-drop {
+	display: none;
+	border-radius: 5px;
+	position: absolute;
+	z-index: 9998;
+	width: auto;
+	min-width: 250px;
+	background: #ccc;
+	border: 1px solid #eee;
+	padding: 15px;
+	margin-top: 0px;
+	margin-left: 0px;
+	box-shadow: 0 0 3px rgba(0,0,0,1.0);
+	color: #eee;
+	font-size: 14px;
+	font-weight: normal;
+}
+.ap-admin.selected .ap-drop {
+	display: block;
+}
+
+.ap-admin .ap-drop li {
+	display: block;
+}
+.ap-admin .ap-drop a {
+	float: none;
+	margin: 0;
+	padding: 0;
+	line-height: 12px;
+	display: inline;
+	color: #246;
+	text-shadow: 0 1px 0 #ddd;
+}
+
+.ap-admin .ap-drop a:hover {
+	color: #fff;
+	text-shadow: 0 1px 0 #888;
+}
+

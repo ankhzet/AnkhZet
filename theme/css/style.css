@@ -1,0 +1,271 @@
+* {
+	margin: 0;
+	padding: 0;
+}
+html {
+	height: 100%;
+}
+body {
+	font: 12px/18px Tahoma, Verdana, sans-serif;
+	width: 100%;
+	height: 100%;
+	background: #e9e9e9;
+}
+a {
+	color: #246;
+	outline: none;
+	text-decoration: underline;
+}
+a:hover {
+	color: #359;
+	text-decoration: none;
+}
+p {
+	margin: 0 0 18px
+}
+textarea {
+	resize:none;
+}
+img {
+	border: none;
+}
+input {
+	vertical-align: middle;
+}
+
+li {
+	list-style: none;
+}
+
+input, select {
+	width: 150px;
+	padding: 2px;
+	border: 1px solid #999;
+	border-radius: 2px;
+	-moz-border-radius: 2px;
+	-webkit-border-radius: 2px;
+	color: #666;
+}
+input:hover {
+	border: 1px solid #666;
+	padding: 2px;
+	color: #111;
+}
+input[type="submit"] {
+	width: 156px;
+	padding: 2px 5px;
+	color: #246;
+	font-weight: bold;
+	font-size: 11px;
+}
+label {
+	margin-right: 10px;
+	color: #444;
+	width: 150px;
+	float: left;
+	text-align: right;
+}
+
+.red {
+	color: red;
+}
+
+#wrapper {
+	width: 100%;
+	margin: 0 auto;
+	min-height: 100%;
+	height: auto !important;
+	height: 100%;
+}
+
+/* stylish
+----------------------------------------------------------*/
+
+.sidebar {
+	display: block;
+	width: 100%;
+	position: fixed;
+	top: 0;
+	z-index: 1000;
+	border-bottom: 1px solid #444;
+	background: #ddd;
+	box-shadow: 0 0 5px #000;
+}
+.sidecont {
+	padding: 5px;
+	border-bottom: 1px solid #fff;
+	overflow: hidden;
+}
+
+.menu {
+	display: inline;
+	font-weight: bold;
+}
+.menu a {
+	padding: 0 5px;
+	margin: 0;
+	text-decoration: none;
+	text-shadow: 0 1px 0 #fff;
+}
+.menu a:hover {
+	color: green;
+	text-shadow: 0 1px 0 #ded;
+}
+.menu li {
+	display: inline;
+}
+.menu.user {
+	float: right;
+}
+
+
+#content {
+	margin-top: 40px;
+	width: 100%;
+}
+
+#content .content {
+	margin: 10px;
+}
+
+.content-header {
+	font-weight: bold;
+	border-bottom: 1px solid #ddd;
+	background: #eee;
+	padding: 5px 2px;
+	margin-top: 5px;
+}
+
+.content-header.grip {
+	font-size: 10px;
+	color: #888;
+	background: #ddd;
+	padding: 0 2px;
+	border-bottom: 1px solid #ccc;
+}
+.content-header.grip * {
+	font-size: 10px;
+}
+
+.pull_right {
+	float: right;
+	padding: 0 5px;
+	color: #555;
+	font: normal 10px Tahoma, Geneva, sans-serif;
+	text-transform: none;
+	opacity: 0.3;
+}
+*:hover>.pull_right, .pull_right:hover {
+	opacity: 1.0;
+}
+.pull_left {
+	float: left;
+	padding: 0 5px;
+	color: #555;
+	font: normal 10px Tahoma, Geneva, sans-serif;
+	text-transform: none;
+	opacity: 0.3;
+}
+*:hover>.pull_left, .pull_left:hover {
+	opacity: 1.0;
+}
+.pull_right a {
+	color: #999;
+	font: normal 10px Tahoma, Geneva, sans-serif;
+}
+.block_head .pull_right a, .head .pull_right a {
+	color: #44f;
+}
+.pull_right a:hover {
+	color: #f33;
+	text-decoration: none;
+}
+
+.main-container {
+	padding: 10px 0;
+}
+
+.cnt-item {
+	margin: 0 5px;
+	padding: 5px 0;
+	border-bottom: 1px solid #ccc;
+	border-top: 1px solid #fff;
+	min-height: 16px;
+}
+
+.cnt-item .title {
+	font-size: 12px;
+	font-weight: bold;
+	clear: both;
+	float: left;
+	width: 100%;
+}
+
+.cnt-item .text {
+	font-size: 11px;
+	color: #aaa;
+}
+
+.cnt-item .text a {
+	font-size: 10px;
+}
+
+.cnt-item .title .head {
+
+}
+.cnt-item .title .head .pull_right {
+	position: absolute;
+}
+.cnt-item .title .link {
+	float: right;
+	width: 30%;
+	text-align: left;
+	font-weight: normal;
+	padding: 0 0 2px 16px;
+	display: block;
+}
+.cnt-item .title .link a {
+	font-size: 11px;
+	color: #aaa;
+}
+.cnt-item .title .link a:hover {
+	color: #666;
+}
+.cnt-item .title .link.samlib {
+	background: url(/theme/img/samlib.gif) no-repeat 0 4px;
+}
+.cnt-item .title .link.size {
+	padding-left: 0;
+	width: 70px;
+	font-size: 11px;
+	font-weight: bold;
+}
+
+.text.reader {
+	padding: 60px 10px;
+	font-size: 15px;
+	font-family: Tahoma;
+	color: #000;
+}
+
+.pages {
+	width: 100%;
+	text-align: center;
+	margin: 7px 0 2px;
+	padding: 5px 0;
+	background: #ddd;
+	border-bottom: 1px solid #ccc;
+}
+.pages li {
+	display: inline;
+}
+
+.pages li.active a, .pages li.disabled a {
+	text-decoration: none;
+	color: #aaa;
+}
+
+.pages li.active a {
+	color: #46f;
+	font-weight: bold;
+}

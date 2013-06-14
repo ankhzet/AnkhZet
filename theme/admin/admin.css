@@ -1,0 +1,856 @@
+* {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	outline: 0;
+	font-size: 100%;
+	vertical-align: baseline;
+	background: transparent;
+}
+ol, ul {list-style: none;}
+blockquote, q {quotes: none;}
+:focus {outline: 0;}
+ins {text-decoration: none;}
+del {text-decoration: line-through;}
+table {border-collapse: collapse;border-spacing: 0;}
+html {}
+body {
+	font: 12px/18px Tahoma, Arial, Verdana, sans-serif;
+	background: url(/theme/admin/back.png) repeat-x 0px 42px fixed;
+}
+a {
+	color: #67c;
+	outline: none;
+	text-decoration: none;
+	border-bottom: 1px dotted #aaf;
+}
+a:hover {
+	color: #89d;
+  text-decoration: none;
+	border-bottom: 1px solid #89d;
+}
+p {margin: 0 0 18px}
+img {border: none;}
+
+.pull_right {
+	float: right;
+}
+
+/* Inputs
+-----------------------------------------------------------------------------*/
+input, textarea {
+	border: 1px solid #fff;
+	margin-top: -3px;
+	border-color: white;
+	background-color: #cdf;
+}
+input:hover, textarea:hover {
+	border: 1px solid #aaa;
+}
+
+
+.btn {
+	display: inline-block;
+	background: none;
+	margin: 1px 0;
+	padding: 2px 0;
+	border-width: 0;
+	overflow: visible;
+	text-decoration: none;
+	color: #444;
+}
+
+.btn, .btn * {
+	cursor: default;
+}
+
+a.btn {
+	border: 0;
+}
+
+.btn span {
+	padding: 2px 0;
+	border-left: 1px solid #ccc;
+	border-right: 1px solid #ccc;
+}
+
+.btn span span {
+	position: relative;
+	margin: -2px 0;
+	border-width: 0;
+	border-top: 1px solid #ccc;
+	border-bottom: 1px solid #aaa;
+}
+span.btn span span {
+	border-top: 1px solid #aaa;
+	border-bottom: 1px solid #ccc;
+}
+a.btn span span {
+	padding: 2px 15px;
+	min-width: 120px;
+	min-height: 24px;
+}
+
+a.btn span {
+	background: #ddd url(/theme/admin/bg-button.gif) repeat-x 0 0;
+}
+
+.btn:hover span,
+.btn:hover span span/*,
+.btn:focus span,
+.btn:focus span span*/ {
+	border-color: #aaa !important;
+	color: #000;
+}
+
+a.btn span {
+	outline: none;
+}
+
+a.btn:focus span, a.btn:active span {
+	background-position: 0 -400px;
+	outline: none;
+}
+.btn:hover, .btn:focus, .btn:active {
+	outline: none;
+	text-decoration: none;
+}
+
+/* Header && Footer
+-----------------------------------------------------------------------------*/
+#header, #footer, * .f_c, #header .f_r, #footer .f_r, #middle, #middle .f_rr {
+	width: auto; height: auto;
+	position: relative;
+}
+#header {
+	height: 35px;
+	margin: 0 15px 0 0;
+	background: url(/theme/admin/c-up-left.png) no-repeat left top;
+}
+#footer {
+	height: 35px;
+	margin: 0 15px 0 0;
+	background: url(/theme/admin/c-bt-left.png) no-repeat left top;
+}
+#header .f_r {
+	height: 35px;
+	left: 15px;
+	background: url(/theme/admin/c-up-right.png) no-repeat right top;
+}
+#footer .f_r {
+	height: 35px;
+	left: 15px;
+	background: url(/theme/admin/c-bt-right.png) no-repeat right top;
+}
+* .f_c {
+	height: 35px;
+	top: -28px;
+	left: 15px;
+	text-align: center;
+	color: #556699;
+}
+#header .f_c {
+	height: 35px;
+	top: -28px;
+	left: 4px;
+	text-align: right;
+}
+
+.site {
+	float: left;
+	width: 275px;
+	text-align: center;
+	position: relative;
+	top: 3px;
+	font-weight: bold;
+}
+/* Middle
+-----------------------------------------------------------------------------*/
+#wrapper {
+	min-width: 600px;
+	max-width: 1150px;
+	margin: 15px auto;
+}
+#middle {
+	min-height: 612px;
+	margin: 0;
+	background: url(/theme/admin/left-c.png) repeat-y left top;
+	padding-right: 5px;
+	margin: 0 10px 0 0;
+}
+#middle:after {
+	content: '.';
+	display: block;
+	clear: both;
+	visibility: hidden;
+	height: 0;
+}
+#middle .f_rr {
+	position: absolute;
+	top: 0px;
+	right: -10px;
+	float: right;
+	clear: none;
+	height: 100%;
+	width: 15px;
+
+	background: url(/theme/admin/right-c.png) repeat-y right top;
+}
+#container {
+	margin: -20px 0 0 0;
+	float: left;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+#content {
+	height: 100%;
+	overflow: hidden;
+	padding: 5px 10px 0 285px;
+}
+
+
+/* Sidebar Left
+-----------------------------------------------------------------------------*/
+#sideLeft {
+	position: absolute;
+	float: left;
+	clear: none;
+	width: 240px;
+	height: 100%;
+	padding: 0px;
+	margin: 0px;
+	text-align: left;
+	margin-left: 9px;
+}
+
+#sideLeft *, .site a {
+	color: #67c;
+	text-shadow: 1px 1px #fff;
+}
+
+#sideLeft li:hover a, .site a:hover {
+	color: #fff;
+	text-shadow: 1px 1px #67c;
+}
+
+#sideLeft li {
+	display: block;
+	width: 100%;
+	padding-left: 25px;
+	margin-bottom: 1px;
+	background-repeat: no-repeat;
+}
+
+.mliindex {
+	background-image: url(/theme/admin/menuindex.png);
+}
+
+.mliadmin {
+	background-image: url(/theme/admin/menuadmin.png);
+}
+
+.mlipdf {
+	background-image: url(/theme/admin/menupdf.png);
+}
+
+.mlifeedbacks {
+	background-image: url(/theme/admin/menufeedback.png);
+}
+
+.mlishop {
+	background-image: url(/theme/admin/menupm.png);
+}
+
+.mlipayments {
+	background-image: url(/theme/admin/menupayments.png);
+}
+
+#sideLeft li a {
+
+}
+
+#sideLeft li:hover {
+	background-color: #bcf;
+	border-top: 1px solid #abe;
+	border-bottom: 1px solid #def;
+	margin: -1px 0 0px 0;
+	background-position: 0 -16px;
+}
+
+.adminfunctions label {
+	display: block;
+	width: 100%;
+	background-position: right top;
+	background-repeat: no-repeat;
+	height: 22px;
+	line-height: 22px;
+	margin: -10px 5px 0 0;
+	padding-right: 0px;
+	vertical-align: middle;
+}
+
+.adminfunctions div:hover label {
+	background-position: right -32px;
+}
+
+.afmeta {
+	background-image: url(/theme/admin/adminmeta.png);
+}
+
+.afuserlist {
+	background-image: url(/theme/admin/adminuserlist.png);
+}
+
+.aftemplates {
+	background-image: url(/theme/admin/admincontentmanagement.png);
+}
+
+.afreset {
+	background-image: url(/theme/admin/adminreset.png);
+}
+
+/* Micellaneous
+-----------------------------------------------------------------------------*/
+
+.error {
+	display: block;
+	background: none;
+	text-align: center;
+	border-width: 0;
+	margin: 25px auto;
+	padding: 0;
+	overflow: visible;
+}
+
+.error span {
+	padding: 15px 0px;
+	border-width: 0;
+	border-left: 1px solid #9af;
+	border-right: 1px solid #9af;
+}
+
+.error span span {
+	margin: -15px auto;
+	position: relative;
+	border-width: 0;
+	border-top: 1px solid #9af;
+	border-bottom: 1px solid #67c;
+	padding: 15px 0;
+	padding-right: 10px;
+	cursor: default;
+	font-weight: bold;
+	color: #e64;
+	background: #bce;
+	text-shadow: 0px 1px 0px #631;
+}
+
+.error img {
+	position: relative;
+	top: 19px;
+}
+
+.message {
+	display: block;
+	background: none;
+	text-align: center;
+	border-width: 0;
+	margin: 25px auto;
+	padding: 0;
+	overflow: visible;
+}
+
+.message span {
+	padding: 15px 0px;
+	border-width: 0;
+	border-left: 1px solid #99aaff;
+	border-right: 1px solid #99aaff;
+}
+
+.message span span {
+	margin: -15px auto;
+	position: relative;
+	border-width: 0;
+	border-top: 1px solid #99aaff;
+	border-bottom: 1px solid #6677cc;
+	padding: 15px 10px;
+	cursor: default;
+	font-weight: bold;
+	color: #ffffff;
+	background: #bce;
+	text-shadow: 0px 1px 0px #113366;
+}
+
+.message a {
+	color: #136;
+	text-shadow: 0px 1px 0px #fff;
+	border-bottom: 1px dotted #358;
+}
+
+.message a:hover {
+	color: #ffffff;
+	text-shadow: 0px 1px 0px #136;
+	border-bottom: 1px solid #fff;
+}
+
+.contitem {
+	text-align: center;
+}
+
+.waiter {
+	width: 14px;
+	height: 14px;
+	margin: 0 0 0 5px;
+}
+
+/* Links etc.
+-----------------------------------------------------------------------------*/
+
+.ulink {display: inline;color: #9af;}
+.ulink a {}
+.ulink a:hover {}
+
+/* Floating Form
+-------------------------------------------------------------------- */
+.form {
+	border          : 1px solid blue;
+	display         : none;
+ /* position        : absolute; */
+	width           : 200px;
+	height          : 200px;
+	left            : 200px;
+	top             : 100px;
+	z-index         : 99999;
+	background-color: #888888;
+	color           : #ffffff;
+}
+
+/* ------------------------ Admin forms ---------------------------------------
+ */
+
+.login {
+	width:90%;
+	margin: 0 auto;
+	background-color:#fff;
+	padding: 30px ;
+}
+
+.loginform {
+	width:200px;
+	height:250px;
+	background-image:url(/theme/admin/block-fon.png);
+	background-repeat:no-repeat;
+	margin: 0 auto;
+	text-align:center;
+}
+
+.loginform .title {
+	color:#333;
+	font-family:Verdana, Geneva, sans-serif;
+	font-size:14px;
+	font-weight:bold;
+	padding-top:10px;
+	margin-bottom:15px;
+}
+
+.loginform input {
+	width:150px;
+	margin-bottom: 20px;
+}
+
+.login a {
+	padding: 0px;
+	color: silver;
+	border-bottom: 1px dotted silver;
+}
+
+.login a:hover {
+	color: blue;
+	border-bottom: 1px solid blue;
+}
+
+#regform {
+	margin: 0px auto;
+	width: 400px;
+}
+
+#regform input {
+	width: 200px;
+	margin: 0 0 0 20px;
+	color: black;
+	height: 16px;
+}
+
+#regform b {
+	color: red;
+	margin-left: 5px;
+}
+
+/* ---------------------------------- DATATABLE --------------------------
+ */
+
+	#datatable {
+		width: 100%;
+		margin: 0px;
+		border: 1px solid #eef;
+	}
+	#datatable input, #datatable form {
+		min-width: 20px;
+		max-width: 40px;
+		width: 40px;
+		float: none;
+		clear: none;
+		display: inline;
+	}
+	#datatable td {
+		line-height: 22px;
+		vertical-align: bottom;
+		background-color: #dee;
+		word-spacing: normal;
+		padding-left: 3px;
+	 }
+	#datatable tr.odd td {
+		background-color: #eef;
+	}
+	#datatable tr:hover td {
+		background-color: #fff;
+	}
+	#datatable tr:hover a {
+		text-decoration: none;
+	}
+	#datatable tr.header td, #datatable tr.header:hover td {
+		background-color: #eeffee;
+		font-weight: bold;
+	}
+	#datatable tr.header td a {
+		text-decoration: none;
+		color: #469;
+	}
+	#datatable .current td {
+		background-color: silver;
+		font-weight: bold;
+	}
+
+	#dtcontainer {
+		width: 95%;
+		padding: 1px;
+		margin: 15px auto;
+		display: block;
+		overflow: hidden;
+		border: 1px solid #aaaaff;
+		border-radius: 4px;
+		-moz-border-radius: 4px;
+		-webkit-border-radius: 4px;
+	}
+
+	.del {
+		display: block;
+		width: 15px;
+		height: 16px;
+		margin: 0px 5px 3px 5px;
+		background-image: url(/theme/admin/del.png);
+		background-position: 16px 0px;
+		opacity: 0.1;
+		float: right;
+	}
+	.del:hover {
+		background-position: 0px 0px;
+	}
+
+	a.del {
+		border: 0;
+	}
+
+	*:hover>.del, li:hover .del {
+		opacity: 1.0;
+	}
+
+/* ----------------------- Templates management -------------------------------
+ */
+
+	.templates {
+		margin: 0 auto;
+		overflow: hidden;
+	}
+
+	.templates li {
+		display: inline-block;
+		list-style: none;
+		height: 36px;
+		width: 330px;
+		padding: 0 10px 0 30px;
+		background-image: url(/theme/admin/doc.png);
+		background-repeat: no-repeat;
+		background-position: 0 bottom;
+		margin: 10px 5px;
+
+		font-family: Arial;
+		font-size: 16px;
+		font-weight: normal;
+	}
+	.templates.share li {
+		background-image: url(/theme/admin/share.png);
+	}
+
+	.templates .template {
+		border-bottom: 1px dotted #99f;
+		display: block;
+		min-height: 42px;
+	}
+
+	.templates .template:hover {
+		border-bottom: 1px solid #89d;
+	}
+
+	.template a {
+		border: 0;
+	}
+
+	.template .title {
+		width: 250px;
+		display: inline-block;
+		position: absolute;
+	}
+
+	.templates .fs {
+		float: right;
+		font-family: Georgia;
+		font-size: 10px;
+		color: silver;
+	}
+
+	.template .del {
+		float: right;
+		margin-left: 10px;
+		min-height: 16px;
+		height: 16px;
+	}
+
+	/* ------------------------- Mail -------------------------------------------
+	 */
+
+
+	.mail {
+		width: 100%;
+	}
+
+	.mail hr {
+		display: block;
+		width: 100%;
+		height: 1px;
+		margin: 5px auto;
+		border: 0;
+		border-top: 1px dotted silver;
+	}
+
+	.mail a {
+		color:darkblue;
+	}
+
+	.mail .msg_panel {
+		width:720px;
+		text-align:center;
+	}
+
+	.mail .msg_panel li {
+		display:inline;
+		margin-left:10px;
+	}
+
+	.mail .msg_list {
+		width: 100%;
+	}
+
+	.mail .msg_list .read a {
+		color:gray;
+	}
+	.msg_list .read .act a, .msg_list .read .avtor a {
+		color: navy;
+	}
+
+	.mail .msg_form input[type=text] {
+		width:505px;
+	}
+
+	.mail .msg_form textarea {
+		width:505px;
+		margin-bottom:10px;
+	}
+
+	.msg_list .avtor {width: 30%;}
+	.msg_list .title {width: 60%;}
+	.msg_list .date {width: 10%; text-align: center;}
+
+	.act {
+		margin: -2px 0 0 10px;
+		padding: 1px 5px;
+		background-color: silver;
+		position: absolute;
+		border: 1px solid blue;
+		border-radius: 3px;
+	 -moz-border-radius: 3px;
+		z-index: 999;
+		display: none;
+	}
+
+	tr:hover .act {
+		float: right;
+		display: inline;
+	}
+
+	.mail_content {
+		margin-bottom: 10px;
+	}
+
+/* ------------------------- Portfolio management -----------------------------
+ */
+
+	.admportfolio img {
+		width: 64px;
+	}
+
+/* ------------------------- Upload form --------------------------------------
+ */
+
+	#upload {
+		width: 80%;
+		height: 120px;
+		margin: 0 auto;
+		border: 1px solid #aaf;
+		border-radius: 3px;
+		min-width: 400px;
+	}
+	#upload h3 {
+		text-align: center;
+		margin-bottom: 10px;
+	}
+	#upload label {
+		display: block;
+		float: left;
+		clear: left;
+		margin: 5px 10px;
+		text-align: right;
+		width: 80px;
+		height: 20px;
+	}
+	#upload input, #upload .btn, #upload textarea, #upload select {
+		width: 60%;
+		margin: 5px 10px;
+		color: black;
+		height: 20px;
+	}
+
+	#upload .btn {
+		width: 1%;
+	}
+
+	#upload input[type="text"] {
+		padding: 0 0px;
+	}
+	#upload textarea {
+		height: 100px;
+	}
+
+	#upload.long {
+		height: 280px;
+	}
+
+	#upload.long label {
+		width: 150px;
+	}
+	#upload.long input, #upload.long select, #upload.long textarea {
+		width: 50%;
+	}
+
+	hr {
+		display: block;
+		border: 0;
+		border-top: 1px dotted #cce;
+		weight: 1px;
+		width: 100%;
+		padding: 0;
+		margin: 7px 1px;
+	}
+
+/* ------------------------ Config page -------------------------
+ */
+
+	#config h3 {
+		margin: 15px 0 2px 5px;
+		padding: 0 0 2px;
+		width: 100%;
+		background: url(/theme/admin/dash.png) left bottom repeat-x;
+		color: #68a;
+	}
+	#config form span {
+		display: inline-block;
+		width: 30%;
+		text-align: right;
+		margin-right: 7px;
+	}
+	#config form h3, #config form div {
+		margin-left: 5px;
+	}
+	#config form div {
+		padding: 10px 0 0 5px;
+	}
+	#config label {
+		display: inline-block;
+		width: 30%;
+		text-align: right;
+		padding-right: 5px;
+	}
+	#config input[type="text"], #config input[type="password"], #config textarea {
+		width: 50%;
+		max-width: 50%;
+	}
+	#config td input[type="text"] {
+		width: 90%;
+		max-width: 90%;
+	}
+	#config input[type="checkbox"], #config input[type="radio"] {
+		padding: 2px;
+		width: 12px;
+		height: 12px;
+	}
+
+	.dis, .all {
+		min-width: 20px;
+		width: 20px;
+		height: 12px;
+		border-radius: 6px;
+		margin: 1px 1px;
+	}
+	.dis {
+//				border: 1px solid red;
+		color: red;
+	}
+	.all {
+//				border: 1px solid green;
+		color: green;
+	}
+	#config td {
+		text-align: center;
+	}
+	#config td.route {
+		text-align: left;
+	}
+	#config td.headers {
+		width: 60px;
+	}
+	#config #dtcontainer {
+		margin-left: 30%;
+		padding: 10px;
+		width: 65%;
+	}
+	#config .header {
+		font-size: 10px;
+	}
+
+	.fold>div {
+		border: 1px solid #999;
+		display: none;
+	}
+	.fold.unfolded>div {
+		display: block;
+	}
