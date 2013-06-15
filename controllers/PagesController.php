@@ -133,14 +133,15 @@
 
 			switch ($_REQUEST['action']) {
 			case 'view':
-				$version = intval($_REQUEST['version']);
 				View::addKey('title', $data['title'] . ' <span style="font-size: 80%;">[update: ' . date('d.m.Y', $version) . ']</span>');
+				$version = intval($_REQUEST['version']);
 				$cnt = @file_get_contents("$storage/$version.html");
 				$cnt1 = @gzuncompress/**/($cnt);
 				if ($cnt1 !== false) $cnt = $cnt1;
 				$cnt = mb_convert_encoding($cnt, 'UTF-8', 'CP1251');
 				echo $cnt;
 			default:
+				View::addKey('title', $data['title']);
 				rsort($p);
 				$l = count($p) - 1;
 				$row = array('root' => $this->_name, 'page' => $page);

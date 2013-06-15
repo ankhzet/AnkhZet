@@ -70,9 +70,9 @@
 						'title' => $row['title']
 					, 'author' => $at[$pa[$page_id]['author']]['fio']
 					, 'group' => $gt[$pa[$page_id]['group']]
-					, 'link' => $data['link'] . 'pages/id/' . $page_id
-					, 'pubdate' => date('r', $row['lastseen'])
-					, 'guid' => md5($row[0] . $time)
+					, 'link' => "{$data[link]}pages/version/{$page_id}?action=view&amp;version={$row[time]}"
+					, 'pubDate' => date('r', $row['time'])
+					, 'guid' => md5($page_id . '/' . $row[time])
 					);
 
 					$delta = intval($row['size']) - intval($row['size_old']);
@@ -91,7 +91,7 @@
 					);
 				}
 
-				$h->upToDate(fetch_field($pages, '0'));
+//				$h->upToDate(fetch_field($pages, '0'));
 			}
 
 			$data['items'] = $i;

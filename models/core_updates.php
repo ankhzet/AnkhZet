@@ -184,7 +184,7 @@
 
 				$s = $q->dbc->select('`pages` p, `authors` a'
 				, 'p.`id` in (' . join(',', $u) . ') and p.`author` = a.`id`'
-				, 'p.`id`, p.`link`, p.`size`, a.`link` as `author`');
+				, 'p.`id`, p.`link`, p.`size`, a.`link` as `author`, p.`time`');
 
 				if ($s) {
 					$c = new PageComparator();
@@ -203,7 +203,7 @@
 
 						echo '> U@' . $h_id . ', ID#' . $page . ': ' . $row['link'] . '...<br />';
 						$link = $row['link'];
-						$size = $c->compare($page, $row['author'] . '/' . $row['link']);
+						$size = $c->compare($page, $row['author'] . '/' . $row['link'], $row['time']);
 						$s1 = $size[0];
 						$s2 = $size[1];
 						if (intval($row['size']) <> $size[2]) {

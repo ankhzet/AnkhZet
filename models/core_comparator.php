@@ -3,11 +3,12 @@
 
 	class PageComparator {
 
-		function compare($page, $link) {
+		function compare($page, $link, $time = 0) {
 			$path = SUB_DOMEN . '/cache/pages/' . $page;
 			assume_dir_exists($path);
 			$last = $path . '/last.html';
-			$store = $path . '/' . time() . '.html';
+			$time = $time ? $time : time();
+			$store = $path . '/' . $time . '.html';
 			$html1 = @file_get_contents($last);
 			if ($html1) $html1 = @gzuncompress/**/($html1);
 
