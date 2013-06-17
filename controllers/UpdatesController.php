@@ -15,7 +15,11 @@
 		var $LIST_ITEM  = '
 					<div class="cnt-item">
 						<div class="title">
-							<span class="head"><span class="pull_left">[<a href="/{%root}/uptodate/{%id}">{%uptodate}</a>]</span><a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/id/{%pageid}">{%title}</a></span>
+							<span class="head">
+								<span class="pull_left">[<a href="/{%root}/uptodate/{%id}">{%uptodate}</a>]</span>
+								<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/version/{%pageid}">{%title}</a>
+								<span class="pull_right">[<a href="/{%root}/delete/{%id}?page={%page}">{%untrace}</a>]</span>
+							</span>
 							<span class="link">{%size}KB (<span style="{%diff}">{%delta}KB</span>)</span>
 							<span class="link size">{%time}</span>
 						</div>
@@ -110,6 +114,7 @@
 					$row['size'] = $s;
 					$row['diff'] = $this->diff_sign[sign($delta)];
 					$row['uptodate'] = Loc::lget('uptodate');
+					$row['untrace'] = Loc::lget('untrace');
 
 					$n[] = $this->makeItem($aggregator, $row);
 				}

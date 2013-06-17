@@ -5,7 +5,7 @@
 
 	define('QUEUE_NEW', 0);
 	define('QUEUE_PROCESS', 1);
-	define('QUEUE_FAILTIME', 5);//60 * 60); // 1 hour
+	define('QUEUE_FAILTIME', 60 * 10);//60 * 60); // 1 hour
 
 	class QueueAggregator extends Aggregator {
 		static $instance = null;

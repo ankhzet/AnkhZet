@@ -181,7 +181,7 @@
 			$old .= '.html';
 
 			$d = array(false => '=&gt;', true => '&lt;=');
-			$show_old = $_REQUEST[showold] == 'true';
+			$show_old = $_REQUEST['showold'] == 'true';
 			echo 'Resource: <a href="/pages/id/' . $page . '">' . $data['title'] . '</a><br />';
 			echo "[$old <a href=\"?showold=" . ($show_old ? 'false' : 'true') . "\">" . $d[$show_old] . "</a> $cur]<hr />";
 			$t1 = @file_get_contents($storage . '/' . $old);
@@ -190,61 +190,99 @@
 			if ($_t1 !== false) $t1 = $_t1;
 			$_t2 = @gzuncompress/**/($t2);
 			if ($_t2 !== false) $t2 = $_t2;
-//			$t1 = mb_convert_encoding($t1, 'UTF-8', 'CP1251');
-//			$t2 = mb_convert_encoding($t2, 'UTF-8', 'CP1251');
+			$t1 = str_replace(array("\n", '<dd>'), array(PHP_EOL, '[n]'), $t1);
+			$t2 = str_replace(array("\n", '<dd>'), array(PHP_EOL, '[n]'), $t2);
+			$t1 = strip_tags($t1, '<p><br><u><i><s>');
+			$t2 = strip_tags($t2, '<p><br><u><i><s>');
+			$l1 = strlen($t1);
+			$l2 = strlen($t1);
+			$chunk = 10 * 1024;
+			if (($l1 > $chunk) || ($l2 > $chunk)) {
+				$c = 0;
+				while (($l1 - $c) > $chunk) {
+					$c += $chunk;
+					$i = strpos($t1, PHP_EOL, $c);
+					$j = $i;
+					while (abs($j - $i) < 1024)
+						$j = strpos($t1, PHP_EOL, $j + 1);
+
+					$mark = substr($t1, $i, $j - $i);
+					$u = strpos($t2, $mark);
+					if ($u === false) {
+						$c = $i;
+						continue;
+					}
+					$t1 = substr($t1, 0, $i) . PHP_EOL . substr($t1, $i);
+					$t2 = str_replace($mark, PHP_EOL . $mark, $t2);
+				}
+			}
 
 			require_once 'core_diff.php';
-//			ob_start();
+			ob_start();
 //			echo '<pre>';
-			$io = new DiffIO();
+			$io = new uDiffIO($page);
 			$io->show_new = !$show_old;
 			$db = new DiffBuilder($io);
 			$h = $db->diff($t1, $t2, $db->DIFF_TEXT_SPLITTERS);
-//			echo '<script> var text_old = ["' . join('", "', $h[0]) . '"], text_new = ["' . join('", "', $h[1]) . '"];</script>';
-//			$c = ob_get_contents();
-//			ob_end_clean();
-			echo mb_convert_encoding($c, 'UTF-8', 'CP1251');
+			echo '<script> var text_old = ["' . join('", "', $h[0]) . '"], text_new = ["' . join('", "', $h[1]) . '"];</script>';
+			$c = ob_get_contents();
+			ob_end_clean();
+			echo mb_convert_encoding(str_replace('[n]', '<br/>', $c), 'UTF-8', 'CP1251');
 		}
 	}
 
 	require_once 'core_diff.php';
 	class uDiffIO extends DiffIO {
 		var $show_new = true;
+		var $f = null;
+		function __construct($page) {
+			$this->f = fopen(SUB_DOMEN . '/diff_' . $page . '.html', 'w');
+		}
 
-		public function outOld($text) {
-			if ($this->show_new)
-				echo '<del class="old">' . rtrim($text) . '</del> ';
-			else
-				echo '<ins class="old">' . rtrim($text) . '</ins> ';
+		function __destruct() {
+			fclose($this->f);
 		}
-		public function outNew($text) {
-			if ($this->show_new)
-				echo '<ins class="new">' . rtrim($text) . '</ins> ';
-			else
-				echo '<del class="new">' . rtrim($text) . '</del> ';
-		}
-		public function outSame($text) {
+
+		function out($text) {
 			echo $text;
-//			$text = mb_convert_encoding($text, 'cp1251', 'UTF8');
-			$l = strlen($text);
-			if ($l >= 50) {
-				$s1 = substr($text, 0, 20);
-				$s2 = substr($text, $l - 20);
-				$text = "$s1...\n...$s2";
-			}
-			echo $text;//mb_convert_encoding($text, 'UTF8', 'cp1251');
+			return;
+			fwrite($this->f, $text);
+			fflush($this->f);
 		}
 
-		public function outReplace($diff, $old, $new) {
+		public function left($text) {
+			if ($this->show_new)
+				$this->out('<del class="old">' . rtrim($text) . '</del> ');
+			else
+				$this->out('<ins class="old">' . rtrim($text) . '</ins> ');
+		}
+		public function right($text) {
+			if ($this->show_new)
+				$this->out('<ins class="new">' . rtrim($text) . '</ins> ');
+			else
+				$this->out('<del class="new">' . rtrim($text) . '</del> ');
+		}
+		public function same($text) {
+//			$text = mb_convert_encoding($text, 'cp1251', 'UTF8');
+/*			$l = strlen($text);
+			if ($l >= 100) {
+				$s1 = substr($text, 0, 50);
+				$s2 = substr($text, $l - 50);
+				$text = "$s1...<br />...$s2";
+			}/**/
+			$this->out($text);//mb_convert_encoding($text, 'UTF8', 'cp1251');
+		}
+
+		public function replace($diff, $old, $new) {
 			$diff->repl[] = array($old, $new);
 			if ($this->show_new)
 				if (trim($new))
-					echo '<span class="new"><span>' . $new . '</span><a class="pin" href="#" onclick="h_edit(this, ' . count($diff->repl) . ');return false;">diff</a></span>';
+					$this->out('<span class="new"><span>' . $new . '</span><a class="pin" href="#" onclick="h_edit(this, ' . count($diff->repl) . ');return false;">diff</a></span>');
 				else
 					;
 			else
 				if (trim($old))
-					echo '<span class="old"><span>' . $old . '</span><a class="pin" href="#" onclick="h_edit(this, ' . count($diff->repl) . ');return false;">diff</a></span>';
+					$this->out('<span class="old"><span>' . $old . '</span><a class="pin" href="#" onclick="h_edit(this, ' . count($diff->repl) . ');return false;">diff</a></span>');
 		}
 
 	}

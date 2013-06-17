@@ -1,4 +1,4 @@
-var
+﻿var
 	upform = (typeof upform != 'undefined') ? upform : (new function () {
 		var BTN_CLOSE = 000001;
 		var div = null;
@@ -67,8 +67,6 @@ var
 		}
 	});
 
-$(document).ready(function() {
-})
 
 function show_error(title, contents) {
 	upform.init({

@@ -58,7 +58,7 @@
 		}
 
 		function authorsToUpdate($uid, $force = 0) {
-			$t = time() - ($force ? 60 : 60 * 60); // 1 hour
+			$t = time() - ($force ? 60 : 60 * 30); // 30 minutes
 			if ($uid)
 				$s = $this->dbc->select('`history` h, `pages` p, `authors` a'
 				, 'h.`user` = ' . $uid . ' and h.`page` = p.`id` and a.`id` = p.`author` and a.`time` < ' . $t . ' group by a.`id`'
