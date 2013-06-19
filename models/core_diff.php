@@ -313,8 +313,8 @@ class DiffBuilder {
 		$o = array();
 		$n = array();
 		foreach ($this->repl as $repl) {
-			$o[] = str_replace(array(PHP_EOL, '"'), array('<br/>', '&quot;'), $repl[0]);
-			$n[] = str_replace(array(PHP_EOL, '"'), array('<br/>', '&quot;'), $repl[1]);
+			$o[] = str_replace(array("\r", PHP_EOL, '"'), array('', '\n', '&quot;'), $repl[0]);
+			$n[] = str_replace(array("\r", PHP_EOL, '"'), array('', '\n', '&quot;'), $repl[1]);
 		}
 		return array($o, $n);
 	}

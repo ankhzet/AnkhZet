@@ -70,7 +70,7 @@
 						'title' => $row['title']
 					, 'author' => $at[$pa[$page_id]['author']]['fio']
 					, 'group' => $gt[$pa[$page_id]['group']]
-					, 'link' => "{$data[link]}pages/version/{$page_id}?action=view&amp;version={$row[time]}"
+					, 'link' => "{$data[link]}pages/version/{$page_id}?version={$row[time]}"
 					, 'pubDate' => date('r', $row['time'])
 					, 'guid' => md5($page_id . '/' . $row[time])
 					);
@@ -86,6 +86,7 @@
 					, 'diff' => $diff
 					, 'samlib' => $at[$pa[$page_id]['author']]['link'] . '/' . $pa[$page_id]['link']
 					, 'link' => $i[$page_id]['link']
+					, 'link2' => "{$data[link]}pages/id/{$page_id}"
 					, 'pubdate' => date('d.m.Y h:i:s', $pa[$page_id]['time'])
 					, 'description' => safeSubstr($row['description'], 200, 3)
 					);

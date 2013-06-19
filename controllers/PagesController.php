@@ -182,7 +182,7 @@
 
 			$d = array(false => '=&gt;', true => '&lt;=');
 			$show_old = $_REQUEST['showold'] == 'true';
-			echo 'Resource: <a href="/pages/id/' . $page . '">' . $data['title'] . '</a><br />';
+			echo 'Resource: <a href="/pages/version/' . $page . '">' . $data['title'] . '</a><br />';
 			echo "[$old <a href=\"?showold=" . ($show_old ? 'false' : 'true') . "\">" . $d[$show_old] . "</a> $cur]<hr />";
 			$t1 = @file_get_contents($storage . '/' . $old);
 			$t2 = @file_get_contents($storage . '/' . $cur);
@@ -236,18 +236,17 @@
 		var $show_new = true;
 		var $f = null;
 		function __construct($page) {
-			$this->f = fopen(SUB_DOMEN . '/diff_' . $page . '.html', 'w');
+//			$this->f = fopen(SUB_DOMEN . '/diff_' . $page . '.html', 'w');
 		}
 
 		function __destruct() {
-			fclose($this->f);
+//			fclose($this->f);
 		}
 
 		function out($text) {
 			echo $text;
-			return;
-			fwrite($this->f, $text);
-			fflush($this->f);
+//			fwrite($this->f, $text);
+//			fflush($this->f);
 		}
 
 		public function left($text) {
@@ -264,7 +263,7 @@
 		}
 		public function same($text) {
 //			$text = mb_convert_encoding($text, 'cp1251', 'UTF8');
-/*			$l = strlen($text);
+/**/			$l = strlen($text);
 			if ($l >= 100) {
 				$s1 = substr($text, 0, 50);
 				$s2 = substr($text, $l - 50);
