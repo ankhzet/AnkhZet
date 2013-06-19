@@ -1,4 +1,15 @@
-﻿var
+function patternize(pattern, data) {
+	return pattern.replace(/\{\%([^\}]+)\}/g, function(a, b) { return data[b]; });
+}
+function urldecode(str) {
+	return decodeURIComponent((str+'').replace(/\+/g, '%20'));
+}
+
+function locate(location) {
+	document.location.href = location;
+}
+
+var
 	upform = (typeof upform != 'undefined') ? upform : (new function () {
 		var BTN_CLOSE = 000001;
 		var div = null;
@@ -71,9 +82,9 @@
 function show_error(title, contents) {
 	upform.init({
 	title: title
-	, content: contents
+	, content: urldecode(contents)
 	, onready: function(form) {
-		form.show(function(){setTimeout(function(){form.close()}, 5000)})
+		form.show(function(){setTimeout(function(){form.close()}, 60000)})
 	}
 	});
 }

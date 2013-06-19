@@ -76,5 +76,36 @@
 
 			return $a;
 		}
+
+		function tracePages($author) {
+			$s = $this->dbc->select('`pages`', '`author` = ' . $author, '`id` as `0`');
+			$idx = array(); // author pages
+			if ($s) {
+				$f = $this->dbc->fetchrows($s);
+				foreach ($f as &$row)
+					$idx[] = intval($row[0]);
+			}
+			return $idx;
+		}
+
+		function traceNew($author, $uid) {
+			$idx = $this->tracePages($author);
+			$p = array(); // traced pages
+			$d = $this->fetch(array('nocalc' => 1, 'desc' => 0, 'filter' => '`user` = ' . $uid, 'collumns' => '`page` as `0`'));
+			if ($d['total'])
+				foreach ($d['data'] as &$row)
+					$p[] = intval($row[0]);
+
+			$diff = array_diff($idx, $p);
+			if (count($diff)) // there are pages, that not traced yet
+				$this->traceHistory($uid, $diff);
+			return $diff;
+		}
+
+		function traceHistory($uid, $idx) {
+//			foreach ($idx as $page_id)
+//				$this->add(array('user' => $uid, 'page' => $page_id, 'time' => 0));
+		}
+
 	}
 ?>

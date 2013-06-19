@@ -285,6 +285,49 @@
 		exit();
 	}
 
+/* ---------- Exception handling -------------------------
+ */
+
+	function wrapExceptionTrace($e) {
+		$message = $e->getMessage();
+		$acl = User::get()->ACL() >= ACL::ACL_ADMINS;
+		if ($acl) {
+			$stack = $e->getTrace();
+			$s = array();
+			$c = count($stack);
+			foreach ($stack as $trace) {
+				$file = str_replace(array(ROOT, '\\'), array('.', '/'), $trace['file']);
+				$line = $trace['line'];
+				$call = $trace['class']
+					? "({$trace['class']})?{$trace['type']}{$trace['function']}"
+					: "{$trace['function']}";
+
+				$a = array();
+				if ($trace['args'])
+					foreach ($trace['args'] as &$arg) {
+						switch (gettype($arg)) {
+						case 'integer':
+						case 'int':
+						case 'double': $a[] = $arg; break;
+						case 'string': $a[] = "\"$arg\""; break;
+						case 'boolean': $a[] = $arg ? 'true' : 'false'; break;
+						case 'array': $a[] = 'Array()'; break;
+						case 'object': $a[] = '' . get_class($arg) . '()'; break;
+						case 'resource': $a[] = '(resource)'; break;
+						default: $a[] = $arg;
+						}
+					}
+
+				$call .= '(' . join(', ', $a) . ')';
+				$tab = str_repeat('  ', $c--);
+				$s[] = "{$tab}<span class=\"filename\">{$file} ({$line})</span> <span class=\"call\">{$call}</span>";
+			}
+			$s = array_reverse($s);
+			return '<div class="msg-box"><div class="message">' . $message . '</div><pre>Stack trace:<br />' . join(PHP_EOL, $s) . '</pre></div>';
+		}
+		return '<div class="msg-box"><div class="message">' . $message . '</div></div>';
+	}
+
 /* ---------- Pattern templates handling -----------------
  */
 

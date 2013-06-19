@@ -77,7 +77,7 @@ TimeLeech::addTimes('after controller work');
 			} catch (Exception $e) {
 				View::addKey('title', strip_tags(Loc::lget('msg_err')));
 				View::addKey('site', strip_tags(FrontEnd::getInstance()->get('config')->get('site-title')));
-				$view->errors = array($e->getMessage());
+				$view->errors = array(wrapExceptionTrace($e));
 				$view->renderTPL('error');
 			};
 TimeLeech::addTimes('after dispatch');

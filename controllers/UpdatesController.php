@@ -32,7 +32,7 @@
 		const TRACE_PATT = '
 		<div class="cnt-item">
 			<div class="title">
-				<span class="head"><a href="/pages/id/{%id}">{%title}</a></span>
+				<span class="head">[<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/id/{%id}">{%title}</a>]</span>
 				<span class="link size">{%size}</span>
 			</div>
 			<div class="text">
@@ -144,52 +144,43 @@
 		}
 
 		public function actionTrace($r) {
-			$author = intval($r[0]);
-			if (!$author)
-				throw new Exception('Author ID not specified!');
-
-			$added = $this->checkTrace($author);
-
-			if (count($added)) {
-				$pa = $this->getAggregator(2);
-				$d = $pa->fetch(array('nocalc' => 1, 'desc' => 0, 'filter' => '`id` in (' . join(',', $added) . ')'));
-				if ($d['total'])
-					foreach ($d['data'] as &$row) {
-						$row['size'] = fs(intval($row['size']) * 1024);
-						echo patternize(self::TRACE_PATT, $row);
-					}
-			}
-		}
-
-		function checkTrace($author) {
-			$ha = $this->getAggregator(0);
-			$s = $ha->dbc->select('`pages`', '`author` = ' . $author, '`id` as `0`');
-			$idx = array(); // author pages
-			if ($s) {
-				$f = $ha->dbc->fetchrows($s);
-				foreach ($f as &$row)
-					$idx[] = intval($row[0]);
-			}
-
-			$p = array(); // traced pages
-			$d = $ha->fetch(array('nocalc' => 1, 'desc' => 0, 'filter' => '`user` = ' . $this->user->ID(), 'collumns' => '`page` as `0`'));
-			if ($d['total'])
-				foreach ($d['data'] as &$row)
-					$p[] = intval($row[0]);
-
-			$diff = array_diff($idx, $p);
-			if (count($diff)) // there are pages, that not traced yet
-				$this->tracePages($diff);
-
-			return $diff;
-		}
-
-		function tracePages($idx) {
 			$ha = $this->getAggregator(0);
 			$uid = $this->user->ID();
-			$time = time();
-			foreach ($idx as $page_id)
-				$ha->add(array('user' => $uid, 'page' => $page_id, 'time' => $time));
+			$aid = intval($r[0]);
+			$a = array();
+			if (!$aid) {
+				$s = $ha->dbc->select('`history` h, `pages` p', "h.`user` = $uid and h.`page` = p.`id` group by p.`author`", 'p.`author` as `0`');
+				while (($row = @mysql_fetch_row($s)) !== false)
+					$a[] = intval($row[0]);
+			} else
+				$a = array($aid);
+
+			$p = array();
+			foreach ($a as $author) {
+				$added = $ha->traceNew($author, $uid);
+
+				if (count($added)) {
+					$pa = $this->getAggregator(2);
+					$d = $pa->fetch(array('nocalc' => 1, 'desc' => 0, 'filter' => '`id` in (' . join(',', $added) . ')'));
+					if ($d['total'])
+						$p = array_merge($p, $d['data']);
+				}
+			}
+
+			if (count($p)) {
+				View::addKey('title', Loc::lget('pages_to_check'));
+				$aa = $this->getAggregator(1);
+				$d = $aa->get($a, '`id`, `fio`');
+				$f = array();
+				foreach ($d as $row)
+					$f[intval($row['id'])] = $row['fio'];
+
+				foreach ($p as &$row) {
+					$row['size'] = fs(intval($row['size']) * 1024);
+					$row['fio'] = $f[intval($row['author'])];
+					echo patternize(self::TRACE_PATT, $row);
+				}
+			}
 		}
 
 		function actionCheck($r) {

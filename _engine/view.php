@@ -108,8 +108,7 @@
 
 		public function renderButton($caption, $link, $inhref = true, $render = true) {
 			$l = '<a class="btn" href="' . ($inhref ? $link : 'javascript:void(0);') . '"' . ($inhref ? '' : ' onclick="' . $link . '"') . '><span><span>' . $caption . '</span></span></a>';
-			if ($render)
-				echo $l;
+			if ($render) echo $l;
 			return $l;
 		}
 
@@ -119,7 +118,9 @@
 				case self::MSG_WARN : $title = Loc::lget('warning'); break;
 				case self::MSG_ERROR: $title = Loc::lget('error'); break;
 			}
-			echo '<div class="message"><div class="msg-title">' . $title . '</div><div class="msg-content">' . $message . '</div></div><script>$(document).ready(function(){show_error("' . $title . '", "' . $message . '")});</script>';
+			echo '
+			<script>$(document).ready(function(){show_error("' . $title . '", "' . urlencode($message) . '")});</script>
+			';
 		}
 
 		function innerLink($link, $name, $style = null) {
