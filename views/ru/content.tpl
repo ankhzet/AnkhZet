@@ -30,14 +30,14 @@
 	}
 
 	function content_utils($view) {
-		$l = '<script src="/theme/js/utils.js"></script>';
+		$l = '<script type="text/javascript" src="/theme/js/utils.js"></script>';
 
 		switch (User::ACL()) {
 		case ACL::ACL_USER:
 			break;
 		case ACL::ACL_MODER:
 		case ACL::ACL_ADMINS:
-			$l .= '<script src="/theme/admin/utils.js"></script>';
+			$l .= '<script type="text/javascript" src="/theme/admin/utils.js"></script>';
 			break;
 		default:
 		}

@@ -53,7 +53,7 @@
 		const VERSION_PATT2 = '
 		<div class="cnt-item">
 			<div class="title">
-				<span class="head">{%timestamp} - <a href="/{%root}/id/{%id}">{%title}</a></span>
+				<span class="head">{%timestamp}</span>
 				<span class="link size">{%size}</span>
 			</div>
 			<div class="text">[
@@ -104,12 +104,13 @@
 			$row['fio'] = $this->author_fio;
 			$row['autolink'] = $this->author_link;
 			$row['content'] = @file_get_contents(SUB_DOMEN . '/cache/pages/' . $row['id'] . '/last.html');
-			if ($row['content']) {
-				$c = @file_get_contents(SUB_DOMEN . '/cache/pages/' . $row['id'] . '/last.html');
+			if ($row['content'] !== false) {
 				$len = strlen($row['content']);
-				$row['content'] = @gzuncompress/**/($c);
+				$c = @gzuncompress/**/($row['content']);
+				if ($c !== false) $row['content'] = $c;
 				$row['content'] = mb_convert_encoding($row['content'], 'UTF-8', 'CP1251');
 			}
+			$len = strlen($row['content']);
 			header('Content-Length: ' . $len);
 			return patternize($this->ID_PATTERN, $row);
 		}
@@ -121,7 +122,13 @@
 				throw new Exception('Page ID not specified!');
 
 			$a = $this->getAggregator(0);
-			$data = $a->get($page, '`id`, `title`');
+			$data = $a->get($page, '`id`, `title`, `author`');
+
+			if (!$data['id'])
+				throw new Exception('Page not found!');
+
+			$aa = $this->getAggregator(1);
+			$adata = $aa->get(intval($data['author']), '`fio`');
 
 			$storage = SUB_DOMEN . '/cache/pages/' . $page;
 			$p = array();
@@ -131,9 +138,12 @@
 					if (is_file($storage . '/' . $entry) && ($version = intval(basename($entry, '.html'))))
 						$p[] = $version;
 
+			$alink = "<a href=\"/authors/id/{$data['author']}\">{$adata['fio']}</a>";
+			$plink = "<a href=\"/pages/id/{$page}\">{$data['title']}</a>";
+
 			switch ($_REQUEST['action']) {
 			case 'view':
-				View::addKey('title', $data['title'] . ' <span style="font-size: 80%;">[update: ' . date('d.m.Y', $version) . ']</span>');
+				View::addKey('title', $alink . ' - ' . $plink . ' <span style="font-size: 80%;">[update: ' . date('d.m.Y', $version) . ']</span>');
 				$version = intval($_REQUEST['version']);
 				$cnt = @file_get_contents("$storage/$version.html");
 				$cnt1 = @gzuncompress/**/($cnt);
@@ -141,12 +151,12 @@
 				$cnt = mb_convert_encoding($cnt, 'UTF-8', 'CP1251');
 				echo $cnt;
 			default:
-				View::addKey('title', $data['title']);
+				View::addKey('title', $alink . ' - ' . $plink);
 				rsort($p);
 				$l = count($p) - 1;
 				$row = array('root' => $this->_name, 'page' => $page);
 				foreach ($p as $idx => $version) {
-					$row = array_merge($data, $row);
+					$row = array_merge($data, $row, $adata);
 					$row['view'] = Loc::lget('view');
 					$row['diff'] = Loc::lget('diff');
 					$row['version'] = $version;
@@ -196,7 +206,7 @@
 			$t2 = strip_tags($t2, '<p><br><u><i><s>');
 			$l1 = strlen($t1);
 			$l2 = strlen($t1);
-			$chunk = 10 * 1024;
+			$chunk = (($chunk = intval($_REQUEST['chunk'])) ? $chunk : 10) * 1024;
 			if (($l1 > $chunk) || ($l2 > $chunk)) {
 				$c = 0;
 				while (($l1 - $c) > $chunk) {
@@ -220,68 +230,72 @@
 			require_once 'core_diff.php';
 			ob_start();
 //			echo '<pre>';
-			$io = new uDiffIO($page);
+			$io = new uDiffIO(1024);
 			$io->show_new = !$show_old;
 			$db = new DiffBuilder($io);
 			$h = $db->diff($t1, $t2, $db->DIFF_TEXT_SPLITTERS);
-			echo '<script> var text_old = ["' . join('", "', $h[0]) . '"], text_new = ["' . join('", "', $h[1]) . '"];</script>';
+			$old = str_replace("\n", '<br />', join('", "', $h[0]));
+			$new = str_replace("\n", '<br />', join('", "', $h[1]));
+			echo '<script> var text_old = ["' . $old . '"], text_new = ["' . $new . '"];</script>';
 			$c = ob_get_contents();
 			ob_end_clean();
-			echo mb_convert_encoding(str_replace('[n]', '<br/>', $c), 'UTF-8', 'CP1251');
+			echo /*mb_convert_encoding(*/str_replace('[n]', '<br/>', $c);//, 'UTF-8', 'CP1251');
 		}
 	}
 
 	require_once 'core_diff.php';
 	class uDiffIO extends DiffIO {
 		var $show_new = true;
-		var $f = null;
-		function __construct($page) {
-//			$this->f = fopen(SUB_DOMEN . '/diff_' . $page . '.html', 'w');
+		var $context = 100;
+		function __construct($context) {
+			$this->context = $context ? $context : $this->context;
 		}
 
 		function __destruct() {
-//			fclose($this->f);
 		}
 
 		function out($text) {
 			echo $text;
-//			fwrite($this->f, $text);
-//			fflush($this->f);
 		}
 
 		public function left($text) {
+			$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
 			if ($this->show_new)
-				$this->out('<del class="old">' . rtrim($text) . '</del> ');
+				$this->out('<span class="old">' . rtrim($text) . '</span> ');
 			else
-				$this->out('<ins class="old">' . rtrim($text) . '</ins> ');
+				$this->out('<span class="old">' . rtrim($text) . '</span> ');
 		}
 		public function right($text) {
+			$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
 			if ($this->show_new)
-				$this->out('<ins class="new">' . rtrim($text) . '</ins> ');
+				$this->out('<span class="new">' . rtrim($text) . '</span> ');
 			else
-				$this->out('<del class="new">' . rtrim($text) . '</del> ');
+				$this->out('<span class="new">' . rtrim($text) . '</span> ');
 		}
 		public function same($text) {
-//			$text = mb_convert_encoding($text, 'cp1251', 'UTF8');
+			$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
 /**/			$l = strlen($text);
-			if ($l >= 100) {
-				$s1 = substr($text, 0, 50);
-				$s2 = substr($text, $l - 50);
-				$text = "$s1...<br />...$s2";
+			if ($l >= $this->context) {
+				$text = str_replace('&nbsp;', ' ', $text);
+				$s1 = safeSubstr($text, $this->context / 2, 100);
+				$s2 = safeSubstrl($text, $this->context / 2, 100);
+				$text = "<br /><span class=\"context\">{$s1}</span><br />~~~<br /><span class=\"context\">{$s2}</span>";
 			}/**/
 			$this->out($text);//mb_convert_encoding($text, 'UTF8', 'cp1251');
 		}
 
 		public function replace($diff, $old, $new) {
+			$old = mb_convert_encoding($old, 'UTF8', 'cp1251');
+			$new = mb_convert_encoding($new, 'UTF8', 'cp1251');
 			$diff->repl[] = array($old, $new);
 			if ($this->show_new)
 				if (trim($new))
-					$this->out('<span class="new"><span>' . $new . '</span><a class="pin" href="#" onclick="h_edit(this, ' . count($diff->repl) . ');return false;">diff</a></span>');
+					$this->out('<span class="new"><span>' . $new . '</span><a class="pin" href="javascript:void(0)" pin="' . count($diff->repl) . '">diff</a></span>');
 				else
 					;
 			else
 				if (trim($old))
-					$this->out('<span class="old"><span>' . $old . '</span><a class="pin" href="#" onclick="h_edit(this, ' . count($diff->repl) . ');return false;">diff</a></span>');
+					$this->out('<span class="old"><span>' . $old . '</span><a class="pin" href="javascript:void(0)" pin="' . count($diff->repl) . '">diff</a></span>');
 		}
 
 	}

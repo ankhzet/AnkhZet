@@ -103,8 +103,8 @@
 		}
 
 		function traceHistory($uid, $idx) {
-//			foreach ($idx as $page_id)
-//				$this->add(array('user' => $uid, 'page' => $page_id, 'time' => 0));
+			foreach ($idx as $page_id)
+				$this->add(array('user' => $uid, 'page' => $page_id, 'time' => 0));
 		}
 
 	}

@@ -253,11 +253,39 @@
 					if ($lines < count($l))
 						$str = join(PHP_EOL, array_slice($l, 0, $lines));
 				}
-				preg_match('/(.*[.!?]+)[^.!?]*$/is', $str, $matches);
-				preg_match('/^(.+)([.!?]+)\P{L}*$/isu', rtrim($matches[1]), $matches);
+				preg_match('/(.*[\.!\?]+)[^\.!\?]*$/is', $str, $matches);
+				preg_match('/^(.+)([\.!\?]+)\P{L}*$/isu', rtrim($matches[1]), $matches);
 				$str = rtrim($matches[1]) . $matches[2] . '..';
 			} while (mb_strlen($matches[1]) <= 0);
 			$str = str_replace(PHP_EOL, '<br />', close_tags($str));
+		}
+
+		return $str;
+	}
+
+	function safeSubstrl($str, $maxlen, $lines = 0) {
+		if (($len = mb_strlen($str)) > $maxlen) {
+			$str = str_replace(array('<br />', '[n]'), PHP_EOL, $str);
+			$s = $str;
+			$d = intval($maxlen * 0.1);
+			do {
+				if ($maxlen >= $len) {
+					$str = $s;
+					break;
+				}
+				$str = rtrim(mb_substr($s, - ($maxlen - 3)));
+				$maxlen += $d;
+
+				if ($lines) {
+					$l = explode(PHP_EOL, $str);
+					if ($lines < count($l))
+						$str = join(PHP_EOL, array_slice($l, 0, $lines));
+				}
+				preg_match('/^[^\.!\?]*([\.!\?]+.*)/is', $str, $matches);
+				preg_match('/\P{L}*([\.!\?]+)(.+)$/isu', rtrim($matches[1]), $matches);
+				$str = $matches[1] . '..' . rtrim($matches[2]);
+			} while (mb_strlen($matches[1]) <= 0);
+			$str = str_replace(PHP_EOL, '[n]', close_tags($str));
 		}
 
 		return $str;
