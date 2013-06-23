@@ -58,6 +58,12 @@ input[type="submit"] {
 	font-weight: bold;
 	font-size: 11px;
 }
+input[type="checkbox"], input[type="radio"] {
+	width: 13px;
+}
+input[type="checkbox"]:hover, input[type="radio"]:hover {
+	color: #66f;
+}
 label {
 	margin-right: 10px;
 	color: #444;
@@ -329,4 +335,10 @@ del {
 }
 .msg-box .call {
 	color: maroon;
+}
+
+/*-*/
+span.multi {
+	float: left;
+	margin-right: 5px;
 }

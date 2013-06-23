@@ -14,12 +14,19 @@
 		var $EDIT_FILES   = array();
 		var $EDIT_REQUIRES= array('link');
 		var $ID_PATTERN = '
-				<div class="panel">{%fio}{%time}</div>
-				<div class="text">
-					{%link}<br />
-					<a href="/pages?author={%id}">{%pages}</a><br />
-					<a href="/{%root}/check/{%id}">{%checkupdates}</a>
+			<div class="cnt-item">
+				<div class="title">
+					<div class="head">
+						{%fio}
+						<span class="pull_right">[<a href="/pages?author={%id}">{%pages}</a>|<a href="/{%root}/check/{%id}">{%checkupdates}</a>]</span>
+					</div>
+					<span class="link size">{%time}</span>
+					<span class="link samlib"><a href="http://samlib.ru/{%link}">/{%link}</a></span>
 				</div>
+				<div class="text">
+					{%groups}
+				</div>
+			</div>
 ';
 		var $LIST_ITEM  = '
 					<div class="cnt-item">
@@ -32,6 +39,19 @@
 						</div>
 						<div class="text">{%moder}
 							<a href="/pages?author={%id}">{%pages}</a> <a href="/{%root}/id/{%id}">{%detail}</a>
+						</div>
+					</div>
+';
+		var $GROUP_ITEM  = '
+					<div class="cnt-item">
+						<div class="title">
+							<span class="head">
+								<a href="/pages?group={%g:id}">{%g:title}</a>
+							</span>
+							<span class="link samlib"><a href="http://samlib.ru{%g:link}">{%g:link}</a></span>
+						</div>
+						<div class="text">
+							{%g:desc}
 						</div>
 					</div>
 ';
@@ -58,6 +78,20 @@
 			html_escape($row, array('fio', 'link'));
 			$row['pages'] = Loc::lget('pages');
 			$row['checkupdates'] = Loc::lget('checkupdates');
+
+			$ga = $this->getAggregator(1);
+			$g = $ga->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => '`author` = ' . $row['id'], 'collumns' => '`id`, `title`, `link`, `description`'));
+			$a = array();
+			if ($g['total'])
+				foreach ($g['data'] as $rowg) {
+					$row['g:id'] = $rowg['id'];
+					$row['g:link'] = preg_match('/^[\/\\\]/', $rowg['link']) ? $rowg['link'] : "/{$row['link']}/{$rowg['link']}";
+					$row['g:title'] = $rowg['title'];
+					$row['g:desc'] = $rowg['description'];
+					$a[] = patternize($this->GROUP_ITEM, $row);
+				}
+
+			$row['groups'] = join('', $a);
 			return patternize($this->ID_PATTERN, $row);
 		}
 

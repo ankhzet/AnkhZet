@@ -38,6 +38,10 @@ class DiffBuilder {
 	, array('/([\.\!\?]+)/', '/[\.\!\?]+/')
 	, array('/([\s]+)/', '/[\s]+/')
 	);
+	var $DIFF_TEXT_SPLITTERS2 = array (
+		array("/(\x0A[\x0A\s]*\x0A)/", "/\x0A[\x0A\s]*\x0A/")
+	, array('/(\x0A)/i', '/\x0A/i')
+	);
 
 	var
 		$repl, $io

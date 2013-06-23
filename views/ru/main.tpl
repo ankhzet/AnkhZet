@@ -20,7 +20,7 @@
 	$r = array();
 	if ($d['total'])
 		foreach ($d['data'] as &$row) {
-			$row['delta'] = date('dд. hч. iм.', $t - intval($row['time']));
+			$row['delta'] = tmDelta($row['time']);
 			$row['time'] = date('d.m.Y h:i:s', intval($row['time']));
 			$r[] = patternize($p1, $row);
 		}
@@ -42,9 +42,9 @@
 		foreach ($d['data'] as &$row)
 			$idx[] = intval($row[1]);
 
-		$e = $p->get($idx, '`id`, `title`, `link`, `time`');
-		foreach ($e as &$row) {
-			$row['delta'] = date('dд. hч. iм.', $t - intval($row['time']));
+		$d = $p->get($idx, '`id`, `title`, `link`, `time`');
+		foreach ($d as $idx => &$row) {
+			$row['delta'] = tmDelta($row['time']);
 			$row['time'] = date('d.m.Y h:i:s', intval($row['time']));
 			$e[] = patternize($p2, $row);
 		}
@@ -58,6 +58,17 @@
 		$w = new AuthorWorker();
 		msqlDB::o()->debug = 1;
 		$w->check($a_id);
+	}
+
+	function tmDelta($t) {
+		$t = time() - intval($t);
+		$s = $t % 60;
+		$t = ($t - $s) / 60;
+		$m = $t % 60;
+		$t = ($t - $m) / 60;
+		$h = $t % 24;
+		$d = ($t - $h) / 24;
+		return "{$d}д. {$h}ч. {$m}м.";
 	}
 ?>
 	<h4>Очередь на проверку обновлений (<?=$c1?>):</h4>

@@ -26,7 +26,7 @@
 		var $LIST_ITEM  = '
 					<div class="cnt-item">
 						<div class="title">
-							<span class="head">{%fio} - <a href="/{%root}/id/{%id}">{%title}</a>{%moder}</span>
+							<span class="head"><a href="/authors/id/{%author}">{%fio}</a> - <a href="/{%root}/id/{%id}">{%title}</a>{%moder}</span>
 							<span class="link samlib"><a href="http://samlib.ru/{%autolink}/{%link}">{%autolink}/{%link}</a></span>
 							<span class="link size">{%size}KB</span>
 						</div>
@@ -34,7 +34,7 @@
 							{%description}
 						</div>
 						<div class="text">
-							<a href="/{%root}/version/{%id}">{%versions}</a>
+							<a href="/{%root}/version/{%id}">{%versions}</a>{%group}
 						</div>
 					</div>
 ';
@@ -66,20 +66,38 @@
 			switch ($p) {
 			case 0: return PagesAggregator::getInstance();
 			case 1: return AuthorsAggregator::getInstance();
+			case 2: return GroupsAggregator::getInstance();
 			}
 		}
 
 		public function action($r) {
-			$author = intval($_REQUEST[author]);
+			$author = intval($_REQUEST['author']);
+			$group = intval($_REQUEST['group']);
+			if (!$author && $group) {
+				$ga = $this->getAggregator(2);
+				$g = $ga->get($group, '`author`, `title`');
+				$this->group_title = $g['title'];
+				$author = intval($g['author']);
+			}
+
 			if ($author) {
-				$this->query = '`author` = ' . $author;
-				$this->link = '?author=' . $author;
+				$this->query = '`author` = ' . $author . ($group ? ' and `group` = ' . $group : '');
+				$this->link = '?author=' . $author . ($group ? '&group=' . $group : '');
 				$g = $this->getAggregator(1);
 				$a = $g->get($author);
 				$this->author_fio = $a['fio'] ? $a['fio'] : '&lt;author&gt;';
 				$this->author_link = $a['link'];
 			}
+
+			if (!$author)
+				locate_to('/authors');
+
 			parent::action($r);
+			if ($author)
+				View::addKey('title'
+				, "<a href=\"/{$this->_name}?author={$author}\">{$this->author_fio}</a> - "
+				. ($group ? "<a href=\"/{$this->_name}?group={$group}\">{$this->group_title}</a>" : View::$keys['title'])
+				);
 		}
 
 		public function makeItem(&$aggregator, &$row) {
@@ -88,6 +106,16 @@
 			$row['versions'] = Loc::lget('versions');
 			$row['fio'] = $this->author_fio;
 			$row['autolink'] = $this->author_link;
+
+			$group = intval($row['group']);
+			if ($group && !isset($this->groups[$group])) {
+				$ga = $this->getAggregator(2);
+				$g = $ga->get($group, '`id`, `title`');
+				$this->groups[$group] = $g;
+
+			}
+
+			$row['group'] = $group ? patternize(Loc::lget('group_patt'), $this->groups[$group]) : '';
 			return patternize($this->LIST_ITEM, $row);
 		}
 
@@ -233,13 +261,13 @@
 			$io = new uDiffIO(1024);
 			$io->show_new = !$show_old;
 			$db = new DiffBuilder($io);
-			$h = $db->diff($t1, $t2, $db->DIFF_TEXT_SPLITTERS);
-			$old = str_replace("\n", '<br />', join('", "', $h[0]));
-			$new = str_replace("\n", '<br />', join('", "', $h[1]));
-			echo '<script> var text_old = ["' . $old . '"], text_new = ["' . $new . '"];</script>';
+			$h = $db->diff($t1, $t2, intval($_REQUEST['notdeep']) ? $db->DIFF_TEXT_SPLITTERS2 : $db->DIFF_TEXT_SPLITTERS);
 			$c = ob_get_contents();
 			ob_end_clean();
 			echo /*mb_convert_encoding(*/str_replace('[n]', '<br/>', $c);//, 'UTF-8', 'CP1251');
+			$old = str_replace("\n", '<br />', join('", "', $h[0]));
+			$new = str_replace("\n", '<br />', join('", "', $h[1]));
+			echo '<script> var text_old = ["' . $old . '"], text_new = ["' . $new . '"];</script>';
 		}
 	}
 

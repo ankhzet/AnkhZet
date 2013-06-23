@@ -27,9 +27,9 @@
 			return self::$instance;
 		}
 
-		function fetchUpdates($uid, $traces = null, $colls = '*') {
+		function fetchUpdates($uid, $traces = null, $colls = '*', $filter = 1) {
 			$d = $this->fetch(array('nocalc' => 1, 'desc' => 0
-			, 'filter' => $traces ? '`id` in (' . join(',', $traces) . ')' : "`user` = $uid"
+			, 'filter' => $traces ? '`id` in (' . join(',', $traces) . ')' : "`user` = $uid and `trace` = 1"
 			, 'collumns' => '`page` as `0`'
 			));
 			if (!$d['total']) return array();
@@ -39,7 +39,7 @@
 				$p[] = intval($row[0]);
 
 			$s = $this->dbc->select('pages p, history h'
-			, 'p.`id` in (' . join(',', $p) . ') and p.`id` = h.`page`' . ($traces ? '' : ' and p.`size` <> h.`size`')
+			, 'p.`id` in (' . join(',', $p) . ') and p.`id` = h.`page` and h.`trace` = ' . $filter . ($traces ? '' : ' and p.`size` <> h.`size`')
 			, 'h.`id` as `0`, h.`page`, p.`description`, p.`size`, h.`size` as `size_old`, p.`time`, p.`title`');
 
 			$f = $this->dbc->fetchrows($s);
@@ -57,11 +57,18 @@
 			);
 		}
 
+		function dontTrace($idx) {
+			$this->dbc->update('history'
+			, '`trace` = 0'
+			, '`id` in (' . join(',', $idx) . ')'
+			);
+		}
+
 		function authorsToUpdate($uid, $force = 0) {
 			$t = time() - ($force ? 60 : 60 * 30); // 30 minutes
 			if ($uid)
 				$s = $this->dbc->select('`history` h, `pages` p, `authors` a'
-				, 'h.`user` = ' . $uid . ' and h.`page` = p.`id` and a.`id` = p.`author` and a.`time` < ' . $t . ' group by a.`id`'
+				, 'h.`user` = ' . $uid . ' and h.`trace` = 1 and h.`page` = p.`id` and a.`id` = p.`author` and a.`time` < ' . $t . ' group by a.`id`'
 				, 'a.`id` as `0`'
 				);
 			else

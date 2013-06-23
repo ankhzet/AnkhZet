@@ -16,9 +16,9 @@
 					<div class="cnt-item">
 						<div class="title">
 							<span class="head">
-								<span class="pull_left">[<a href="/{%root}/uptodate/{%id}">{%uptodate}</a>]</span>
+								<span class="multi"><input type=checkbox name="id[]" value="{%id}" /></span>
 								<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/version/{%pageid}">{%title}</a>
-								<span class="pull_right">[<a href="/{%root}/delete/{%id}?page={%page}">{%untrace}</a>]</span>
+								<span class="pull_right">[<a href="/{%root}/hide?id[]={%id}">{%untrace}</a> | <a href="/{%root}/uptodate?id[]={%id}">{%uptodate}</a>]</span>
 							</span>
 							<span class="link">{%size}KB (<span style="{%diff}">{%delta}KB</span>)</span>
 							<span class="link size">{%time}</span>
@@ -53,11 +53,6 @@
 			}
 		}
 
-		public function makeItem(&$aggregator, &$row) {
-			html_escape($row, array('link'));
-			return patternize($this->LIST_ITEM, $row);
-		}
-
 		public function makeIDItem(&$aggregator, &$row) {
 			View::addKey('title', $this->author_fio . ' - ' . $row['title']);
 			html_escape($row, array('author', 'link'));
@@ -77,7 +72,7 @@
 			$this->page = $page;
 			$params = array('page' => $page - 1, 'pagesize' => $aggregator->FETCH_PAGE, 'desc' => true);
 			$params['collumns'] = 'h.*, p.`author`, a.`fio`, p.`title`, p.`description`, p.`size` as `new_size`, p.`time` as `updated`, (p.`size` <> h.`size`) as `upd`';
-			$params['filter'] = '`user` = ' . $this->user->ID();
+			$params['filter'] = '`user` = ' . $this->user->ID() . ' and `trace` = 1';
 			$params['order'] = '`upd` desc, `time`';
 
 			$aggregator->TBL_FETCH = '`history` h left join `pages` p on p.`id` = h.`page` left join `authors` a on a.`id` = p.`author`';
@@ -116,30 +111,46 @@
 					$row['uptodate'] = Loc::lget('uptodate');
 					$row['untrace'] = Loc::lget('untrace');
 
-					$n[] = $this->makeItem($aggregator, $row);
+					$n[] = patternize($this->LIST_ITEM, $row);
 				}
 				$n = join($this->LIST_JOINER, $n);
 			}
 
-			if ($last > 1) $this->view->pages = '<ul class="pages">' . PHP_EOL . $aggregator->generatePageList($page, $last, $this->_name . '/', $this->link) . '</ul>' . PHP_EOL;
+			if ($last > 1) $this->view->pages = '<ul class="pages">'
+			. '<li style="float: left; margin: 0 -100% 0 5px; position: relative;"><input type=checkbox class="multi-check" /> С отмеченными: <a href="javascript:void(0)" alt="/updates/uptodate" class="multi link">Прочитано</a> | <a href="javascript:void(0)" alt="/updates/hide" class="multi link">Не отслеживать</a></li>'
+			. PHP_EOL . $aggregator->generatePageList($page, $last, $this->_name . '/', $this->link) . '</ul>' . PHP_EOL;
 
 			$this->view->data = $n ? ($this->USE_UL_WRAPPER ? '<ul class="' . $this->_name . '">' . PHP_EOL . $n . PHP_EOL . '</ul>' : $n) : Loc::lget($this->_name . '_nodata');
 			$this->view->renderTPL($this->_name . '/index');
 		}
 
 		public function actionUptodate($r) {
-			$trace = intval($r[0]);
-			if (!$trace)
+			$trace = $_REQUEST['id'];
+			if (!@count($trace))
 				throw new Exception('Trace ID not specified!');
 
+			$idx = array();
+			foreach($trace as $id)
+				$idx[] = intval($id);
+
 			$ha = $this->getAggregator(0);
-			$pa = $this->getAggregator(2);
+			$ha->upToDate($idx);
+			if ($_REQUEST['silent']) die();
+			locate_to('/' . $this->_name);
+		}
 
-			$t = $ha->get($trace, '`page`');
-			if (!($page = intval($t['page'])))
-				throw new Exception('Trace not found!');
+		public function actionHide($r) {
+			$trace = $_REQUEST['id'];
+			if (!@count($trace))
+				throw new Exception('Trace ID not specified!');
 
-			$ha->upToDate(array($trace));
+			$idx = array();
+			foreach($trace as $id)
+				$idx[] = intval($id);
+
+			$ha = $this->getAggregator(0);
+			$ha->dontTrace($idx);
+			if ($_REQUEST['silent']) die();
 			locate_to('/' . $this->_name);
 		}
 
