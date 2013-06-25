@@ -23,7 +23,7 @@
 	</div>
 	<div id="content">
 		<div class="content">
-		{%patt:ustatic%}
+{%patt:ustatic%}
 		</div>
 	</div>
 

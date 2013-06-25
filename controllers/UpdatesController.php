@@ -7,26 +7,27 @@
 	class UpdatesController extends AggregatorController {
 		protected $_name = 'updates';
 
+		var $USE_UL_WRAPPER = false;
 		var $MODER_EDIT = '<span class="pull_right">[<a href="/{%root}/delete/{%id}">{%delete}</a>]</span>';
 		var $EDIT_STRINGS = array();
 		var $EDIT_FILES   = array();
 		var $EDIT_REQUIRES= array();
 		var $ID_PATTERN = '';
 		var $LIST_ITEM  = '
-					<div class="cnt-item">
-						<div class="title">
-							<span class="head">
-								<span class="multi"><input type=checkbox name="id[]" value="{%id}" /></span>
-								<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/version/{%pageid}">{%title}</a>
-								<span class="pull_right">[<a href="/{%root}/hide?id[]={%id}">{%untrace}</a> | <a href="/{%root}/uptodate?id[]={%id}">{%uptodate}</a>]</span>
-							</span>
-							<span class="link">{%size}KB (<span style="{%diff}">{%delta}KB</span>)</span>
-							<span class="link size">{%time}</span>
-						</div>
-						<div class="text">
-							{%description}
-						</div>
+				<div class="cnt-item">
+					<div class="title">
+						<span class="head">
+							<span class="multi"><input type=checkbox name="id[]" value="{%id}" /></span>
+							<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/version/{%pageid}">{%title}</a>
+							<span class="pull_right">[<a href="/{%root}/hide?id[]={%id}">{%untrace}</a> | <a href="/{%root}/uptodate?id[]={%id}">{%uptodate}</a>]</span>
+						</span>
+						<span class="link">{%size}KB (<span style="{%diff}">{%delta}KB</span>)</span>
+						<span class="link size">{%time}</span>
 					</div>
+					<div class="text">
+						{%description}
+					</div>
+				</div>
 ';
 
 		const TRACE_PATT = '
@@ -40,7 +41,7 @@
 			</div>
 		</div>
 		';
-		const UPDATES_CHECK = '<span class="pull_right">[<a href="/updates/check/">{%checkupdates}</a>]</span>';
+		const UPDATES_CHECK = '<span class="pull_right">[<a href="/updates/trace">{%checkupdates}</a>]</span>';
 		const UPDATES_RSS = '<span class="pull_right">[<a href="/api.php?action=rss&channel={%uid}">{%rss}</a>]</span>';
 
 		var $diff_sign = array(-1 => 'color:red', 0 => '', 1 => 'color:green');
@@ -117,7 +118,7 @@
 			}
 
 			if ($last > 1) $this->view->pages = '<ul class="pages">'
-			. '<li style="float: left; margin: 0 -100% 0 5px; position: relative;"><input type=checkbox class="multi-check" /> С отмеченными: <a href="javascript:void(0)" alt="/updates/uptodate" class="multi link">Прочитано</a> | <a href="javascript:void(0)" alt="/updates/hide" class="multi link">Не отслеживать</a></li>'
+			. '<li style="float: left; margin: 0 -100% 0 5px; position: relative;"><input type=checkbox class="multi-check" /> С отмеченными: <a href="javascript:void(0)" alt="/updates/uptodate" class="multi link">Прочитано</a> | <a href="javascript:void(0)" alt="/updates/hide" confirm="1" class="multi link">Не отслеживать</a></li>'
 			. PHP_EOL . $aggregator->generatePageList($page, $last, $this->_name . '/', $this->link) . '</ul>' . PHP_EOL;
 
 			$this->view->data = $n ? ($this->USE_UL_WRAPPER ? '<ul class="' . $this->_name . '">' . PHP_EOL . $n . PHP_EOL . '</ul>' : $n) : Loc::lget($this->_name . '_nodata');

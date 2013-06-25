@@ -89,18 +89,21 @@ label {
 
 .sidebar {
 	display: block;
-	width: 100%;
-	position: fixed;
-	top: 0;
+	width: 98%;
+	margin: -5px auto 5px auto;
 	z-index: 1000;
-	border-bottom: 1px solid #444;
+	border: 1px solid #000;
+	border-top: 0;
 	background: #ddd;
+	overflow: hidden;
 	box-shadow: 0 0 5px #000;
+	border-radius: 3px;
 }
 .sidecont {
-	padding: 5px;
+	padding: 7px 5px 3px 5px;
 	border-bottom: 1px solid #fff;
 	overflow: hidden;
+	border-radius: 2px;
 }
 
 .menu {
@@ -108,14 +111,18 @@ label {
 	font-weight: bold;
 }
 .menu a {
+	position: relative;
+	display: block;
+	float: left;
 	padding: 0 5px;
 	margin: 0;
 	text-decoration: none;
 	text-shadow: 0 1px 0 #fff;
 }
 .menu a:hover {
-	color: green;
-	text-shadow: 0 1px 0 #ded;
+	color: #efe;
+	text-shadow: 0 1px 0 #246;
+	margin-top: -1px;
 }
 .menu li {
 	display: inline;
@@ -126,7 +133,7 @@ label {
 
 
 #content {
-	margin-top: 40px;
+	margin-top: 00px;
 	width: 100%;
 }
 

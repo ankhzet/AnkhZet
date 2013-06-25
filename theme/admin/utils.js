@@ -6,7 +6,7 @@ function urldecode(str) {
 }
 
 function locate(location) {
-	document.location.href = location;
+	document.location.href = urldecode(location);
 }
 
 var mapEn = (
@@ -109,13 +109,14 @@ $(document).ready(function() {
 	$(':not(.ap-admin>a)').click(function(){setupProfilerReload(chart);$('.ap-admin').removeClass('selected');});
 
 	$("a").each(function(){
+		var href = this.href;
 		if (this.href.indexOf("delete") >= 0)
 			$(this).click(function() {
 				upform.init({
 					title: 'Удаление'
 				, content: '<div class="static">Вы действительно хотите выполнить это действие?<br/>[<span style="color: red;">' + this.href + '</span>]</div>'
 				, controls: [
-					{action: "javascript:locate('" + encodeURIComponent(this.href) + "')", caption: 'Удалить'}
+					{action: "javascript:locate('" + encodeURIComponent(href) + "')", caption: 'Удалить'}
 				, upform.BTN_CLOSE]
 				, onready: function(){
 					upform.show();
@@ -142,7 +143,7 @@ function fitAdminPanel() {
 	, d = ((o.left - parseInt(down.css('margin-left'))) + w) - b
 	;
 
-	down.css('margin-left', ( - d - $('.ap-admin>a').width() - 10) + 'px');
+	down.css('margin-left', ( - d - $('.ap-admin>a').width() - 25) + 'px');
 }
 
 

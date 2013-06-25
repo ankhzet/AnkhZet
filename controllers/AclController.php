@@ -36,7 +36,7 @@
 			$c = preg_replace('/(protected|private|public)/', '', $c);
 			$c = preg_replace('/[\8\40]{2,}/', ' ', $c);
 
-			preg_match_all('/(class ([\w\d_]+)[^\}]*\})/i', $c, &$c);
+			preg_match_all('/(class ([\w\d_]+)[^\}]*\})/i', $c, $c);
 
 			$m = array();
 			foreach ($c[0] as $code) {
@@ -52,7 +52,7 @@
 						$_['actions'] = $e['actions'];
 				}
 
-				preg_match_all('/function action([\w\d_]+)/i', $code, &$e);
+				preg_match_all('/function action([\w\d_]+)/i', $code, $e);
 				$_['actions'] = array_unique(array_merge($_['actions'], is_array($e[1]) ? $e[1] : array()));
 
 				$this->classes[$name] = $_;
@@ -99,7 +99,7 @@
 
 			$o = array();
 			foreach ($this->classes as $ctl => $class) {
-				preg_match('/([\w\d_]+)controller/i', $ctl, &$m);
+				preg_match('/([\w\d_]+)controller/i', $ctl, $m);
 				sort($class['actions']);
 				$o[$m[1]] = array('extends' => $class['extends'], 'actions' => $class['actions']);
 				unset($this->classes[$ctl]);
@@ -194,10 +194,10 @@
 			foreach ($acl as $group => $acls) {
 				if (is_array($acls[disallow]) && count($acls[disallow]))
 					foreach ($acls[disallow] as $route)
-						allow_route(&$r, $route, $id, false);
+						allow_route($r, $route, $id, false);
 				else
 					if ($route = trim($acls[disallow]))
-						allow_route(&$r, $route, $id, false);
+						allow_route($r, $route, $id, false);
 			}
 
 			$t = array();

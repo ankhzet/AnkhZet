@@ -17,7 +17,7 @@ var
 			if (!controls || !controls.length)
 				return '';
 
-			var p1 = '<a class="button" href="{%action}">{%caption}</a>';
+			var p1 = '<a class="button" href="{%action}" onclick="{%onclick}">{%caption}</a>';
 			var c = [], p = null;
 
 			for (var i in controls) {
@@ -25,8 +25,11 @@ var
 				case upform.BTN_CLOSE:
 					p = {"action": "javascript:upform.close()", "caption": "Закрыть"};
 					break;
+				default:
+					if (p.action.indexOf('return') !== false)
+						p = {"caption": p.caption, "action": "javascript:void(0)", "onclick": p.action};
 				}
-				c.push((typeof p !== "string" ) ? patternize(p1, p) : p);
+				c.push((typeof p != "string") ? patternize(p1, p) : p);
 			}
 
 			return c.join("");

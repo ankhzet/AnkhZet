@@ -85,12 +85,10 @@
 				$this->link = '?author=' . $author . ($group ? '&group=' . $group : '');
 				$g = $this->getAggregator(1);
 				$a = $g->get($author);
+				$this->author = $author;
 				$this->author_fio = $a['fio'] ? $a['fio'] : '&lt;author&gt;';
 				$this->author_link = $a['link'];
 			}
-
-			if (!$author)
-				locate_to('/authors');
 
 			parent::action($r);
 			if ($author)
@@ -98,6 +96,13 @@
 				, "<a href=\"/{$this->_name}?author={$author}\">{$this->author_fio}</a> - "
 				. ($group ? "<a href=\"/{$this->_name}?group={$group}\">{$this->group_title}</a>" : View::$keys['title'])
 				);
+		}
+
+		public function actionPage($r) {
+			if (!$this->author)
+				locate_to('/authors');
+
+			return parent::actionPage($r);
 		}
 
 		public function makeItem(&$aggregator, &$row) {
@@ -139,10 +144,70 @@
 				$row['content'] = mb_convert_encoding($row['content'], 'UTF-8', 'CP1251');
 			}
 			$len = strlen($row['content']);
-			header('Content-Length: ' . $len);
 			return patternize($this->ID_PATTERN, $row);
 		}
 
+		function actionCleanup($r) {
+			$save = intval($r[0]) ? intval($r[0]) : 3;
+			$save = max(2, $save);
+			$force = intval($_REQUEST['force']);
+			$dir = SUB_DOMEN . '/cache/pages';
+			$d = @dir($dir);
+			$p = array();
+			if ($d)
+				while (($entry = $d->read()) !== false)
+					if (($entry != '.') && ($entry != '..'))
+						if (intval($entry) && is_dir("$dir/$entry"))
+							$p[] = $entry;
+
+			$msg = '';
+			$s = 0;
+			$pa = $this->getAggregator();
+			$aa = $this->getAggregator(1);
+			foreach ($p as $page_id) {
+				$cache = "$dir/$page_id";
+				$d = @dir($cache);
+				$c = array();
+				$o = 0;
+				$v = 0;
+				if ($d)
+					while (($entry = $d->read()) !== false)
+						if (intval($entry) && is_file("$cache/$entry")) {
+							$c[$v++] = intval($entry);
+							$o += filesize("$cache/$entry");
+						}
+
+				$g = $pa->get($page_id, '`title`, `author`');
+				$a = $aa->get(intval($g['author']), '`fio`');
+
+				if (count($c) > $save) {
+					rsort($c);
+					$c = array_slice($c, $save);
+					$t = 0;
+					foreach ($c as $version) {
+						$t += @filesize("$cache/$version.html");
+						if ($force)
+							@unlink("$cache/$version.html");
+					}
+					$s += $t;
+					$data = array(
+						'id' => $page_id
+					, 'author:id' => $g['author']
+					, 'author' => $a['fio']
+					, 'title' => $g['title']
+					, 'size' => fs($o)
+					, 'versions' => $v
+					, 'delete' => $v - $save
+					, 'free' => fs($t)
+					);
+					$msg .= patternize(Loc::lget('cleanup'), $data);
+				}
+			}
+			$data = array('delete' => fs($s));
+			$req = patternize($force ? Loc::lget('deleted') : Loc::lget('do_delete'), $data);
+			echo $msg . '<br />' . $req;
+			View::renderMessage($req, View::MSG_INFO);
+		}
 
 		function actionVersion($r) {
 			$page = intval($r[0]);
@@ -177,7 +242,7 @@
 				$cnt1 = @gzuncompress/**/($cnt);
 				if ($cnt1 !== false) $cnt = $cnt1;
 				$cnt = mb_convert_encoding($cnt, 'UTF-8', 'CP1251');
-				echo $cnt;
+				echo "<div class=\"cnt-item\"><div class=\"text reader\">$cnt</div></div>";
 			default:
 				View::addKey('title', $alink . ' - ' . $plink);
 				rsort($p);
@@ -265,8 +330,8 @@
 			$c = ob_get_contents();
 			ob_end_clean();
 			echo /*mb_convert_encoding(*/str_replace('[n]', '<br/>', $c);//, 'UTF-8', 'CP1251');
-			$old = str_replace("\n", '<br />', join('", "', $h[0]));
-			$new = str_replace("\n", '<br />', join('", "', $h[1]));
+			$old = str_replace(array("[n]", "\n"), '<br />', join('", "', $h[0]));
+			$new = str_replace(array("[n]", "\n"), '<br />', join('", "', $h[1]));
 			echo '<script> var text_old = ["' . $old . '"], text_new = ["' . $new . '"];</script>';
 		}
 	}
