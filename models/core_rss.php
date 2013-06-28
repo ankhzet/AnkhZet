@@ -22,7 +22,7 @@
 			);
 		}
 
-		function output($data, $die = false) {
+		function format($data) {
 			$tpl = $this->loadTemplates();
 			$i = array();
 			if ($data['items'])
@@ -32,18 +32,7 @@
 				}
 
 			$data['items'] = join('', $i);
-			if ($die) {
-				$rss = patternize($tpl[0], $data);
-				header("Content-Type: application/rss+xml");
-				header('Content-Disposition: inline; filename=rss.xml');
-				ob_start("ob_gzhandler");
-				echo $rss;
-				ob_end_flush();
-				die();
-				return;
-			} else
-				echo patternize($tpl[0], $data);
+			return patternize($tpl[0], $data);
 		}
 
 	}
-?>

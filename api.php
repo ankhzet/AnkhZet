@@ -23,6 +23,16 @@
 	require_once ENGINE_ROOT . '/user.php';
 	require_once ENGINE_ROOT . '/api.php';
 	$action = strtolower($_REQUEST['action']);
+
+	$uri = $_SERVER['REQUEST_URI'];
+	$q = strpos($uri, '?');
+	if ($q !== false) {
+		$uri = substr($uri, $q + 1);
+		if ($uri != '') {
+			parse_str($uri, $a);
+			$_REQUEST = (array_merge($_REQUEST, $a));
+		}
+	}
 	$acl = User::ACL();
 	$moder = $acl >= ACL::ACL_MODER;
 	$aacl = API::getACLs();
@@ -36,4 +46,3 @@
 
 	if (API::handle($action, $_REQUEST) === false)
 		die('METHOD_UNKNOWN');
-?>
