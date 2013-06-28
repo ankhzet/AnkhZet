@@ -30,4 +30,30 @@
 		}
 
 	}
+
+	class GrammarAggregator extends Aggregator {
+		static $instance = null;
+		var $TBL_FETCH  = 'grammar';
+		var $TBL_INSERT = 'grammar';
+		var $TBL_DELETE = 'grammar';
+		var $collumns = array(
+			'`id` int auto_increment null'
+		, '`user` int not null'
+		, '`page` int not null'
+		, '`range` varchar(50) not null'
+		, '`replacement` varchar(255) not null'
+		, '`time` int not null'
+		, 'primary key (`id`)'
+		);
+
+		var $FETCH_PAGE = 20;
+
+		static public function getInstance($args = null) {
+			if (!isset(self::$instance))
+				self::$instance = new self($args);
+
+			return self::$instance;
+		}
+
+	}
 ?>

@@ -69,6 +69,7 @@
 			case 1: return AuthorsAggregator::getInstance();
 			case 2: return GroupsAggregator::getInstance();
 			case 3: return HistoryAggregator::getInstance();
+			case 4: return GrammarAggregator::getInstance();
 			}
 		}
 
@@ -331,6 +332,48 @@
 			$c = str_replace('<br />', PHP_EOL, $c);
 			$c = preg_replace('"<([^>]+)>(\s*)</\1>"', '\2', $c);
 			$c = preg_replace('"</([^>]+)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
+
+
+			$idx = 0;
+			$p = 0;
+			while (preg_match('"<(([\w]+)([^>/]*))>"', substr($c, $p), $m, PREG_OFFSET_CAPTURE)) {
+				$p += intval($m[0][1]);
+				$sub = $m[0][0];
+				if (strpos($sub, 'class="pin"') === false) {
+					$idx++;
+					$tag = $m[2][0];
+					$attr = $m[3][0];
+					$r = "<$tag node=\"$idx\"$attr>";
+					$c = substr_replace($c, $r, $p, strlen($sub));
+//					debug(array($tag, $p, $attr));
+					$p += strlen($r);
+				} else
+					$p += strlen($sub);
+//				break;
+			}
+
+			$ga = $this->getAggregator(4);
+			$d = $ga->fetch(array('nocalc' => true, 'desc' => 0
+			, 'filter' => "`page` = $page"// and `approved`"
+			, 'collumns' => '`id`, `user`, `range`, `replacement`'
+			));
+			if ($d['total']) {
+				$r = array();
+				foreach ($d['data'] as &$row)
+					$r[$row['range']][] = $row;
+
+				foreach ($r as $range => $data) {
+					$j = array();
+					foreach ($data as $row) {
+						html_escape($row, array('replacement'));
+						$j[] = patternize('{"i", {%id}, "u": {%user}, "r": "{%replacement}" />', $row);
+					}
+					$r[$range] = '{"range": "' . $range . '", "suggestions": [' . join(',', $j) . ']}';
+				}
+				$grammar = join(',', $r);
+				echo "<script>var grammar = [$grammar]</script>";
+			}
+
 			$c = str_replace(PHP_EOL, '<br />', $c);
 			echo $c;
 			$old = str_replace(PHP_EOL, '<br />', join('", "', $h[0]));
