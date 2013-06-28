@@ -72,6 +72,13 @@
 	color: #000;
 }
 
+.up-form .button.disabled {
+	color: #999;
+	background: #eee;
+	border-color: #ddd;
+	cursor: default;
+}
+
 .up-form .banners-list {
 	margin: 5px;
 	border: 1px solid #aaa;

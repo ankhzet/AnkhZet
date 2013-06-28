@@ -81,6 +81,7 @@ var
 		this.init = function() {
 			sel = notIE ? window.getSelection(): document.selection;
 			window.addEventListener('keypress', function (e) {
+				if (typeof grammar == 'undefined') return;
 				switch (e.keyCode) {
 				case 13:
 					if (!e.ctrlKey) break;
@@ -96,20 +97,7 @@ var
 					if (!s) return;
 					var compilation = grammarNazzi.compileSelection(s);
 					var text = s.toString();
-					upform.init({
-						title: 'Grammar Nazzi [' + compilation + ']!'
-					, content: patternize(
-						'<input type="hidden" class="grammar-code" value="{%code}"/>'
-					+ '<textarea class="grammar-before" disabled="disabled">{%text}</textarea><br /><br />'
-					+ 'Replace with:<br />'
-					+ '<textarea class="grammar-area">{%text}</textarea>'
-					, {"text": text, "code": compilation})
-					, controls: [
-						{'caption': 'Ok', 'action': 'return grammarNazzi.send(this)'}
-					, upform.BTN_CLOSE
-					]
-					, onready: function(form) { form.show(); }
-					});
+					grammarNazzi.showForm(text, compilation);
 				}
 			}, false);
 			if (show) this.queueNotes();
@@ -130,7 +118,7 @@ var
 			});
 		}
 		this.makeGrammarNotes = function() {
-			if (!grammar) return;
+			if (typeof grammar == 'undefined') return;
 			var n = [], g = [];
 
 			for (var i in grammar) {
@@ -265,37 +253,68 @@ var
 		}
 		this.getPage = function() {
 			var uri = document.location.href;
-			var m = uri.match(/\/pages\/(version|id|diff)\/(\d+)/i);
+			var m = uri.match(/\/pages\/(version|diff)\/(\d+)/i);
 			return m ? parseInt(m[2]) : 0;
 		}
 		this.getZone = function() {
 			var uri = document.location.href;
-			var m = uri.match(/\/pages\/((version|id|diff)[^$]+)/i);
+			var m = uri.match(/\/pages\/((version\/\d+\/|diff\/\d+)[^$]+)/i);
 			return m ? m[1] : null;
 		}
+		this.toggleButton = function(button, enabled) {
+			if (enabled)
+				$(button).removeClass('disabled').attr('disabled', false);
+			else
+				$(button).addClass('disabled').attr('disabled', 'disabled');
+		}
 		this.send = function(a) {
+			if ($(a).attr('disabled') == 'disabled') return false;
+
 			var code = $('.grammar-code').val();
 			var text = $('.grammar-before').val();
 			var replacement = $('.grammar-area').val();
+			this.toggleButton(a, false);
+			$('.grammar-area').attr('disabled', 'disabled');
 			if (text == replacement) {
 				alert('No changes =\\');
+				$('.grammar-area').attr('disabled', false);
+				this.toggleButton(a, true);
 				return;
 			}
 			$.post('/api.php?action=grammar', {"page": this.getPage(), "zone": this.getZone(), "range": code, "replacement": replacement}
 			, function(data, status) {
-				upform.close();
 				if (status == 'success') {
+					grammarNazzi.toggleButton(a, true);
 					if (data.result == 'ok') {
 						row = data.data;
 						var i = {"range": row.range, "suggestions": [{"i": row.id, "u": row.user, "r": row.replacement}]};
 						grammar.push(i);
 						grammarNazzi.show = 1;
 						grammarNazzi.queueNotes();
+						upform.close();
+						return;
 					} else
 						alert(data.data);
 				} else
 					alert('Request error');
+				$('.grammar-area').attr('disabled', false);
 			}, 'json');
+		}
+		this.showForm = function(text, code) {
+			upform.init({
+					title: 'Grammar Nazzi [' + code + ']!'
+				, content: patternize(
+					'<input type="hidden" class="grammar-code" value="{%code}"/>'
+				+ '<textarea class="grammar-before" disabled="disabled">{%text}</textarea><br />'
+				+ '<h4 style="padding-left: 1%;">Replace with:</h4>'
+				+ '<textarea class="grammar-area">{%text}</textarea>'
+				, {"text": text, "code": code})
+				, controls: [
+					{'caption': 'Ok', 'action': 'return grammarNazzi.send(this)'}
+				, upform.BTN_CLOSE
+				]
+				, onready: function(form) { form.show(); }
+			});
 		}
 		$(document).ready(function(){
 			grammarNazzi.init();
