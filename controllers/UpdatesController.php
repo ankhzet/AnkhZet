@@ -19,7 +19,7 @@
 						<span class="head">
 							<span class="multi"><input type=checkbox name="id[]" value="{%id}" /></span>
 							<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/version/{%pageid}">{%title}</a>
-							<span class="pull_right">[<a href="/{%root}/hide?id[]={%id}">{%untrace}</a> | <a href="/{%root}/uptodate?id[]={%id}">{%uptodate}</a>]</span>
+							<span class="pull_right">[<a href="/{%root}/hide?id[]={%id}&traced={%trace}">{%untrace}</a> | <a href="/{%root}/uptodate?id[]={%id}">{%uptodate}</a>]</span>
 						</span>
 						<span class="link">{%size}KB (<span style="{%diff}">{%delta}KB</span>)</span>
 						<span class="link size">{%time}</span>
@@ -42,6 +42,7 @@
 		</div>
 		';
 		const UPDATES_CHECK = '<span class="pull_right">[<a href="/updates/trace">{%checkupdates}</a>]</span>';
+		const UPDATES_HIDDEN = '<span class="pull_right">[<a href="/updates?hidden={%hidden}">{%check}</a>]</span>';
 		const UPDATES_RSS = '<span class="pull_right">[<a href="/api.php?action=rss&channel={%uid}">{%rss}</a>]</span>';
 
 		var $diff_sign = array(-1 => 'color:red', 0 => '', 1 => 'color:green');
@@ -61,19 +62,23 @@
 		}
 
 		function actionPage($r) {
+			$hidden = intval($_REQUEST['hidden']);
 			$loc = array(
 				'checkupdates' => Loc::lget('checkupdates')
+			, 'check' => Loc::lget($hidden ? 'checktraced' : 'checkhidden')
 			, 'rss' => Loc::lget('RSS')
 			, 'uid' => $this->user->ID()
+			, 'hidden' => !$hidden
 			);
-			View::addKey('moder', patternize(self::UPDATES_RSS . ' ' . self::UPDATES_CHECK, $loc));
+			View::addKey('moder', patternize(self::UPDATES_RSS . ' ' . self::UPDATES_CHECK . ' ' . self::UPDATES_HIDDEN, $loc));
 			$this->query = '`user` = ' . $this->user->ID();
 			$aggregator = $this->getAggregator();
 			$page = ($page = intval($r[0])) ? $page : 1;
 			$this->page = $page;
+			$this->link = $hidden ? '?hidden=1' : '';
 			$params = array('page' => $page - 1, 'pagesize' => $aggregator->FETCH_PAGE, 'desc' => true);
 			$params['collumns'] = 'h.*, p.`author`, a.`fio`, p.`title`, p.`description`, p.`size` as `new_size`, p.`time` as `updated`, (p.`size` <> h.`size`) as `upd`';
-			$params['filter'] = '`user` = ' . $this->user->ID() . ' and `trace` = 1';
+			$params['filter'] = '`user` = ' . $this->user->ID() . ' and `trace` = ' . ($hidden ? 0 : 1);
 			$params['order'] = '`upd` desc, `time`';
 
 			$aggregator->TBL_FETCH = '`history` h left join `pages` p on p.`id` = h.`page` left join `authors` a on a.`id` = p.`author`';
@@ -110,7 +115,7 @@
 					$row['size'] = $s;
 					$row['diff'] = $this->diff_sign[sign($delta)];
 					$row['uptodate'] = Loc::lget('uptodate');
-					$row['untrace'] = Loc::lget('untrace');
+					$row['untrace'] = Loc::lget($row['trace'] ? 'untrace' : 'trace');
 
 					$n[] = patternize($this->LIST_ITEM, $row);
 				}
@@ -150,7 +155,7 @@
 				$idx[] = intval($id);
 
 			$ha = $this->getAggregator(0);
-			$ha->dontTrace($idx);
+			$ha->markTrace($idx, !intval($_REQUEST['traced']));
 			if ($_REQUEST['silent']) die();
 			locate_to('/' . $this->_name);
 		}
