@@ -57,9 +57,9 @@
 			);
 		}
 
-		function dontTrace($idx) {
+		function markTrace($idx, $trace = 0) {
 			$this->dbc->update('history'
-			, '`trace` = 0'
+			, '`trace` = ' . $trace . ', `time` = ' . time()
 			, '`id` in (' . join(',', $idx) . ')'
 			);
 		}

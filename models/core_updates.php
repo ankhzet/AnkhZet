@@ -25,6 +25,10 @@
 //				$html = gzuncompress/**/(file_get_contents($store));
 
 			$html = mb_convert_encoding($html, 'UTF-8', 'CP1251');
+			if (($html === false) || trim($html) == '') {
+				echo Loc::lget('samlib_down');
+				return false;
+			}
 
 			$data = $this->parseAuthor($html);
 			$groups = $data[0];
