@@ -61,4 +61,3 @@
 		return '"' . htmlspecialchars(str_replace('&nbsp;', ' ', $v1[1])) . '"' . PHP_EOL;
 	}
 
-?>

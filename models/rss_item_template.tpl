@@ -8,4 +8,3 @@
 			<guid isPermaLink="false">{%guid}</guid>
 			<pubDate>{%pubDate}</pubDate>
 		</item>
-

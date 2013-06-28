@@ -144,4 +144,3 @@
 		default                      : return Loc::lget('acl_error');
 		}
 	}
-?>

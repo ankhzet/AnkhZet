@@ -72,7 +72,7 @@
 			$config = @file_get_contents($file);
 			$config = preg_replace('/('.$user.'\.disallow\][^\[]*)(\d+\s*\=\s*'.$uri.'\/\*\s*)([^\[]*)\[/isU', '\\1\\3[', $config, 1);
 			if (!$allow) {
-				preg_match('/('.$user.'\.disallow\])[^\[]*(\d+)[^\d]+\[/isU', $config, &$match);
+				preg_match('/('.$user.'\.disallow\])[^\[]*(\d+)[^\d]+\[/isU', $config, $match);
 				$max = intval($match[2]) + 1;
 				$config = preg_replace('/('.$user.'\.disallow\][^\[]*)\[/isU', "\\01$max = $uri/*\r\n[", $config, 1);
 			}
@@ -148,4 +148,3 @@
 		}
 	}
 
-?>
