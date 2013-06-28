@@ -60,12 +60,12 @@ class DiffIO {
 		$diff->repl[] = array($old, $new);
 		if ($this->show_new)
 			if (trim($new))
-				$this->out('<span class="new"><span>' . $new . '</span><a class="pin" href="javascript:void(0)" pin="' . count($diff->repl) . '">diff</a></span>');
+				$this->out('<span class="new"><span>' . $new . '</span><a class="pin" href="javascript:void(0)" pin="' . count($diff->repl) . '"></a></span>');
 			else
 				;
 		else
 			if (trim($old))
-				$this->out('<span class="old"><span>' . $old . '</span><a class="pin" href="javascript:void(0)" pin="' . count($diff->repl) . '">diff</a></span>');
+				$this->out('<span class="old"><span>' . $old . '</span><a class="pin" href="javascript:void(0)" pin="' . count($diff->repl) . '"></a></span>');
 	}
 
 }

@@ -133,7 +133,7 @@
 			$this->author_fio = $a['fio'] ? $a['fio'] : '&lt;author&gt;';
 			$this->author_link = $a['link'];
 
-			View::addKey('title', '<a href="/authors/id/' . $row['author'] . '">' . $this->author_fio . '</a> - ' . $row['title']);
+			View::addKey('title', '<a href="/authors/id/' . $row['author'] . '">' . $this->author_fio . '</a> - <a href="/pages/version/' . $row['id'] . '">' . $row['title'] . '</a>');
 			html_escape($row, array('author', 'link'));
 			$row['date'] = Loc::lget('date');
 			$row['original'] = Loc::lget('original');
@@ -141,13 +141,18 @@
 			$row['autolink'] = $this->author_link;
 			$row['content'] = @file_get_contents(SUB_DOMEN . '/cache/pages/' . $row['id'] . '/last.html');
 			if ($row['content'] !== false) {
-				$len = strlen($row['content']);
 				$c = @gzuncompress/**/($row['content']);
 				if ($c !== false) $row['content'] = $c;
-				$row['content'] = mb_convert_encoding($row['content'], 'UTF-8', 'CP1251');
-			}
-			$len = strlen($row['content']);
-			return patternize($this->ID_PATTERN, $row);
+			} else
+				$row['content'] = '&lt;no file&gt;';
+
+			$row['content'] = $this->prepareForGrammar($row['content'], true);
+			$row['content'] = mb_convert_encoding($row['content'], 'UTF-8', 'CP1251');
+
+			View::addKey('grammar', $this->fetchGrammarSuggestions(intval($row['id'])));
+			View::addKey('preview', $row['content']);
+			$this->view->renderTPL('pages/view');
+			return '';//patternize($this->ID_PATTERN, $row);
 		}
 
 		function actionCleanup($r) {
@@ -225,6 +230,8 @@
 
 			$aa = $this->getAggregator(1);
 			$adata = $aa->get(intval($data['author']), '`fio`');
+			$alink = "<a href=\"/authors/id/{$data['author']}\">{$adata['fio']}</a>";
+			$plink = "<a href=\"/pages/version/{$page}\">{$data['title']}</a>";
 
 			$storage = SUB_DOMEN . '/cache/pages/' . $page;
 			$p = array();
@@ -234,9 +241,6 @@
 					if (is_file($storage . '/' . $entry) && ($version = intval(basename($entry, '.html'))))
 						$p[] = $version;
 
-			$alink = "<a href=\"/authors/id/{$data['author']}\">{$adata['fio']}</a>";
-			$plink = "<a href=\"/pages/id/{$page}\">{$data['title']}</a>";
-
 			switch ($_REQUEST['action']) {
 			case 'view':
 				View::addKey('title', $alink . ' - ' . $plink . ' <span style="font-size: 80%;">[update: ' . date('d.m.Y', $version) . ']</span>');
@@ -244,8 +248,10 @@
 				$cnt = @file_get_contents("$storage/$version.html");
 				$cnt1 = @gzuncompress/**/($cnt);
 				if ($cnt1 !== false) $cnt = $cnt1;
-				$cnt = mb_convert_encoding($cnt, 'UTF-8', 'CP1251');
-				echo "<div class=\"cnt-item\"><div class=\"text reader\">$cnt</div></div>";
+				$cnt = $this->prepareForGrammar($cnt, true);
+				View::addKey('preview', mb_convert_encoding($cnt, 'UTF-8', 'CP1251'));
+				View::addKey('grammar', $this->fetchGrammarSuggestions($page));
+				$this->view->renderTPL('pages/view');
 			default:
 				View::addKey('title', $alink . ' - ' . $plink);
 				rsort($p);
@@ -277,26 +283,32 @@
 				throw new Exception('Page ID not specified!');
 
 			$a = $this->getAggregator(0);
-			$data = $a->get($page, '`id`, `title`');
+			$data = $a->get($page, '`id`, `title`, `author`');
 			if ($data['id'] != $page)
 				throw new Exception('Resource not found o__O');
 
-			$r = explode(',', $r[1]);
-			$cur= intval($r[0]);
-			$old= intval($r[1]);
+			$u = explode(',', $r[1]);
+			$cur= intval($u[0]);
+			$old= intval($u[1]);
 
 			if (!($cur * $old))
 				throw new Exception('Old or current version not found');
 
 			$storage = SUB_DOMEN . '/cache/pages/' . $page;
 
-			$cur .= '.html';
-			$old .= '.html';
 
 			$d = array(false => '=&gt;', true => '&lt;=');
 			$show_old = $_REQUEST['showold'] == 'true';
-			echo 'Resource: <a href="/pages/version/' . $page . '">' . $data['title'] . '</a><br />';
-			echo "[$old <a href=\"?showold=" . ($show_old ? 'false' : 'true') . "\">" . $d[$show_old] . "</a> $cur]<hr />";
+			$aa = $this->getAggregator(1);
+			$adata = $aa->get(intval($data['author']), '`fio`');
+			$alink = "<a href=\"/authors/id/{$data['author']}\">{$adata['fio']}</a>";
+			$plink = "<a href=\"/pages/version/{$page}\">{$data['title']}</a>";
+			$old_d = date('d.m.Y', $old);
+			$cur_d = date('d.m.Y', $cur);
+			View::addKey('title', $alink . ' - ' . $plink . " <span style=\"font-size: 80%;\">[$old_d <a href=\"" . ($show_old ? $cur . ',' . $old : '?showold=true') . "\">" . $d[$show_old] . "</a> $cur_d]</span>");
+
+			$cur .= '.html';
+			$old .= '.html';
 			$t1 = @file_get_contents($storage . '/' . $old);
 			$t2 = @file_get_contents($storage . '/' . $cur);
 			$_t1 = @gzuncompress/**/($t1); if ($_t1 !== false) $t1 = $_t1;
@@ -329,11 +341,28 @@
 			$h = $db->diff($t1, $t2);//, intval($_REQUEST['notdeep']) ? $db->DIFF_TEXT_SPLITTERS2 : $db->DIFF_TEXT_SPLITTERS);
 			$c = ob_get_contents();
 			ob_end_clean();
-			$c = str_replace('<br />', PHP_EOL, $c);
+
+			$c = $this->prepareForGrammar($c);
+
+			$old = str_replace(PHP_EOL, '<br />', join('", "', $h[0]));
+			$new = str_replace(PHP_EOL, '<br />', join('", "', $h[1]));
+			View::addKey('grammar', $this->fetchGrammarSuggestions($page));
+			View::addKey('preview', $c);
+			View::addKey('h_old', $old);
+			View::addKey('h_new', $new);
+			$this->view->renderTPL('pages/view');
+		}
+
+		function prepareForGrammar($c, $cleanup = false) {
+			if ($cleanup) {
+				$c = strip_tags($c, '<dd><p><br><u><b><i><s>');
+				$c = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $c);
+				$c = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $c);
+			} else
+				$c = str_replace('<br />', PHP_EOL, $c);
+
 			$c = preg_replace('"<([^>]+)>(\s*)</\1>"', '\2', $c);
 			$c = preg_replace('"</([^>]+)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
-
-
 			$idx = 0;
 			$p = 0;
 			while (preg_match('"<(([\w]+)([^>/]*))>"', substr($c, $p), $m, PREG_OFFSET_CAPTURE)) {
@@ -343,18 +372,20 @@
 					$idx++;
 					$tag = $m[2][0];
 					$attr = $m[3][0];
-					$r = "<$tag node=\"$idx\"$attr>";
-					$c = substr_replace($c, $r, $p, strlen($sub));
-//					debug(array($tag, $p, $attr));
-					$p += strlen($r);
+					$u = "<$tag node=\"$idx\"$attr>";
+					$c = substr_replace($c, $u, $p, strlen($sub));
+					$p += strlen($u);
 				} else
 					$p += strlen($sub);
-//				break;
 			}
+			return str_replace(PHP_EOL, '<br />', $c);
+		}
 
+		function fetchGrammarSuggestions($page, $approved = 1) {
+			$zone = str_replace("/{$this->_name}/", '', $_SERVER['REQUEST_URI']);
 			$ga = $this->getAggregator(4);
 			$d = $ga->fetch(array('nocalc' => true, 'desc' => 0
-			, 'filter' => "`page` = $page"// and `approved`"
+			, 'filter' => "`page` = $page and `zone` = '$zone'"// and `approved`"
 			, 'collumns' => '`id`, `user`, `range`, `replacement`'
 			));
 			if ($d['total']) {
@@ -365,20 +396,15 @@
 				foreach ($r as $range => $data) {
 					$j = array();
 					foreach ($data as $row) {
-						html_escape($row, array('replacement'));
-						$j[] = patternize('{"i", {%id}, "u": {%user}, "r": "{%replacement}" />', $row);
+						$row['replacement'] = str_replace(array("\n", "\r", '"'), array('<br />\\n', '', '&quot;'), $row['replacement']);
+						$j[] = patternize('{"i": {%id}, "u": {%user}, "r": "{%replacement}"}', $row);
 					}
 					$r[$range] = '{"range": "' . $range . '", "suggestions": [' . join(',', $j) . ']}';
 				}
 				$grammar = join(',', $r);
-				echo "<script>var grammar = [$grammar]</script>";
+				return $grammar;
 			}
-
-			$c = str_replace(PHP_EOL, '<br />', $c);
-			echo $c;
-			$old = str_replace(PHP_EOL, '<br />', join('", "', $h[0]));
-			$new = str_replace(PHP_EOL, '<br />', join('", "', $h[1]));
-			echo "<script> var text_old = [\"{$old}\"], text_new = [\"{$new}\"];</script>\n";
+			return '';
 		}
 	}
 

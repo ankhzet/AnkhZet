@@ -6,18 +6,19 @@
 			$ga = GrammarAggregator::getInstance();
 			$uid = User::get()->ID();
 			$page = intval($params['page']);
+			$zone = preg_replace('"[^\w\d:,/\?\&=]"', '', $params['zone']);
 			$range = preg_replace('/[^\d:,]/', '', $params['range']);
 			$replace = str_replace('\'', '&quot', strip_tags($params['replacement']));
-			if (!($page && $range && $replace))
+			if (!($page && $zone && $range && $replace))
 				JSON_Result(JSON_Fail, "Page, text range or replacement not specified");
 
 
 			$d = $ga->fetch(array('nocalc' => true, 'desc' => 0,
-			'filter' => "`user` = '$uid' and `range` = '$range'"));
+			'filter' => "`user` = '$uid' and `range` = '$range' and `zone` = '$zone'"));
 			if ($d['total'])
 				JSON_Result(JSON_Fail, "You already submitted suggestion for that piece of text");
 
-			$id = $ga->add(array('user' => $uid, 'page' => $page, 'range' => $range, 'replacement' => $replace));
+			$id = $ga->add(array('user' => $uid, 'page' => $page, 'zone' => $zone, 'range' => $range, 'replacement' => $replace));
 
 			if ($id)
 				JSON_Result(JSON_Ok, $ga->get($id));

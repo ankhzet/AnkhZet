@@ -37,7 +37,7 @@ li {
 	list-style: none;
 }
 
-input, select {
+input, select, textarea {
 	width: 150px;
 	padding: 2px;
 	border: 1px solid #999;
@@ -51,6 +51,9 @@ input:hover {
 	padding: 2px;
 	color: #111;
 }
+textarea {
+	height: 150px;
+}
 input[type="submit"] {
 	width: 156px;
 	padding: 2px 5px;
@@ -63,6 +66,11 @@ input[type="checkbox"], input[type="radio"] {
 }
 input[type="checkbox"]:hover, input[type="radio"]:hover {
 	color: #66f;
+}
+.captcha-img {
+	width: 109px;
+	margin: 0 23px;
+	border: 0;
 }
 label {
 	margin-right: 10px;
@@ -286,20 +294,6 @@ label {
 
 /* Diff
 --------------------------------------------*/
-#content a.pin {
-	display: inline-block;
-	width: 16px;
-	height: 12px;
-	border: 1px solid silver;
-	margin: 0 2px -4px 0;
-	font-size: 9px;
-	text-decoration: none;
-	padding: 0;
-	line-height: 16px;
-	border-radius: 2px;
-	color: gray;
-}
-
 .old {
 	color: red;
 }
@@ -349,3 +343,67 @@ span.multi {
 	float: left;
 	margin-right: 5px;
 }
+
+/* Grammar Nazzi */
+
+.grammar-highlight {
+	position: absolute;
+	border: 0;
+	background: #f00;
+	opacity: 0.2;
+}
+
+#content a.pin, .grammar-tip {
+	position: absolute;
+	background: #ddd url(/theme/img/grammar-pin.gif) no-repeat;
+	border: 1px solid black;
+	margin: 0 0 0 -2px;
+	border-radius: 2px;
+	padding: 0 1px;
+	width: 10px;
+	height: 12px;
+	cursor: pointer;
+	overflow: hidden;
+	opacity: 0.2;
+	z-index: 1;
+}
+
+#content a.pin {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	position: relative;
+	margin: 14px -7px -14px -7px;
+	padding: 0;
+	z-index: 2;
+	overflow: visible;
+}
+
+#content a.pin:hover {
+	background-color: #ccf;
+	opacity: 1.0;
+}
+.grammar-tip:hover {
+	background-color: #ccf;
+	opacity: 1.0;
+	overflow: visible;
+	width: auto;
+	height: auto;
+	z-index: 2;
+}
+
+.grammar-tip .suggestion {
+	display: none;
+	margin: -1px 0 0 12px;
+	padding: 0;
+}
+
+.grammar-tip .text.reader {
+	margin: 0;
+	padding: 0 1px 1px 0;
+}
+
+.grammar-tip:hover .suggestion {
+	display: block;
+}
+

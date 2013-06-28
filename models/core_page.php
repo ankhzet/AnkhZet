@@ -40,6 +40,7 @@
 			'`id` int auto_increment null'
 		, '`user` int not null'
 		, '`page` int not null'
+		, '`zone` varchar(60) not null'
 		, '`range` varchar(50) not null'
 		, '`replacement` varchar(255) not null'
 		, '`time` int not null'

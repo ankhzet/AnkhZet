@@ -60,23 +60,148 @@ function check_send(a) {
 
 var
 	grammarNazzi = new function () {
+		this.TIMER_NOTES_QUEUE = 1;
+		this.TIMEOUT_NOTES_QUEUE = 100;
 		var sel, notIE = !!window.getSelection;
-		var textNodes = [];
+		var timers = [];
+		var show = 1;
 
+		this.clearTimer = function(timer) {
+			if (t = timers[timer])
+				clearTimeout(t);
+			timers[timer] = 0;
+		}
+		this.setTimer = function(timer, timeout, callback) {
+			this.clearTimer(timer);
+			timers[timer] = setTimeout(function() {
+				grammarNazzi.clearTimer(timer);
+				callback(grammarNazzi);
+			}, timeout);
+		}
 		this.init = function() {
 			sel = notIE ? window.getSelection(): document.selection;
-			textNodes = $('.main-container')[0].childNodes;
-			this.makeGrammarNotes();
-			$('.grammar div').click(function () {
-				var range = $(this).attr('range');
-				grammarNazzi.highlite([range]);
+			window.addEventListener('keypress', function (e) {
+				switch (e.keyCode) {
+				case 13:
+					if (!e.ctrlKey) break;
+					if (e.shiftKey) {
+						if (show = !show)
+							grammarNazzi.queueNotes();
+						else
+							grammarNazzi.removeGrammarNotes();
+						break;
+					}
+					if (!grammarNazzi.getPage()) break;
+					var s = grammarNazzi.getSelection();
+					if (!s) return;
+					var compilation = grammarNazzi.compileSelection(s);
+					var text = s.toString();
+					upform.init({
+						title: 'Grammar Nazzi [' + compilation + ']!'
+					, content: patternize(
+						'<input type="hidden" class="grammar-code" value="{%code}"/>'
+					+ '<textarea class="grammar-before" disabled="disabled">{%text}</textarea><br /><br />'
+					+ 'Replace with:<br />'
+					+ '<textarea class="grammar-area">{%text}</textarea>'
+					, {"text": text, "code": compilation})
+					, controls: [
+						{'caption': 'Ok', 'action': 'return grammarNazzi.send(this)'}
+					, upform.BTN_CLOSE
+					]
+					, onready: function(form) { form.show(); }
+					});
+				}
+			}, false);
+			if (show) this.queueNotes();
+			$(document).resize(function() {
+				if (show) grammarNazzi.queueNotes();
 			});
 		}
 		this.getSelection = function() {
 			return notIE ? (sel.rangeCount ? sel.getRangeAt(0) : false): sel.createRange();
 		}
+		this.removeGrammarNotes = function() {
+			$('.grammar-highlight, .grammar-tip').remove();
+		}
+		this.queueNotes = function() {
+			grammarNazzi.removeGrammarNotes();
+			this.setTimer(this.TIMER_NOTES_QUEUE, this.TIMEOUT_NOTES_QUEUE, function(gn) {
+				gn.makeGrammarNotes();
+			});
+		}
 		this.makeGrammarNotes = function() {
+			if (!grammar) return;
+			var n = [], g = [];
 
+			for (var i in grammar) {
+				var o = this.takeOffset(grammar[i].range);
+				if (!o) continue;
+				var r = [], s = grammar[i].suggestions;
+				for (var j in s)
+					r.push('<div class="suggestion">' + s[j].r + '</div>');
+
+				n[i] = o;
+				g[i] = r;
+			}
+
+
+			var s = [], u = [], h = 0;
+			for (var i in n) {
+				h = n[i][0].bottom - n[i][0].top;
+				s[i] = {"left": n[i][0].left - 12, "top": n[i][0].top};
+				s[i].right = s[i].left + 14;
+				s[i].bottom = s[i].top + h;
+			}
+
+			for (var i in s)
+				for (var j in s)
+					if (j != i)
+						if (rangesIntersects(s[i], s[j]))
+							if ($.isArray(u[i]))
+								u[i].push(j);
+							else
+								u[i] = [j];
+
+			var y = [], k = 0, y = [];
+			for (var i in u)
+				if (u[i]) {
+					for(var l in u[i])
+						y[u[i][l]] = y[u[i][l]] ? y[u[i][l]] + 1 : 1;
+
+					for (var j in u) {
+						var p = $.inArray(i, u[j]);
+						if (p >= 0)
+							u[j].splice(p, 1);
+					}
+				}
+
+			for (var i in y)
+				if (y[i]) {
+					s[i].top += 14 * y[i];
+					s[i].bottom += 14 * y[i];
+				}
+
+			for (var i in n)
+				this.makeTip(grammar[i].range, g[i], n[i], s[i]);
+
+			$('.grammar-tip').click(function () {grammarNazzi.highlite($(this).attr('range'));});
+		}
+		this.makeTip = function(range, suggestions, o, t) {
+			var div = $(document.createElement('DIV'));
+			var sy = $(document).scrollTop();
+			$('body').append(div);
+			div.html('<div class="text reader">' + suggestions.join('') + '</div>');
+			div.css({left: t.left, top: t.top + sy});
+			div.addClass('grammar-tip');
+			div.attr('range', range);
+
+			for (var i in o) {
+				var rect = o[i];
+				var high = $(document.createElement('DIV'));
+				$('body').append(high);
+				high.css({"top": rect.top + sy, "left": rect.left, "width": rect.right - rect.left, "height": rect.bottom - rect.top});
+				high.addClass('grammar-highlight');
+			}
 		}
 		this.compileSelection = function(rng) {
 			var s = sc = rng.startContainer;
@@ -86,69 +211,67 @@ var
 			var sn = (n = $(s).attr("node")) ? parseInt(n) : 0;
 			var en = (n = $(e).attr("node")) ? parseInt(n) : 0;
 
+			var textNodes = $('.cnt-item .text.reader')[0].childNodes;
 			if (sn) {
 				c = s.childNodes;
 				for (var i = 0; i < c.length; i++)
-					if (c[i] == sc) {
-						sn += ':' + i;
-						break;
-					}
+					if (c[i] == sc) { sn += ':' + i; break; }
 			} else
 				for (var i = 0; i < textNodes.length; i++)
-					if (textNodes[i] == sc) {
-						sn += ':' + i;
-						break;
-					}
+					if (textNodes[i] == sc) { sn += ':' + i; break; }
 			if (en) {
 				c = e.childNodes;
 				for (var i = 0; i < c.length; i++)
-					if (c[i] == ec) {
-						en += ':' + i;
-						break;
-					}
+					if (c[i] == ec) { en += ':' + i; break; }
 			} else
 				for (var i = 0; i < textNodes.length; i++)
-					if (textNodes[i] == ec) {
-						en += ':' + i;
-						break;
-					}
+					if (textNodes[i] == ec) { en += ':' + i; break; }
 
-			return [
-				sn
-			, rng.startOffset
-			, en
-			, rng.endOffset];
+			return [sn, rng.startOffset, en, rng.endOffset];
 		}
-		this.highlite = function (patts) {
-			var rngs = [];
-			$(patts).each(function () {
-				var offs = this.split(',');
-				var sn = grammarNazzi.getNode(offs[0]), en = grammarNazzi.getNode(offs[2]);
-				var so = offs[1], eo = offs[3];
-
-				if (document.createRange) {
+		this.highlite = function (range) {
+			var offs = range.split(',');
+			var sn = this.getNode(offs[0]), en = this.getNode(offs[2]);
+			var so = offs[1], eo = offs[3];
+			if (document.createRange) {
+				var rng = document.createRange();
+				rng.setStart(sn, so);
+				rng.setEnd(en, eo);
+				sel.removeAllRanges();
+				sel.addRange(rng);
+			} else
+				;
+		}
+		this.takeOffset = function (range) {
+			var offs = range.split(',');
+			var sn = this.getNode(offs[0]), en = this.getNode(offs[2]);
+			var so = offs[1], eo = offs[3];
+			if (document.createRange) {
 					var rng = document.createRange();
 					rng.setStart(sn, so);
 					rng.setEnd(en, eo);
-					rngs.push(rng);
-				} else
-					;
-			});
+					if (rng.getClientRects)
+						return rng.getClientRects();
 
-			sel.removeAllRanges();
-			$(rngs).each(function () { sel.addRange(this) });
+			} else
+				;
+			return null;
 		}
 		this.getNode = function(id) {
-			if (id[0] == ':') return textNodes[parseInt(id.replace(':', ''))];
-
 			id = id.split(':');
-			var c = $('[node="' + id[0] + '"]')[0].childNodes;
-			return c[parseInt(id[1])];
+			var c = $('[node="' + id[0] + '"]');
+			c = (c.length ? c : $('.cnt-item .text.reader'))[0].childNodes;
+			return id[1] ? c[parseInt(id[1])] : c;
 		}
 		this.getPage = function() {
 			var uri = document.location.href;
-			var m = uri.match(/\/pages\/(id|diff)\/(\d+)/i);
+			var m = uri.match(/\/pages\/(version|id|diff)\/(\d+)/i);
 			return m ? parseInt(m[2]) : 0;
+		}
+		this.getZone = function() {
+			var uri = document.location.href;
+			var m = uri.match(/\/pages\/((version|id|diff)[^$]+)/i);
+			return m ? m[1] : null;
 		}
 		this.send = function(a) {
 			var code = $('.grammar-code').val();
@@ -158,39 +281,32 @@ var
 				alert('No changes =\\');
 				return;
 			}
-			$.post('/api.php?action=grammar', {"page": this.getPage(), "range": code, "replacement": replacement}
-			, function(status, data) {
+			$.post('/api.php?action=grammar', {"page": this.getPage(), "zone": this.getZone(), "range": code, "replacement": replacement}
+			, function(data, status) {
 				upform.close();
-				alert([status, data]);
-			});
+				if (status == 'success') {
+					if (data.result == 'ok') {
+						row = data.data;
+						var i = {"range": row.range, "suggestions": [{"i": row.id, "u": row.user, "r": row.replacement}]};
+						grammar.push(i);
+						grammarNazzi.show = 1;
+						grammarNazzi.queueNotes();
+					} else
+						alert(data.data);
+				} else
+					alert('Request error');
+			}, 'json');
 		}
 		$(document).ready(function(){
 			grammarNazzi.init();
-			window.addEventListener('keypress', function (e) {
-				switch (e.keyCode) {
-				case 13:
-					if (!e.ctrlKey) break;
-					if (!grammarNazzi.getPage()) break;
-					var s = grammarNazzi.getSelection();
-					if (!s) return;
-					var compilation = grammarNazzi.compileSelection(s);
-					var text = s.toString();
-					upform.init({
-						title: 'Grammar Nazzi!'
-					, content: patternize(
-						'<input type="hidden" class="grammar-code" value="{%code}"/>'
-					+ '<textarea class="grammar-before" disabled="disabled">{%text}</textarea><br /><br />'
-					+ 'Replace with:<br />'
-					+ '<textarea class="grammar-area">{%text}</textarea>'
-					, {"text": text, "code": compilation})
-					, controls: [
-						{'caption': 'Ok', 'action': 'return nodeWorker.send(this)'}
-					, upform.BTN_CLOSE
-					]
-					, onready: function(form) { form.show(); }
-					});
-				}
-			}, false);
+			grammarNazzi.getZone();
 		});
 	}
 
+
+function rangesIntersects(a, b) {
+	return (a.left <= b.right &&
+					b.left <= a.right &&
+					a.top <= b.bottom &&
+					b.top <= a.bottom)
+}
