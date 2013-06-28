@@ -201,7 +201,7 @@
 							$open_tags[$tag][0]--;
 					}
 				}
-				$position += strlen($match[0]);
+				$position += strlen($match[0][0]);
 			}
 			else
 				$position++;
@@ -265,7 +265,7 @@
 
 	function safeSubstrl($str, $maxlen, $lines = 0) {
 		if (($len = mb_strlen($str)) > $maxlen) {
-			$str = str_replace(array('<br />', '[n]'), PHP_EOL, $str);
+			$str = str_replace('<br />', PHP_EOL, $str);
 			$s = $str;
 			$d = intval($maxlen * 0.1);
 			do {
@@ -285,7 +285,7 @@
 				preg_match('/\P{L}*([\.!\?]+)(.+)$/isu', rtrim($matches[1]), $matches);
 				$str = $matches[1] . '..' . rtrim($matches[2]);
 			} while (mb_strlen($matches[1]) <= 0);
-			$str = str_replace(PHP_EOL, '[n]', close_tags($str));
+			$str = str_replace(PHP_EOL, '<br />', close_tags($str));
 		}
 
 		return $str;

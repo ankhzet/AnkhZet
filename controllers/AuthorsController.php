@@ -131,7 +131,7 @@
 					$link = str_replace(array('%', '\'', '"'), '', $m[3]);
 					$a = $this->getAggregator();
 					$d = $a->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`link` like '%$link%'", 'collumns' => '`id`'));
-					if (count($d)) {
+					if ($d['total']) {
 						$row = array_pop($d['data']);
 						$a_id = intval($row['id']);
 						locate_to("/authors/id/$a_id");

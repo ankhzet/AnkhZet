@@ -8,7 +8,7 @@
 		protected $_name = 'feedback';
 
 		public function actionMain($r) {
-			return parent::actionMain(array('about-us'));
+			$this->view->renderTPL('user/feedform');
 		}
 
 		public function actionSend($r) {
@@ -22,9 +22,10 @@
 			}
 
 			require_once 'captcha.php';
-			$c = new Captcha(addslashes(trim($_REQUEST[rid])));
-			if (!(($captcha = trim($_REQUEST[captcha])) && $c->valid($captcha)))
-				$e[captcha] = true;
+			$c = new Captcha(addslashes(trim($_REQUEST['rid'])));
+			$captcha = trim($_REQUEST['captcha']);
+			if (!($captcha && $c->valid($captcha)))
+				$e['captcha'] = true;
 
 			if (!count($e)) {
 				require_once 'core_mail.php';

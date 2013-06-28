@@ -37,7 +37,7 @@
 			break;
 		case ACL::ACL_MODER:
 		case ACL::ACL_ADMINS:
-			$l .= '<script type="text/javascript" src="/theme/admin/utils.js"></script>';
+			$l .= PHP_EOL . '	<script type="text/javascript" src="/theme/admin/utils.js"></script>';
 			break;
 		default:
 		}

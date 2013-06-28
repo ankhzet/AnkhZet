@@ -75,51 +75,59 @@
 
 			asort($g, SORT_NUMERIC);
 
-/*			$o = array();
-			$dir = ROOT . '/controllers';
-			$d = @dir($dir);
-			if ($d)
-				while (($entry = $d->read()) !== false)
-					if (is_file($dir . '/' . $entry) && preg_match('/controller\.php/i', $entry))
-						$o[] = $entry;
-			$reread = 5;
-			$o[] = 'controller.php';
-			$o[] = 'AggregatorController.php';
-			do {
-				$m = array();
-				foreach ($o as $ctl)
-					if (!$m[$ctl])
-						$m[$ctl] = $this->listActions($ctl);
+			if ($_REQUEST['actions']) {
+				$o = array();
+				$dir = ROOT . '/controllers';
+				$d = @dir($dir);
+				if ($d)
+					while (($entry = $d->read()) !== false)
+						if (is_file($dir . '/' . $entry) && preg_match('/controller\.php/i', $entry))
+							$o[] = $entry;
+				$reread = 5;
+				$o[] = 'controller.php';
+				$o[] = 'AggregatorController.php';
+				do {
+					$m = array();
+					foreach ($o as $ctl)
+						if (!$m[$ctl])
+							$m[$ctl] = $this->listActions($ctl);
 
-			} while (--$reread > 0);
+				} while (--$reread > 0);
 
-			foreach ($this->classes as $ctl => &$class)
-				if (!$class['loaded'] || !count($class['actions']))
+				foreach ($this->classes as $ctl => &$class)
+					if (!$class['loaded'] || !count($class['actions']))
+						unset($this->classes[$ctl]);
+
+				$o = array();
+				foreach ($this->classes as $ctl => $class) {
+					preg_match('/([\w\d_]+)controller/i', $ctl, $m);
+					sort($class['actions']);
+					$o[$m[1]] = array('extends' => $class['extends'], 'actions' => $class['actions']);
 					unset($this->classes[$ctl]);
-
-			$o = array();
-			foreach ($this->classes as $ctl => $class) {
-				preg_match('/([\w\d_]+)controller/i', $ctl, $m);
-				sort($class['actions']);
-				$o[$m[1]] = array('extends' => $class['extends'], 'actions' => $class['actions']);
-				unset($this->classes[$ctl]);
-			}
-			ksort($o);
-
-			$t = array();
-			foreach ($o as $ctl => &$class) {
-				$h = '<tr><td colspan=4>' . ucfirst($ctl) . 'Controller (' . ucfirst($class['extends']) . ') </td></tr>';
-				foreach ($class['actions'] as $action) {
-					$u = '';
-					foreach ($g as $group)
-						$u .= '<td>' . ACL::allowed($group, $ctl . '/' . strtolower($action) . '/') . '</td>';
-
-					$h .= '<tr><td>' . $action . '</td>' . $u . '</tr>';
 				}
-				$t[] = $h;
-			}
+				ksort($o);
 
-			echo '<table>' . join('', $t) . '</table>';*/
+				$t = array();
+				foreach ($o as $ctl => &$class) {
+					$h = '<tr><td colspan=4><hr /></td></tr><tr><td colspan=4>' . ucfirst($ctl) . 'Controller'
+					. ($class['extends'] ? ' (::' . str_replace('controller', 'Controller', ucfirst($class['extends'])) . ') ' : '')
+					. '</td></tr>';
+					foreach ($class['actions'] as $action) {
+						$u = '';
+						foreach ($g as $name => $group) {
+							$allowed = ACL::allowed($group, $ctl . '/' . strtolower($action) . '/');
+							$allowed = $allowed ? strtoupper($name[0]) : '';
+							$u .= '<td>' . $allowed . '</td>';
+						}
+
+						$h .= '<tr><td style="width: 70%;">' . $action . '</td>' . $u . '</tr>';
+					}
+					$t[] = $h;
+				}
+
+				echo '<table style="width: 50%; margin: 0 auto;">' . join('', $t) . '</table>';
+				return;
+			}
 
 			switch ($_REQUEST[action]) {
 			case modify:
@@ -155,7 +163,7 @@
 				debug($acls, 'acls');
 				debug($rr, 'routing');
 				$c->save();
-				header('Location: /acl');
+				locate_to('/acl');
 				break;
 			case add:
 				$_route = normalize_uri(stripslashes($_REQUEST[route]));
@@ -173,13 +181,13 @@
 					$c->set(routing, $routing);
 				}
 				$c->save();
-				header('Location: /acl');
+				locate_to('/acl');
 			case del:
 				$route = normalize_uri(stripslashes($_REQUEST[uroute]));
 				unset($routing[$route]);
 				$c->set(routing, $routing);
 				$c->save();
-				header('Location: /acl');
+				locate_to('/acl');
 			case group:
 				$group = $_REQUEST[group];
 				$aid = $g[ACL::ACL_USER];
@@ -187,7 +195,7 @@
 
 				$c->set(array(acl, $group), array(id => $aid, disallow => '*'));
 				$c->save();
-				header('Location: /acl');
+				locate_to('/acl');
 			}
 
 			$r = array();

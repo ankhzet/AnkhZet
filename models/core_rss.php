@@ -33,11 +33,14 @@
 
 			$data['items'] = join('', $i);
 			if ($die) {
-				$rss = gzcompress(patternize($tpl[0], $data));
+				$rss = patternize($tpl[0], $data);
 				header("Content-Type: application/rss+xml");
-				header('Content-Length: '.strlen($rss));
-				header('Content-Encoding: gzip');
-				die($rss);
+				header('Content-Disposition: inline; filename=rss.xml');
+				ob_start("ob_gzhandler");
+				echo $rss;
+				ob_end_flush();
+				die();
+				return;
 			} else
 				echo patternize($tpl[0], $data);
 		}

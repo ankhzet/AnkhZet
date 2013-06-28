@@ -1,6 +1,7 @@
 <?php
 	require_once 'core_page.php';
 	require_once 'core_authors.php';
+	require_once 'core_history.php';
 	require_once 'AggregatorController.php';
 
 	class PagesController extends AggregatorController {
@@ -67,6 +68,7 @@
 			case 0: return PagesAggregator::getInstance();
 			case 1: return AuthorsAggregator::getInstance();
 			case 2: return GroupsAggregator::getInstance();
+			case 3: return HistoryAggregator::getInstance();
 			}
 		}
 
@@ -259,6 +261,13 @@
 					echo patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
 				}
 			}
+			$uid = $this->user->ID();
+			if ($uid) {
+				$ha = $this->getAggregator(3);
+				$s = $a->dbc->select('history', '`user` = ' . $uid . ' and `page` = ' . $page, '`id` as `0`');
+				if ($s && ($r = @mysql_result($s, 0)))
+					$ha->upToDate(array(intval($r)));
+			}
 		}
 
 		public function actionDiff($r) {
@@ -289,107 +298,45 @@
 			echo "[$old <a href=\"?showold=" . ($show_old ? 'false' : 'true') . "\">" . $d[$show_old] . "</a> $cur]<hr />";
 			$t1 = @file_get_contents($storage . '/' . $old);
 			$t2 = @file_get_contents($storage . '/' . $cur);
-			$_t1 = @gzuncompress/**/($t1);
-			if ($_t1 !== false) $t1 = $_t1;
-			$_t2 = @gzuncompress/**/($t2);
-			if ($_t2 !== false) $t2 = $_t2;
-			$t1 = str_replace(array("\n", '<dd>'), array(PHP_EOL, '[n]'), $t1);
-			$t2 = str_replace(array("\n", '<dd>'), array(PHP_EOL, '[n]'), $t2);
-			$t1 = strip_tags($t1, '<p><br><u><i><s>');
-			$t2 = strip_tags($t2, '<p><br><u><i><s>');
-			$l1 = strlen($t1);
-			$l2 = strlen($t1);
-			$chunk = (($chunk = intval($_REQUEST['chunk'])) ? $chunk : 10) * 1024;
-			if (($l1 > $chunk) || ($l2 > $chunk)) {
-				$c = 0;
-				while (($l1 - $c) > $chunk) {
-					$c += $chunk;
-					$i = strpos($t1, PHP_EOL, $c);
-					$j = $i;
-					while (abs($j - $i) < 1024)
-						$j = strpos($t1, PHP_EOL, $j + 1);
+			$_t1 = @gzuncompress/**/($t1); if ($_t1 !== false) $t1 = $_t1;
+			$_t2 = @gzuncompress/**/($t2); if ($_t2 !== false) $t2 = $_t2;
 
-					$mark = substr($t1, $i, $j - $i);
-					$u = strpos($t2, $mark);
-					if ($u === false) {
-						$c = $i;
-						continue;
-					}
-					$t1 = substr($t1, 0, $i) . PHP_EOL . substr($t1, $i);
-					$t2 = str_replace($mark, PHP_EOL . $mark, $t2);
-				}
-			}
 
+			$t1 = trim(str_replace(array("\r", "\n"), '', $t1));
+			$t1 = strip_tags($t1, '<dd><p><br><u><i><s>');
+			$t1 = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $t1);
+			$t1 = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $t1);
+
+			$t2 = trim(str_replace(array("\r", "\n"), '', $t2));
+			$t2 = strip_tags($t2, '<dd><p><br><u><i><s>');
+			$t2 = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $t2);
+			$t2 = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $t2);
+
+//			$t1 = preg_replace('"<([^>]+)>((<br\s*/>|\s)*)</\1>"', '\2', $t1);
+//			$t1 = preg_replace('"</([^>]+)>((<br\s*/>|\s|\&nbsp;)*)?<\1>"i', '\2', $t1);
+//			$t2 = preg_replace('"<([^>]+)>((<br\s*/>|\s)*)</\1>"', '\2', $t2);
+//			$t2 = preg_replace('"</([^>]+)>((<br\s*/>|\s|\&nbsp;)*)?<\1>"i', '\2', $t2);
+//			@ob_end_flush();
+//			@ob_end_flush();
 			require_once 'core_diff.php';
+			define('PHP_EOL', "\n");
 			ob_start();
 //			echo '<pre>';
-			$io = new uDiffIO(1024);
+			$io = new DiffIO(1024);
 			$io->show_new = !$show_old;
 			$db = new DiffBuilder($io);
-			$h = $db->diff($t1, $t2, intval($_REQUEST['notdeep']) ? $db->DIFF_TEXT_SPLITTERS2 : $db->DIFF_TEXT_SPLITTERS);
+			$h = $db->diff($t1, $t2);//, intval($_REQUEST['notdeep']) ? $db->DIFF_TEXT_SPLITTERS2 : $db->DIFF_TEXT_SPLITTERS);
 			$c = ob_get_contents();
 			ob_end_clean();
-			echo /*mb_convert_encoding(*/str_replace('[n]', '<br/>', $c);//, 'UTF-8', 'CP1251');
-			$old = str_replace(array("[n]", "\n"), '<br />', join('", "', $h[0]));
-			$new = str_replace(array("[n]", "\n"), '<br />', join('", "', $h[1]));
-			echo '<script> var text_old = ["' . $old . '"], text_new = ["' . $new . '"];</script>';
+			$c = str_replace('<br />', PHP_EOL, $c);
+			$c = preg_replace('"<([^>]+)>(\s*)</\1>"', '\2', $c);
+			$c = preg_replace('"</([^>]+)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
+			$c = str_replace(PHP_EOL, '<br />', $c);
+			echo $c;
+			$old = str_replace(PHP_EOL, '<br />', join('", "', $h[0]));
+			$new = str_replace(PHP_EOL, '<br />', join('", "', $h[1]));
+			echo "<script> var text_old = [\"{$old}\"], text_new = [\"{$new}\"];</script>\n";
 		}
 	}
 
-	require_once 'core_diff.php';
-	class uDiffIO extends DiffIO {
-		var $show_new = true;
-		var $context = 100;
-		function __construct($context) {
-			$this->context = $context ? $context : $this->context;
-		}
-
-		function __destruct() {
-		}
-
-		function out($text) {
-			echo $text;
-		}
-
-		public function left($text) {
-			$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
-			if ($this->show_new)
-				$this->out('<span class="old">' . rtrim($text) . '</span> ');
-			else
-				$this->out('<span class="old">' . rtrim($text) . '</span> ');
-		}
-		public function right($text) {
-			$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
-			if ($this->show_new)
-				$this->out('<span class="new">' . rtrim($text) . '</span> ');
-			else
-				$this->out('<span class="new">' . rtrim($text) . '</span> ');
-		}
-		public function same($text) {
-			$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
-/**/			$l = strlen($text);
-			if ($l >= $this->context) {
-				$text = str_replace('&nbsp;', ' ', $text);
-				$s1 = safeSubstr($text, $this->context / 2, 100);
-				$s2 = safeSubstrl($text, $this->context / 2, 100);
-				$text = "<br /><span class=\"context\">{$s1}</span><br />~~~<br /><span class=\"context\">{$s2}</span>";
-			}/**/
-			$this->out($text);//mb_convert_encoding($text, 'UTF8', 'cp1251');
-		}
-
-		public function replace($diff, $old, $new) {
-			$old = mb_convert_encoding($old, 'UTF8', 'cp1251');
-			$new = mb_convert_encoding($new, 'UTF8', 'cp1251');
-			$diff->repl[] = array($old, $new);
-			if ($this->show_new)
-				if (trim($new))
-					$this->out('<span class="new"><span>' . $new . '</span><a class="pin" href="javascript:void(0)" pin="' . count($diff->repl) . '">diff</a></span>');
-				else
-					;
-			else
-				if (trim($old))
-					$this->out('<span class="old"><span>' . $old . '</span><a class="pin" href="javascript:void(0)" pin="' . count($diff->repl) . '">diff</a></span>');
-		}
-
-	}
 ?>

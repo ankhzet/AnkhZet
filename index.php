@@ -10,7 +10,7 @@
 		var $frontend = null;
 
 		function initialize() {
-			require_once dirname(SUB_DOMEN) . '/www/_engine/frontend.php';
+			require_once SUB_DOMEN . '/_engine/frontend.php';
 			$this->frontend = FrontEnd::getInstance();
 			$this->frontend->set('started', microtime());
 		}

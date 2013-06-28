@@ -71,6 +71,7 @@
 					, 'author' => $at[$pa[$page_id]['author']]['fio']
 					, 'group' => $gt[$pa[$page_id]['group']]
 					, 'link' => "{$data[link]}pages/version/{$page_id}?version={$row[time]}"
+					, 'samlib' => $at[$pa[$page_id]['author']]['link'] . '/' . str_replace('.shtml', '', $pa[$page_id]['link'])
 					, 'pubDate' => date('r', $row['time'])
 					, 'guid' => md5($page_id . '/' . $row[time])
 					);

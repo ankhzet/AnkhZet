@@ -88,8 +88,8 @@
 	width: 23%;
 	margin: 5px 1% 0 1%;
 }
-.up-form input {
-	width: 98%;
+.up-form input, .up-form textarea {
+	width: 97%;
 	margin-left: 1%;
 }
 
@@ -135,23 +135,23 @@
 .act {
 	margin: -2px 0 0 10px;
 	padding: 1px 5px;
-	background-color: #faa;
+	background-color: #ddd;
 	position: absolute;
-	border: 1px solid #611;
+	border: 1px solid #116;
 	border-radius: 3px;
  -webkit-border-radius: 3px;
 	z-index: 999;
 	display: none;
 }
 #content .act a, #content .msg_list .act a {
-	color: #611;
-	text-shadow: 0 1px 1px #fee;
+	color: #246;
+	text-shadow: 0 1px 1px #eef;
 	font-weight: bold;
 	text-decoration: none;
 }
 
 #content .act a:hover {
-	color: #200;
+	color: #002;
 }
 
 tr:hover .act {
