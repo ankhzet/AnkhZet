@@ -344,6 +344,14 @@ span.multi {
 	margin-right: 5px;
 }
 
+.diff-to-oldest {
+	background: #4d4;
+	border-radius: 3px;
+	margin: -1px;
+	padding: 2px;
+	color: blue;
+}
+
 /* Grammar Nazzi */
 
 .grammar-highlight {

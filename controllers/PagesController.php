@@ -45,10 +45,7 @@
 				<span class="head">{%timestamp}</span>
 				<span class="link size">{%size}</span>
 			</div>
-			<div class="text">[
-				<a href="/{%root}/version/{%page}?action=view&version={%version}">{%view}</a> |
-				<a href="/{%root}/diff/{%page}/{%version},{%prew}"{%last}>{%diff}</a> &darr;
-			]</div>
+			<div class="text">[<a href="/{%root}/version/{%page}?action=view&version={%version}">{%view}</a> | {%prev}]</div>
 		</div>
 		';
 		const VERSION_PATT2 = '
@@ -257,6 +254,7 @@
 				rsort($p);
 				$l = count($p) - 1;
 				$row = array('root' => $this->_name, 'page' => $page);
+				$oldest = intval($_REQUEST['version']);
 				foreach ($p as $idx => $version) {
 					$row = array_merge($data, $row, $adata);
 					$row['view'] = Loc::lget('view');
@@ -265,13 +263,23 @@
 					$row['prew'] = intval($p[$idx + 1]);
 					$row['timestamp'] = date('d.m.Y h:i:s', $version);
 					$row['size'] = fs(filesize("$storage/$version.html"));
+					$t = '<a href="/{%root}/diff/{%page}/{%version},{%prev}" {%oldest}>{%diff}</a>';
+					$u = array();
+					foreach ($p as $v2)
+						if ($v2 < $version) {
+							$row['prev'] = $v2;
+							$row['oldest'] = ($oldest > $v2) ? ' class="diff-to-oldest"' : '';
+							$u[] = patternize($t, $row);
+						}
+
+					$row['prev'] = join(' &darr; | ', $u) . ' &darr; ';
 					echo patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
 				}
 			}
 			$uid = $this->user->ID();
 			if ($uid) {
 				$ha = $this->getAggregator(3);
-				$s = $a->dbc->select('history', '`user` = ' . $uid . ' and `page` = ' . $page, '`id` as `0`');
+				$s = $ha->dbc->select('history', '`user` = ' . $uid . ' and `page` = ' . $page, '`id` as `0`');
 				if ($s && ($r = @mysql_result($s, 0)))
 					$ha->upToDate(array(intval($r)));
 			}
