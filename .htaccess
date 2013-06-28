@@ -1,0 +1,35 @@
+<IfModule mod_rewrite.c>
+	Options +FollowSymlinks
+	RewriteEngine On
+
+	RewriteRule \.(?:css|js|html?)$ compress.php
+	RewriteRule ([^\.]+)\.(?:xml)$ api.php?action=$1
+
+	RewriteCond %{REQUEST_URI} !/theme
+	RewriteCond %{REQUEST_URI} !/thumbnails
+
+	RewriteRule \.(?:jpe?g|gif|png)$ adaptive-images.php
+
+	RewriteCond %{REQUEST_URI} !/_engine
+	RewriteCond %{REQUEST_URI} !/views
+	RewriteCond %{REQUEST_URI} !/controllers
+	RewriteCond %{REQUEST_FILENAME} -s [OR]
+	RewriteCond %{REQUEST_FILENAME} -l [OR]
+	RewriteCond %{REQUEST_FILENAME} -d
+	RewriteRule ^.*$ - [NC,L]
+
+	RewriteCond %{REQUEST_FILENAME} -l [OR]
+	RewriteCond %{REQUEST_FILENAME} -d
+	RewriteRule ^.*$ index.php [NC,L]
+
+	RewriteRule ^.*\.[^\/\\]*$ 404.php [NC,L]
+	RewriteRule ^.*$ index.php [NC,L]
+
+</IfModule>
+
+AddDefaultCharset utf-8
+
+
+AddOutputFilterByType GZIP text/css
+AddOutputFilterByType GZIP application/rss+xml
+AddOutputFilterByType GZIP application/javascript

@@ -97,7 +97,18 @@
 			}
 
 			$data['items'] = $i;
-			$rss->output($data, true);
+//			ob_start("ob_gzhandler");
+			$rss = $rss->format($data);
+			if (!intval($_REQUEST['nogzip'])) {
+				$rss = gzcompress($rss);
+				header('Content-Encoding: gzip');
+			}
+			header('Content-Type: application/rss+xml; charset=UTF-8');
+			header('Content-Length: ' . strlen($rss));
+			header('Content-Disposition: inline; filename=rss.xml');
+//			$rss = ob_get_contents();
+//			ob_end_flush();
+			die($rss);
 			return true;
 		}
 		function _404($text) {
