@@ -40,7 +40,7 @@
 
 			$s = $this->dbc->select('pages p, history h'
 			, 'p.`id` in (' . join(',', $p) . ') and p.`id` = h.`page` and h.`trace` = ' . $filter . ($traces ? '' : ' and p.`size` <> h.`size`')
-			, 'h.`id` as `0`, h.`page`, p.`description`, p.`size`, h.`size` as `size_old`, p.`time`, p.`title`');
+			, 'h.`id` as `0`, h.`page`, p.`description`, p.`size`, p.`time`, p.`title`, h.`size` as `size_old`, h.`time` as `time_old`');
 
 			$f = $this->dbc->fetchrows($s);
 			$s = array();
@@ -50,9 +50,9 @@
 			return $s;
 		}
 
-		function upToDate($idx) {
+		function upToDate($idx, $time = 0) {
 			$this->dbc->update('history` `h`, `pages` `p'
-			, 'h.`size` = p.`size`, h.`lastseen` = p.`time`, h.`time` = ' . time()
+			, 'h.`size` = p.`size`, h.`lastseen` = p.`time`, h.`time` = greatest(h.`time`, ' . ($time ? $time : time()) . ')'
 			, 'h.`id` in (' . join(',', $idx) . ') and h.`page` = p.`id`'
 			);
 		}

@@ -344,12 +344,15 @@ span.multi {
 	margin-right: 5px;
 }
 
-.diff-to-oldest {
-	background: #4d4;
+.diff-to-fresh, .diff-to-new {
+	background: #4dd;
 	border-radius: 3px;
 	margin: -1px;
 	padding: 2px;
 	color: blue;
+}
+.diff-to-fresh {
+	background: #4d4;
 }
 
 /* Grammar Nazzi */

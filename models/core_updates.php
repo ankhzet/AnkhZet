@@ -173,7 +173,6 @@
 
 		function serveQueue($limit = 1, $timeout = 0) {
 			$t = time();
-			$worker_stamp = md5(uniqid(rand(), 1));
 
 			$q = QueueAggregator::getInstance();
 			$d = $q->fetch(array('nocalc' => 1, 'desc' => 0
@@ -196,32 +195,33 @@
 					$pages = $q->dbc->fetchrows($s);
 					$left = count($pages);
 					$done = 0;
-					$time = time();
+					$worker_stamp = md5(uniqid(rand(), 1));
 					foreach ($pages as $row) {
+						$time = time();
 						$h_id = array_search($page = intval($row['id']), $u);
 						$s = $q->dbc->update(
 							$q->TBL_INSERT
-						, array('state' => $worker_stamp, 'updated' => $t)
+						, array('state' => $worker_stamp, 'updated' => $time)
 						, '`id` = ' . $h_id
 						);
 
 						echo '> U@' . $h_id . ', ID#' . $page . ': ' . $row['link'] . '...<br />';
 						$link = $row['link'];
-						$size = $c->compare($page, $row['author'] . '/' . $row['link'], $row['time']);
+						$size = $c->compare($page, $row['author'] . '/' . $row['link'], $time);
 						$s1 = $size[0];
 						$s2 = $size[1];
 						if (intval($row['size']) <> $size[2]) {
 							$pa->dbc->close(); // reconnect mysql DB (preventing "MySQL server has gone away")
 							$pa->dbc->connect();
 							$pa->dbc->open();
-							$pa->update(array('size' => $size[2]), $page);
+							$pa->update(array('size' => $size[2], 'time' => $time), $page);
 							echo '  Updated (' . $size[2] . 'KB).<br />';
 						}
+						$q->dbc->delete($q->TBL_DELETE, '`page` = ' . $page);
+						$done++;
+						if (($timeout > 0) && (time() - $t > $timeout))
+							return $left - $done;
 					}
-					$q->dbc->delete($q->TBL_DELETE, '`page` in (' . join(',', $u) . ')');
-					$done++;
-					if (($timeout > 0) && (time() - $t > $timeout))
-						return $left - $done;
 				}
 				return 0;
 			}

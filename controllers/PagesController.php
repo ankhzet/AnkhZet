@@ -45,7 +45,7 @@
 				<span class="head">{%timestamp}</span>
 				<span class="link size">{%size}</span>
 			</div>
-			<div class="text">[<a href="/{%root}/version/{%page}?action=view&version={%version}">{%view}</a> | {%prev}]</div>
+			<div class="text">[ <a href="/{%root}/version/{%page}?action=view&version={%version}">{%view}</a> | {%diff}: {%prev} ]</div>
 		</div>
 		';
 		const VERSION_PATT2 = '
@@ -238,7 +238,9 @@
 					if (is_file($storage . '/' . $entry) && ($version = intval(basename($entry, '.html'))))
 						$p[] = $version;
 
-			switch ($_REQUEST['action']) {
+			$ha = $this->getAggregator(3);
+			$uid = $this->user->ID();
+			switch ($action = $_REQUEST['action']) {
 			case 'view':
 				View::addKey('title', $alink . ' - ' . $plink . ' <span style="font-size: 80%;">[update: ' . date('d.m.Y', $version) . ']</span>');
 				$version = intval($_REQUEST['version']);
@@ -254,7 +256,9 @@
 				rsort($p);
 				$l = count($p) - 1;
 				$row = array('root' => $this->_name, 'page' => $page);
-				$oldest = intval($_REQUEST['version']);
+				if ($uid) $f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`time`'));
+				$lastseen = ($uid && $f['total']) ? intval($f['data'][0]['time']) : 0;
+				$diffopen = intval($_REQUEST['version']);
 				foreach ($p as $idx => $version) {
 					$row = array_merge($data, $row, $adata);
 					$row['view'] = Loc::lget('view');
@@ -263,25 +267,24 @@
 					$row['prew'] = intval($p[$idx + 1]);
 					$row['timestamp'] = date('d.m.Y h:i:s', $version);
 					$row['size'] = fs(filesize("$storage/$version.html"));
-					$t = '<a href="/{%root}/diff/{%page}/{%version},{%prev}" {%oldest}>{%diff}</a>';
+					$t = '<a href="/{%root}/diff/{%page}/{%version},{%prev}" {%oldest}>{%time}</a>';
 					$u = array();
 					foreach ($p as $v2)
 						if ($v2 < $version) {
 							$row['prev'] = $v2;
-							$row['oldest'] = ($oldest > $v2) ? ' class="diff-to-oldest"' : '';
+							$row['time'] = date('d.m.Y', $v2);
+							$row['oldest'] = ($v2 >= $lastseen) ? ' class="diff-to-' . (($v2 >= $diffopen) ? 'fresh' : 'new') . '"' : '';
 							$u[] = patternize($t, $row);
 						}
 
-					$row['prev'] = join(' &darr; | ', $u) . ' &darr; ';
+					$row['prev'] = count($u) ? join(' &darr; | ', $u) . ' &darr;' : '';
 					echo patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
 				}
 			}
-			$uid = $this->user->ID();
-			if ($uid) {
-				$ha = $this->getAggregator(3);
+			if ($uid && ($action == 'view')) {
 				$s = $ha->dbc->select('history', '`user` = ' . $uid . ' and `page` = ' . $page, '`id` as `0`');
 				if ($s && ($r = @mysql_result($s, 0)))
-					$ha->upToDate(array(intval($r)));
+					$ha->upToDate(array(intval($r)), intval($_REQUEST['version']));
 			}
 		}
 
@@ -315,10 +318,8 @@
 			$cur_d = date('d.m.Y', $cur);
 			View::addKey('title', $alink . ' - ' . $plink . " <span style=\"font-size: 80%;\">[$old_d <a href=\"" . ($show_old ? $cur . ',' . $old : '?showold=true') . "\">" . $d[$show_old] . "</a> $cur_d]</span>");
 
-			$cur .= '.html';
-			$old .= '.html';
-			$t1 = @file_get_contents($storage . '/' . $old);
-			$t2 = @file_get_contents($storage . '/' . $cur);
+			$t1 = @file_get_contents("$storage/{$old}.html");
+			$t2 = @file_get_contents("$storage/{$cur}.html");
 			$_t1 = @gzuncompress/**/($t1); if ($_t1 !== false) $t1 = $_t1;
 			$_t2 = @gzuncompress/**/($t2); if ($_t2 !== false) $t2 = $_t2;
 
@@ -359,6 +360,14 @@
 			View::addKey('h_old', $old);
 			View::addKey('h_new', $new);
 			$this->view->renderTPL('pages/view');
+
+			$uid = $this->user->ID();
+			if ($uid) {
+				$ha = $this->getAggregator(3);
+				$s = $ha->dbc->select('history', '`user` = ' . $uid . ' and `page` = ' . $page, '`id` as `0`');
+				if ($s && ($r = @mysql_result($s, 0)))
+					$ha->upToDate(array(intval($r)), $cur);
+			}
 		}
 
 		function prepareForGrammar($c, $cleanup = false) {
