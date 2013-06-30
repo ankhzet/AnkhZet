@@ -97,7 +97,12 @@
 		public function actionCheck($r) {
 			$id = intval($r[0]);
 			if (!$id)
-				return false;
+				throw new Exception('Author ID not specified!');
+
+			$aa = $this->getAggregator(0);
+			$d = $aa->get($id, '`id` as `0`');
+			if (intval($d[0]) != $id)
+				throw new Exception('Author not found!');
 
 			require_once 'core_updates.php';
 			$u = new AuthorWorker();
