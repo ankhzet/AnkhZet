@@ -71,6 +71,7 @@
 					$alink = $at[$author]['link'];
 					$link = $pa[$page_id]['link'];
 					$slink = str_replace('.shtml', '', $link);
+					$delta = intval($row['size']) - intval($row['size_old']);
 					$i[$page_id] = array(
 						'title' => $row['title']
 					, 'author' => $at[$author]['fio']
@@ -78,10 +79,9 @@
 					, 'link' => "{$data['link']}pages/version/{$page_id}?version={$row['time_old']}"
 					, 'samlib' => "$alink/$slink"
 					, 'pubDate' => date('r', $row['time'])
-					, 'guid' => md5("$page_id/{$row['time_old']}")
+					, 'guid' => md5($page_id . $row['time_old'] . $delta)
 					);
 
-					$delta = intval($row['size']) - intval($row['size_old']);
 					$diff = ($delta < 0) ? 'red' : 'green';
 					$i[$page_id]['description'] = array(
 						'title' => $i[$page_id]['title']

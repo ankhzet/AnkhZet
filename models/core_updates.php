@@ -95,8 +95,8 @@
 			$check = array();
 			// is there anything to check?
 			foreach ($links as $idx => &$block)
-				foreach ($block as $link => &$data)
-					if ($data[2] > 0) // size > 0 ?
+				foreach ($block as $link => &$data) //            0      1     2         3
+					if ($data[2] > 0) // size > 0 ?   // link => {group, title, size, description}
 						$check[$link] = $data;
 
 			if (count($check)) { // ok, there are smth to check
@@ -109,7 +109,7 @@
 				));
 				if ($d['total']) { // there are smth in db, check it if size diff
 					foreach ($d['data'] as $row) {
-						$data = $check[$link = $row['link']];
+						$data = $check[$link = $row['link']]; // recently parsed data about page at @link
 						unset($check[$link]); // don't check it later in this function
 
 						if (intval($row['size']) <> $data[2])
@@ -175,7 +175,7 @@
 			$t = time();
 
 			$q = QueueAggregator::getInstance();
-			$d = $q->fetch(array('nocalc' => 1, 'desc' => 0
+			$d = $q->fetch(array('desc' => 0
 			, 'filter' => '(`state` = 0) or (`state` <> 0 and `updated` < ' . ($t - QUEUE_FAILTIME) . ') limit ' . $limit
 			, 'collumns' => '`id` as `0`, `page` as `1`'
 			));
@@ -183,45 +183,46 @@
 			if ($d['total']) {
 				echo '> ' . $d['total'] . ' pages waits for update...<br />';
 				foreach ($d['data'] as $row)
-					$u[intval($row[0])] = intval($row[1]);
+					$u[intval($row[1])] = intval($row[0]);
 
 				$s = $q->dbc->select('`pages` p, `authors` a'
-				, 'p.`id` in (' . join(',', $u) . ') and p.`author` = a.`id`'
+				, 'p.`id` in (' . join(',', array_keys($u)) . ') and p.`author` = a.`id`'
 				, 'p.`id`, p.`link`, p.`size`, a.`link` as `author`, p.`time`');
+				$pages = $q->dbc->fetchrows($s);
+				$left = count($pages);
+				$done = 0;
 
-				if ($s) {
-					$c = new PageComparator();
-					$pa = PagesAggregator::getInstance();
-					$pages = $q->dbc->fetchrows($s);
-					$left = count($pages);
-					$done = 0;
-					$worker_stamp = md5(uniqid(rand(), 1));
-					foreach ($pages as $row) {
-						$time = time();
-						$h_id = array_search($page = intval($row['id']), $u);
-						$s = $q->dbc->update(
-							$q->TBL_INSERT
-						, array('state' => $worker_stamp, 'updated' => $time)
-						, '`id` = ' . $h_id
-						);
+				$c = new PageComparator();
+				$pa = PagesAggregator::getInstance();
+				$worker_stamp = md5(uniqid(rand(), 1));
+				foreach ($pages as $row) {
+					$page = intval($row['id']); // id of Page
+					$q_id = $u[$page]; // id of Queue row
+					$time = time();
+					$s = $q->dbc->update(
+						$q->TBL_INSERT
+					, array('state' => $worker_stamp, 'updated' => $time)
+					, '`id` = ' . $q_id
+					);
 
-						echo '> U@' . $h_id . ', ID#' . $page . ': ' . $row['link'] . '...<br />';
-						$link = $row['link'];
-						$size = $c->compare($page, $row['author'] . '/' . $row['link'], $time);
-						$s1 = $size[0];
-						$s2 = $size[1];
-						if (intval($row['size']) <> $size[2]) {
-							$pa->dbc->close(); // reconnect mysql DB (preventing "MySQL server has gone away")
-							$pa->dbc->connect();
-							$pa->dbc->open();
-							$pa->update(array('size' => $size[2], 'time' => $time), $page);
-							echo '  Updated (' . $size[2] . 'KB).<br />';
-						}
-						$q->dbc->delete($q->TBL_DELETE, '`page` = ' . $page);
-						$done++;
-						if (($timeout > 0) && (time() - $t > $timeout))
-							return $left - $done;
+					echo "&gt; U@{$q_id}, ID#{$page}: {$row['link']}...<br />";
+					$size = $c->compare($page, "{$row['author']}/{$row['link']}", $time);
+
+					/* reconnect mysql DB (preventing "MySQL server has gone away") */
+					$pa->dbc->close();
+					$pa->dbc->connect();
+					$pa->dbc->open();
+					/* - */
+
+					if (intval($row['size']) <> ($size = intval($size[2]))) {
+						$pa->update(array('size' => $size, 'time' => $time), $page);
+						echo " &nbsp;save to [/cache/pages/$page/$time.html]...<br />";
+						echo ' &nbsp;updated (' . $size . 'KB).<br />';
 					}
+					$q->dbc->delete($q->TBL_DELETE, '`page` = ' . $page);
+					$done++;
+					if (($timeout > 0) && (time() - $t > $timeout))
+						return $left - $done;
 				}
 				return 0;
 			}

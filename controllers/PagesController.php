@@ -129,8 +129,10 @@
 			$a = $g->get($row['author'], '`fio`, `link`');
 			$this->author_fio = $a['fio'] ? $a['fio'] : '&lt;author&gt;';
 			$this->author_link = $a['link'];
+			$page = intval($row['id']);
+			$version = intval($row['utime']);
 
-			View::addKey('title', '<a href="/authors/id/' . $row['author'] . '">' . $this->author_fio . '</a> - <a href="/pages/version/' . $row['id'] . '">' . $row['title'] . '</a>');
+			View::addKey('title', "<a href=\"/authors/id/{$row['author']}\">{$this->author_fio}</a> - <a href=\"/pages/version/{$page}\">{$row['title']}</a>");
 			html_escape($row, array('author', 'link'));
 			$row['date'] = Loc::lget('date');
 			$row['original'] = Loc::lget('original');
@@ -149,69 +151,8 @@
 			View::addKey('grammar', $this->fetchGrammarSuggestions(intval($row['id'])));
 			View::addKey('preview', $row['content']);
 			$this->view->renderTPL('pages/view');
+			$this->updateTrace($page, $version);
 			return '';//patternize($this->ID_PATTERN, $row);
-		}
-
-		function actionCleanup($r) {
-			$save = intval($r[0]) ? intval($r[0]) : 3;
-			$save = max(2, $save);
-			$force = intval($_REQUEST['force']);
-			$dir = SUB_DOMEN . '/cache/pages';
-			$d = @dir($dir);
-			$p = array();
-			if ($d)
-				while (($entry = $d->read()) !== false)
-					if (($entry != '.') && ($entry != '..'))
-						if (intval($entry) && is_dir("$dir/$entry"))
-							$p[] = $entry;
-
-			$msg = '';
-			$s = 0;
-			$pa = $this->getAggregator();
-			$aa = $this->getAggregator(1);
-			foreach ($p as $page_id) {
-				$cache = "$dir/$page_id";
-				$d = @dir($cache);
-				$c = array();
-				$o = 0;
-				$v = 0;
-				if ($d)
-					while (($entry = $d->read()) !== false)
-						if (intval($entry) && is_file("$cache/$entry")) {
-							$c[$v++] = intval($entry);
-							$o += filesize("$cache/$entry");
-						}
-
-				$g = $pa->get($page_id, '`title`, `author`');
-				$a = $aa->get(intval($g['author']), '`fio`');
-
-				if (count($c) > $save) {
-					rsort($c);
-					$c = array_slice($c, $save);
-					$t = 0;
-					foreach ($c as $version) {
-						$t += @filesize("$cache/$version.html");
-						if ($force)
-							@unlink("$cache/$version.html");
-					}
-					$s += $t;
-					$data = array(
-						'id' => $page_id
-					, 'author:id' => $g['author']
-					, 'author' => $a['fio']
-					, 'title' => $g['title']
-					, 'size' => fs($o)
-					, 'versions' => $v
-					, 'delete' => $v - $save
-					, 'free' => fs($t)
-					);
-					$msg .= patternize(Loc::lget('cleanup'), $data);
-				}
-			}
-			$data = array('delete' => fs($s));
-			$req = patternize($force ? Loc::lget('deleted') : Loc::lget('do_delete'), $data);
-			echo $msg . '<br />' . $req;
-			View::renderMessage($req, View::MSG_INFO);
 		}
 
 		function actionVersion($r) {
@@ -252,13 +193,17 @@
 				View::addKey('grammar', $this->fetchGrammarSuggestions($page));
 				$this->view->renderTPL('pages/view');
 			default:
-				View::addKey('title', $alink . ' - ' . $plink);
 				rsort($p);
 				$l = count($p) - 1;
 				$row = array('root' => $this->_name, 'page' => $page);
 				if ($uid) $f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`time`'));
 				$lastseen = ($uid && $f['total']) ? intval($f['data'][0]['time']) : 0;
-				$diffopen = intval($_REQUEST['version']);
+				$diffopen = ($v = intval($_REQUEST['version'])) ? $v : $lastseen;
+				$newest = $p[0];
+				$oldest = $p[count($p) - 1];
+				$ldate = date('d.m.Y', $newest);
+				$full = Loc::lget('full_last_version');
+				View::addKey('title', "$alink - $plink <span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>");
 				foreach ($p as $idx => $version) {
 					$row = array_merge($data, $row, $adata);
 					$row['view'] = Loc::lget('view');
@@ -273,7 +218,8 @@
 						if ($v2 < $version) {
 							$row['prev'] = $v2;
 							$row['time'] = date('d.m.Y', $v2);
-							$row['oldest'] = ($v2 >= $lastseen) ? ' class="diff-to-' . (($v2 >= $diffopen) ? 'fresh' : 'new') . '"' : '';
+							$fresh = ($v2 >= $diffopen) ? 'fresh' : 'new';
+							$row['oldest'] = ($v2 >= $lastseen) ? " class=\"diff-to-{$fresh}\"" : '';
 							$u[] = patternize($t, $row);
 						}
 
@@ -281,10 +227,17 @@
 					echo patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
 				}
 			}
-			if ($uid && ($action == 'view')) {
-				$s = $ha->dbc->select('history', '`user` = ' . $uid . ' and `page` = ' . $page, '`id` as `0`');
+
+			if ($action == 'view')
+				$this->updateTrace($page, intval($_REQUEST['version']));
+		}
+
+		function updateTrace($page_id, $version) {
+			if ($uid = $this->user->ID()) {
+				$ha = $this->getAggregator(3);
+				$s = $ha->dbc->select('history', '`user` = ' . $uid . ' and `page` = ' . $page_id, '`id` as `0`');
 				if ($s && ($r = @mysql_result($s, 0)))
-					$ha->upToDate(array(intval($r)), intval($_REQUEST['version']));
+					$ha->upToDate(array(intval($r)), $version);
 			}
 		}
 
@@ -361,18 +314,13 @@
 			View::addKey('h_new', $new);
 			$this->view->renderTPL('pages/view');
 
-			$uid = $this->user->ID();
-			if ($uid) {
-				$ha = $this->getAggregator(3);
-				$s = $ha->dbc->select('history', '`user` = ' . $uid . ' and `page` = ' . $page, '`id` as `0`');
-				if ($s && ($r = @mysql_result($s, 0)))
-					$ha->upToDate(array(intval($r)), $cur);
-			}
+			$this->updateTrace($page, $cur);
 		}
 
 		function prepareForGrammar($c, $cleanup = false) {
 			if ($cleanup) {
 				$c = strip_tags($c, '<dd><p><br><u><b><i><s>');
+				$c = preg_replace('"<p([^>]*)?>(.*?)<dd>"i', '<p\1>\2</p><dd>', $c);
 				$c = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $c);
 				$c = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $c);
 			} else
@@ -423,6 +371,69 @@
 			}
 			return '';
 		}
+
+		function actionCleanup($r) {
+			$save = intval($r[0]) ? intval($r[0]) : 3;
+			$save = max(2, $save);
+			$force = intval($_REQUEST['force']);
+			$dir = SUB_DOMEN . '/cache/pages';
+			$d = @dir($dir);
+			$p = array();
+			if ($d)
+				while (($entry = $d->read()) !== false)
+					if (($entry != '.') && ($entry != '..'))
+						if (intval($entry) && is_dir("$dir/$entry"))
+							$p[] = $entry;
+
+			$msg = '';
+			$s = 0;
+			$pa = $this->getAggregator();
+			$aa = $this->getAggregator(1);
+			foreach ($p as $page_id) {
+				$cache = "$dir/$page_id";
+				$d = @dir($cache);
+				$c = array();
+				$o = 0;
+				$v = 0;
+				if ($d)
+					while (($entry = $d->read()) !== false)
+						if (intval($entry) && is_file("$cache/$entry")) {
+							$c[$v++] = intval($entry);
+							$o += filesize("$cache/$entry");
+						}
+
+				$g = $pa->get($page_id, '`title`, `author`');
+				$a = $aa->get(intval($g['author']), '`fio`');
+
+				if (count($c) > $save) {
+					rsort($c);
+					$c = array_slice($c, $save);
+					$t = 0;
+					foreach ($c as $version) {
+						$t += @filesize("$cache/$version.html");
+						if ($force)
+							@unlink("$cache/$version.html");
+					}
+					$s += $t;
+					$data = array(
+						'id' => $page_id
+					, 'author:id' => $g['author']
+					, 'author' => $a['fio']
+					, 'title' => $g['title']
+					, 'size' => fs($o)
+					, 'versions' => $v
+					, 'delete' => $v - $save
+					, 'free' => fs($t)
+					);
+					$msg .= patternize(Loc::lget('cleanup'), $data);
+				}
+			}
+			$data = array('delete' => fs($s));
+			$req = patternize($force ? Loc::lget('deleted') : Loc::lget('do_delete'), $data);
+			echo $msg . '<br />' . $req;
+			View::renderMessage($req, View::MSG_INFO);
+		}
+
 	}
 
 ?>

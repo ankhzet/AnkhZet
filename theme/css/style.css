@@ -418,3 +418,12 @@ span.multi {
 	display: block;
 }
 
+.grammar-hint {
+	float: right;
+	font-size: 70%;
+	color: #888;
+}
+
+.uri-pages-id .grammar-hint {
+	display: none;
+}

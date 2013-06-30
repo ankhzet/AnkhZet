@@ -54,7 +54,7 @@
 			$this->dbc->update('history` `h`, `pages` `p'
 			, 'h.`size` = p.`size`, h.`lastseen` = p.`time`, h.`time` = greatest(h.`time`, ' . ($time ? $time : time()) . ')'
 			, 'h.`id` in (' . join(',', $idx) . ') and h.`page` = p.`id`'
-			);
+			, true);
 		}
 
 		function markTrace($idx, $trace = 0) {
@@ -65,7 +65,7 @@
 		}
 
 		function authorsToUpdate($uid, $force = 0) {
-			$t = time() - ($force ? 60 : 60 * 30); // 30 minutes
+			$t = time() - ($force ? 5 : 60 * 30); // 30 minutes
 			if ($uid)
 				$s = $this->dbc->select('`history` h, `pages` p, `authors` a'
 				, 'h.`user` = ' . $uid . ' and h.`trace` = 1 and h.`page` = p.`id` and a.`id` = p.`author` and a.`time` < ' . $t . ' group by a.`id`'
@@ -115,4 +115,4 @@
 		}
 
 	}
-?>
+

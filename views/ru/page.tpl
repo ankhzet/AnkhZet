@@ -27,7 +27,7 @@
 		</div>
 	</div>
 	<div id="content">
-		<div class="content">
+		<div class="content uri-{%page%}">
 {%patt:ustatic%}
 		</div>
 	</div>
