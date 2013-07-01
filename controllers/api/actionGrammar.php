@@ -5,6 +5,18 @@
 		function execute($params) {
 			$ga = GrammarAggregator::getInstance();
 			$uid = User::get()->ID();
+			if (intval($params['delete'])) {
+				if (User::ACL() >= ACL::ACL_MODER) {
+					$id = intval($params['id']);
+					if ($id && $ga->delete($id))
+						JSON_Result(JSON_Ok);
+					else
+						JSON_Result(JSON_Fail, 'deletion failed');
+				} else
+					JSON_Result(JSON_Fail, 'access forbidden');
+				return true;
+			}
+
 			$page = intval($params['page']);
 			$zone = preg_replace('"[^\w\d:,/\?\&=]"', '', $params['zone']);
 			$range = preg_replace('/[^\d:,]/', '', $params['range']);

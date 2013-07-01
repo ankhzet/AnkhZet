@@ -20,6 +20,10 @@ a:hover {
 	color: #359;
 	text-decoration: none;
 }
+a.button {
+	z-index: 100;
+	position: relative;
+}
 p {
 	margin: 0 0 18px
 }
