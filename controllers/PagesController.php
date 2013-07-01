@@ -35,7 +35,7 @@
 							{%description}
 						</div>
 						<div class="text">
-							<a href="/{%root}/version/{%id}">{%versions}</a>{%group}
+							<a href="/{%root}/version/{%id}">{%versions}</a> | <a href="/updates/trace/{%author}/{%id}">{%trace}</a>{%group}
 						</div>
 					</div>
 ';
@@ -109,6 +109,7 @@
 			html_escape($row, array('link'));
 
 			$row['versions'] = Loc::lget('versions');
+			$row['trace'] = Loc::lget('trace');
 			$row['fio'] = $this->author_fio;
 			$row['autolink'] = $this->author_link;
 
@@ -196,36 +197,44 @@
 				rsort($p);
 				$l = count($p) - 1;
 				$row = array('root' => $this->_name, 'page' => $page);
-				if ($uid) $f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`time`'));
-				$lastseen = ($uid && $f['total']) ? intval($f['data'][0]['time']) : 0;
-				$diffopen = ($v = intval($_REQUEST['version'])) ? $v : $lastseen;
 				$newest = $p[0];
 				$oldest = $p[count($p) - 1];
+
+				if ($uid) $f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`time`'));
+				$lastseen = ($uid && $f['total']) ? intval($f['data'][0]['time']) : intval($_COOKIE["ls_{$page}"]);
+				$lastseen = $lastseen ? $lastseen : $newest;
+
+				$diffopen = ($v = intval($_REQUEST['version'])) ? $v : $lastseen;
+
 				$ldate = date('d.m.Y', $newest);
 				$full = Loc::lget('full_last_version');
-				View::addKey('title', "$alink - $plink <span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>");
-				foreach ($p as $idx => $version) {
-					$row = array_merge($data, $row, $adata);
-					$row['view'] = Loc::lget('view');
-					$row['diff'] = Loc::lget('diff');
-					$row['version'] = $version;
-					$row['prew'] = intval($p[$idx + 1]);
-					$row['timestamp'] = date('d.m.Y h:i:s', $version);
-					$row['size'] = fs(filesize("$storage/$version.html"));
-					$t = '<a href="/{%root}/diff/{%page}/{%version},{%prev}" {%oldest}>{%time}</a>';
-					$u = array();
-					foreach ($p as $v2)
-						if ($v2 < $version) {
-							$row['prev'] = $v2;
-							$row['time'] = date('d.m.Y', $v2);
-							$fresh = ($v2 >= $diffopen) ? 'fresh' : 'new';
-							$row['oldest'] = ($v2 >= $lastseen) ? " class=\"diff-to-{$fresh}\"" : '';
-							$u[] = patternize($t, $row);
-						}
+				$last = $newest ? "<span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>" : '';
+				View::addKey('title', "$alink - $plink{$last}");
+				if ($l >= 0)
+					foreach ($p as $idx => $version) {
+						$row = array_merge($data, $row, $adata);
+						$row['view'] = Loc::lget('view');
+						$row['diff'] = Loc::lget('diff');
+						$row['version'] = $version;
+						$row['prew'] = intval($p[$idx + 1]);
+						$row['timestamp'] = date('d.m.Y h:i:s', $version);
+						$row['size'] = fs(filesize("$storage/$version.html"));
+						$t = '<a href="/{%root}/diff/{%page}/{%version},{%prev}" {%oldest}>{%time}</a>';
+						$u = array();
+						foreach ($p as $v2)
+							if ($v2 < $version) {
+								$row['prev'] = $v2;
+								$row['time'] = date('d.m.Y', $v2);
+								$fresh = ($v2 >= $diffopen) ? 'fresh' : 'new';
+								$row['oldest'] = ($v2 >= $lastseen) ? " class=\"diff-to-{$fresh}\"" : '';
+								$u[] = patternize($t, $row);
+							}
 
-					$row['prev'] = count($u) ? join(' &darr; | ', $u) . ' &darr;' : '';
-					echo patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
-				}
+						$row['prev'] = count($u) ? '&rarr; ' . join(' | &rarr; ', $u) . ' ' : '';
+						echo patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
+					}
+				else
+					echo Loc::lget('pages_noversions');
 			}
 
 			if ($action == 'view')
@@ -238,6 +247,11 @@
 				$s = $ha->dbc->select('history', '`user` = ' . $uid . ' and `page` = ' . $page_id, '`id` as `0`');
 				if ($s && ($r = @mysql_result($s, 0)))
 					$ha->upToDate(array(intval($r)), $version);
+			} else {
+				$t = time() + 2592000;
+				preg_match('/(.*\.|^)([^\.]+\.[^\.]+)$/i', $_SERVER['HTTP_HOST'], $m);
+				$m = '.' . $m[2];
+				setcookie("ls_{$page_id}", max(intval($_COOKIE["ls_{$page_id}"]), $version), $t, "/", $m);
 			}
 		}
 

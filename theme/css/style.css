@@ -33,6 +33,11 @@ input {
 	vertical-align: middle;
 }
 
+sub, sup {
+	font-size: 9px;
+	line-height: 1px;
+}
+
 li {
 	list-style: none;
 }

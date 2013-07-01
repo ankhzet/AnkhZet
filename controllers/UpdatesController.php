@@ -122,9 +122,9 @@
 				$n = join($this->LIST_JOINER, $n);
 			}
 
-			if ($last > 1) $this->view->pages = '<ul class="pages">'
+			$this->view->pages = '<ul class="pages">'
 			. '<li style="float: left; margin: 0 -100% 0 5px; position: relative;"><input type=checkbox class="multi-check" /> С отмеченными: <a href="javascript:void(0)" alt="/updates/uptodate" class="multi link">Прочитано</a> | <a href="javascript:void(0)" alt="/updates/hide" confirm="1" class="multi link">Не отслеживать</a></li>'
-			. PHP_EOL . $aggregator->generatePageList($page, $last, $this->_name . '/', $this->link) . '</ul>' . PHP_EOL;
+			. PHP_EOL . (($last > 1) ? $aggregator->generatePageList($page, $last, $this->_name . '/', $this->link) : '<li>&nbsp;</li>') . '</ul>' . PHP_EOL;
 
 			$this->view->data = $n ? ($this->USE_UL_WRAPPER ? '<ul class="' . $this->_name . '">' . PHP_EOL . $n . PHP_EOL . '</ul>' : $n) : Loc::lget($this->_name . '_nodata');
 			$this->view->renderTPL($this->_name . '/index');
@@ -155,15 +155,16 @@
 				$idx[] = intval($id);
 
 			$ha = $this->getAggregator(0);
-			$ha->markTrace($idx, !intval($_REQUEST['traced']));
+			$ha->markTrace($idx, intval(!intval($_REQUEST['traced'])));
 			if ($_REQUEST['silent']) die();
 			locate_to('/' . $this->_name);
 		}
 
 		public function actionTrace($r) {
-			$ha = $this->getAggregator(0);
 			$uid = $this->user->ID();
+			$ha = $this->getAggregator(0);
 			$aid = intval($r[0]);
+			$pid = intval($r[1]);
 			$a = array();
 			if (!$aid) {
 				$s = $ha->dbc->select('`history` h, `pages` p', "h.`user` = $uid and h.`page` = p.`id` group by p.`author`", 'p.`author` as `0`');
@@ -174,7 +175,7 @@
 
 			$p = array();
 			foreach ($a as $author) {
-				$added = $ha->traceNew($author, $uid);
+				$added = $ha->traceNew($author, $uid, $pid);
 
 				if (count($added)) {
 					$pa = $this->getAggregator(2);

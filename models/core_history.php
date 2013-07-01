@@ -84,8 +84,8 @@
 			return $a;
 		}
 
-		function tracePages($author) {
-			$s = $this->dbc->select('`pages`', '`author` = ' . $author, '`id` as `0`');
+		function tracePages($author, $page = 0) {
+			$s = $this->dbc->select('`pages`', (!$page) ? "`author` = $author" : "`id` = $page", '`id` as `0`');
 			$idx = array(); // author pages
 			if ($s) {
 				$f = $this->dbc->fetchrows($s);
@@ -95,8 +95,8 @@
 			return $idx;
 		}
 
-		function traceNew($author, $uid) {
-			$idx = $this->tracePages($author);
+		function traceNew($author, $uid, $page = 0) {
+			$idx = $this->tracePages($author, $page);
 			$p = array(); // traced pages
 			$d = $this->fetch(array('nocalc' => 1, 'desc' => 0, 'filter' => '`user` = ' . $uid, 'collumns' => '`page` as `0`'));
 			if ($d['total'])

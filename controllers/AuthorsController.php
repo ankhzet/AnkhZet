@@ -37,7 +37,7 @@
 						<span class="link samlib"><a href="http://samlib.ru/{%link}">/{%link}</a></span>
 					</div>
 					<div class="text">{%moder}
-						<a href="/pages?author={%id}">{%pages}</a> <a href="/{%root}/id/{%id}">{%detail}</a>
+						[ <a href="/pages?author={%id}">{%pages}</a> | <a href="/{%root}/id/{%id}">{%detail}</a> ]
 					</div>
 				</div>
 ';

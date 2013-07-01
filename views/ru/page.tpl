@@ -7,7 +7,7 @@
 <?php
 	if ($uid = User::get()->ID()) {
 ?>
-	<link href="/api.php?action=rss&channel=<?=$uid?>" type="application/rss+xml" rel="alternate" title="RSS Feed">
+	<link href="/rss.xml?channel=<?=$uid?>" type="application/rss+xml" rel="alternate" title="RSS Feed">
 <?php } ?>
 	<link rel="stylesheet" href="/theme/css/style.css" type="text/css" media="screen, projection" />
 	<link rel="stylesheet" href="/theme/css/upd.css" type="text/css" media="screen, projection" />
