@@ -57,7 +57,8 @@
 				if (!($entry && count($entry)))
 					throw new Exception('Entry not found');
 
-				$entry[time] = date('d.m.Y', intval($entry[time]));
+				$entry['utime'] = ($utime = intval($entry['time']));
+				$entry['time'] = date('d.m.Y', $utime);
 				$entry[root] = $this->_name;
 
 				if ($this->userModer) {
@@ -103,7 +104,8 @@
 				$i = 0;
 				foreach($this->data['data'] as &$row) {
 					$row['root'] = $this->_name;
-					$row['time'] = date('d.m.Y', intval($row[time]));
+					$row['utime'] = ($utime = intval($row['time']));
+					$row['time'] = date('d.m.Y', $utime);
 					$row['page'] = $page;
 					if ($moder) {
 						$row['edit'] = Loc::lget('edit');

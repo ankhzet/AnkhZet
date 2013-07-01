@@ -35,7 +35,7 @@
 							{%description}
 						</div>
 						<div class="text">
-							<a href="/{%root}/version/{%id}">{%versions}</a>{%group}
+							<a href="/{%root}/version/{%id}">{%versions}</a> | <a href="/updates/trace/{%author}/{%id}">{%trace}</a>{%group}
 						</div>
 					</div>
 ';
@@ -45,10 +45,7 @@
 				<span class="head">{%timestamp}</span>
 				<span class="link size">{%size}</span>
 			</div>
-			<div class="text">[
-				<a href="/{%root}/version/{%page}?action=view&version={%version}">{%view}</a> |
-				<a href="/{%root}/diff/{%page}/{%version},{%prew}"{%last}>{%diff}</a> &darr;
-			]</div>
+			<div class="text">[ <a href="/{%root}/version/{%page}?action=view&version={%version}">{%view}</a> | {%diff}: {%prev} ]</div>
 		</div>
 		';
 		const VERSION_PATT2 = '
@@ -112,6 +109,7 @@
 			html_escape($row, array('link'));
 
 			$row['versions'] = Loc::lget('versions');
+			$row['trace'] = Loc::lget('trace');
 			$row['fio'] = $this->author_fio;
 			$row['autolink'] = $this->author_link;
 
@@ -132,8 +130,10 @@
 			$a = $g->get($row['author'], '`fio`, `link`');
 			$this->author_fio = $a['fio'] ? $a['fio'] : '&lt;author&gt;';
 			$this->author_link = $a['link'];
+			$page = intval($row['id']);
+			$version = intval($row['utime']);
 
-			View::addKey('title', '<a href="/authors/id/' . $row['author'] . '">' . $this->author_fio . '</a> - <a href="/pages/version/' . $row['id'] . '">' . $row['title'] . '</a>');
+			View::addKey('title', "<a href=\"/authors/id/{$row['author']}\">{$this->author_fio}</a> - <a href=\"/pages/version/{$page}\">{$row['title']}</a>");
 			html_escape($row, array('author', 'link'));
 			$row['date'] = Loc::lget('date');
 			$row['original'] = Loc::lget('original');
@@ -152,7 +152,238 @@
 			View::addKey('grammar', $this->fetchGrammarSuggestions(intval($row['id'])));
 			View::addKey('preview', $row['content']);
 			$this->view->renderTPL('pages/view');
+			$this->updateTrace($page, $version);
 			return '';//patternize($this->ID_PATTERN, $row);
+		}
+
+		function actionVersion($r) {
+			$page = intval($r[0]);
+			if (!$page)
+				throw new Exception('Page ID not specified!');
+
+			$a = $this->getAggregator(0);
+			$data = $a->get($page, '`id`, `title`, `author`');
+
+			if (!$data['id'])
+				throw new Exception('Page not found!');
+
+			$aa = $this->getAggregator(1);
+			$adata = $aa->get(intval($data['author']), '`fio`');
+			$alink = "<a href=\"/authors/id/{$data['author']}\">{$adata['fio']}</a>";
+			$plink = "<a href=\"/pages/version/{$page}\">{$data['title']}</a>";
+
+			$storage = SUB_DOMEN . '/cache/pages/' . $page;
+			$p = array();
+			$d = @dir($storage);
+			if ($d)
+				while (($entry = $d->read()) !== false)
+					if (is_file($storage . '/' . $entry) && ($version = intval(basename($entry, '.html'))))
+						$p[] = $version;
+
+			$ha = $this->getAggregator(3);
+			$uid = $this->user->ID();
+			switch ($action = $_REQUEST['action']) {
+			case 'view':
+				View::addKey('title', $alink . ' - ' . $plink . ' <span style="font-size: 80%;">[update: ' . date('d.m.Y', $version) . ']</span>');
+				$version = intval($_REQUEST['version']);
+				$cnt = @file_get_contents("$storage/$version.html");
+				$cnt1 = @gzuncompress/**/($cnt);
+				if ($cnt1 !== false) $cnt = $cnt1;
+				$cnt = $this->prepareForGrammar($cnt, true);
+				View::addKey('preview', mb_convert_encoding($cnt, 'UTF-8', 'CP1251'));
+				View::addKey('grammar', $this->fetchGrammarSuggestions($page));
+				$this->view->renderTPL('pages/view');
+			default:
+				rsort($p);
+				$l = count($p) - 1;
+				$row = array('root' => $this->_name, 'page' => $page);
+				$newest = $p[0];
+				$oldest = $p[count($p) - 1];
+
+				if ($uid) $f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`time`'));
+				$lastseen = ($uid && $f['total']) ? intval($f['data'][0]['time']) : intval($_COOKIE["ls_{$page}"]);
+				$lastseen = $lastseen ? $lastseen : $newest;
+
+				$diffopen = ($v = intval($_REQUEST['version'])) ? $v : $lastseen;
+
+				$ldate = date('d.m.Y', $newest);
+				$full = Loc::lget('full_last_version');
+				$last = $newest ? "<span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>" : '';
+				View::addKey('title', "$alink - $plink{$last}");
+				if ($l >= 0)
+					foreach ($p as $idx => $version) {
+						$row = array_merge($data, $row, $adata);
+						$row['view'] = Loc::lget('view');
+						$row['diff'] = Loc::lget('diff');
+						$row['version'] = $version;
+						$row['prew'] = intval($p[$idx + 1]);
+						$row['timestamp'] = date('d.m.Y h:i:s', $version);
+						$row['size'] = fs(filesize("$storage/$version.html"));
+						$t = '<a href="/{%root}/diff/{%page}/{%version},{%prev}" {%oldest}>{%time}</a>';
+						$u = array();
+						foreach ($p as $v2)
+							if ($v2 < $version) {
+								$row['prev'] = $v2;
+								$row['time'] = date('d.m.Y', $v2);
+								$fresh = ($v2 >= $diffopen) ? 'fresh' : 'new';
+								$row['oldest'] = ($v2 >= $lastseen) ? " class=\"diff-to-{$fresh}\"" : '';
+								$u[] = patternize($t, $row);
+							}
+
+						$row['prev'] = count($u) ? '&rarr; ' . join(' | &rarr; ', $u) . ' ' : '';
+						echo patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
+					}
+				else
+					echo Loc::lget('pages_noversions');
+			}
+
+			if ($action == 'view')
+				$this->updateTrace($page, intval($_REQUEST['version']));
+		}
+
+		function updateTrace($page_id, $version) {
+			if ($uid = $this->user->ID()) {
+				$ha = $this->getAggregator(3);
+				$s = $ha->dbc->select('history', '`user` = ' . $uid . ' and `page` = ' . $page_id, '`id` as `0`');
+				if ($s && ($r = @mysql_result($s, 0)))
+					$ha->upToDate(array(intval($r)), $version);
+			} else {
+				$t = time() + 2592000;
+				preg_match('/(.*\.|^)([^\.]+\.[^\.]+)$/i', $_SERVER['HTTP_HOST'], $m);
+				$m = '.' . $m[2];
+				setcookie("ls_{$page_id}", max(intval($_COOKIE["ls_{$page_id}"]), $version), $t, "/", $m);
+			}
+		}
+
+		public function actionDiff($r) {
+			$page = intval($r[0]);
+			if (!$page)
+				throw new Exception('Page ID not specified!');
+
+			$a = $this->getAggregator(0);
+			$data = $a->get($page, '`id`, `title`, `author`');
+			if ($data['id'] != $page)
+				throw new Exception('Resource not found o__O');
+
+			$u = explode(',', $r[1]);
+			$cur= intval($u[0]);
+			$old= intval($u[1]);
+
+			if (!($cur * $old))
+				throw new Exception('Old or current version not found');
+
+			$storage = SUB_DOMEN . '/cache/pages/' . $page;
+
+
+			$d = array(false => '=&gt;', true => '&lt;=');
+			$show_old = $_REQUEST['showold'] == 'true';
+			$aa = $this->getAggregator(1);
+			$adata = $aa->get(intval($data['author']), '`fio`');
+			$alink = "<a href=\"/authors/id/{$data['author']}\">{$adata['fio']}</a>";
+			$plink = "<a href=\"/pages/version/{$page}\">{$data['title']}</a>";
+			$old_d = date('d.m.Y', $old);
+			$cur_d = date('d.m.Y', $cur);
+			View::addKey('title', $alink . ' - ' . $plink . " <span style=\"font-size: 80%;\">[$old_d <a href=\"" . ($show_old ? $cur . ',' . $old : '?showold=true') . "\">" . $d[$show_old] . "</a> $cur_d]</span>");
+
+			$t1 = @file_get_contents("$storage/{$old}.html");
+			$t2 = @file_get_contents("$storage/{$cur}.html");
+			$_t1 = @gzuncompress/**/($t1); if ($_t1 !== false) $t1 = $_t1;
+			$_t2 = @gzuncompress/**/($t2); if ($_t2 !== false) $t2 = $_t2;
+
+
+			$t1 = trim(str_replace(array("\r", "\n"), '', $t1));
+			$t1 = strip_tags($t1, '<dd><p><br><u><i><s>');
+			$t1 = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $t1);
+			$t1 = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $t1);
+
+			$t2 = trim(str_replace(array("\r", "\n"), '', $t2));
+			$t2 = strip_tags($t2, '<dd><p><br><u><i><s>');
+			$t2 = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $t2);
+			$t2 = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $t2);
+
+//			$t1 = preg_replace('"<([^>]+)>((<br\s*/>|\s)*)</\1>"', '\2', $t1);
+//			$t1 = preg_replace('"</([^>]+)>((<br\s*/>|\s|\&nbsp;)*)?<\1>"i', '\2', $t1);
+//			$t2 = preg_replace('"<([^>]+)>((<br\s*/>|\s)*)</\1>"', '\2', $t2);
+//			$t2 = preg_replace('"</([^>]+)>((<br\s*/>|\s|\&nbsp;)*)?<\1>"i', '\2', $t2);
+//			@ob_end_flush();
+//			@ob_end_flush();
+			require_once 'core_diff.php';
+			define('PHP_EOL', "\n");
+			ob_start();
+//			echo '<pre>';
+			$io = new DiffIO(1024);
+			$io->show_new = !$show_old;
+			$db = new DiffBuilder($io);
+			$h = $db->diff($t1, $t2);//, intval($_REQUEST['notdeep']) ? $db->DIFF_TEXT_SPLITTERS2 : $db->DIFF_TEXT_SPLITTERS);
+			$c = ob_get_contents();
+			ob_end_clean();
+
+			$c = $this->prepareForGrammar($c);
+
+			$old = str_replace(PHP_EOL, '<br />', join('", "', $h[0]));
+			$new = str_replace(PHP_EOL, '<br />', join('", "', $h[1]));
+			View::addKey('grammar', $this->fetchGrammarSuggestions($page));
+			View::addKey('preview', $c);
+			View::addKey('h_old', $old);
+			View::addKey('h_new', $new);
+			$this->view->renderTPL('pages/view');
+
+			$this->updateTrace($page, $cur);
+		}
+
+		function prepareForGrammar($c, $cleanup = false) {
+			if ($cleanup) {
+				$c = strip_tags($c, '<dd><p><br><u><b><i><s>');
+				$c = preg_replace('"<p([^>]*)?>(.*?)<dd>"i', '<p\1>\2</p><dd>', $c);
+				$c = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $c);
+				$c = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $c);
+			} else
+				$c = str_replace('<br />', PHP_EOL, $c);
+
+			$c = preg_replace('"<([^>]+)>(\s*)</\1>"', '\2', $c);
+			$c = preg_replace('"</([^>]+)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
+			$idx = 0;
+			$p = 0;
+			while (preg_match('"<(([\w]+)([^>/]*))>"', substr($c, $p), $m, PREG_OFFSET_CAPTURE)) {
+				$p += intval($m[0][1]);
+				$sub = $m[0][0];
+				if (strpos($sub, 'class="pin"') === false) {
+					$idx++;
+					$tag = $m[2][0];
+					$attr = $m[3][0];
+					$u = "<$tag node=\"$idx\"$attr>";
+					$c = substr_replace($c, $u, $p, strlen($sub));
+					$p += strlen($u);
+				} else
+					$p += strlen($sub);
+			}
+			return str_replace(PHP_EOL, '<br />', $c);
+		}
+
+		function fetchGrammarSuggestions($page, $approved = 1) {
+			$zone = str_replace("/{$this->_name}/", '', $_SERVER['REQUEST_URI']);
+			$ga = $this->getAggregator(4);
+			$d = $ga->fetch(array('nocalc' => true, 'desc' => 0
+			, 'filter' => "`page` = $page and `zone` = '$zone'"// and `approved`"
+			, 'collumns' => '`id`, `user`, `range`, `replacement`'
+			));
+			if ($d['total']) {
+				$r = array();
+				foreach ($d['data'] as &$row)
+					$r[$row['range']][] = $row;
+
+				foreach ($r as $range => $data) {
+					$j = array();
+					foreach ($data as $row) {
+						$row['replacement'] = str_replace(array("\n", "\r", '"'), array('<br />\\n', '', '&quot;'), $row['replacement']);
+						$j[] = patternize('{"i": {%id}, "u": {%user}, "r": "{%replacement}"}', $row);
+					}
+					$r[$range] = '{"range": "' . $range . '", "suggestions": [' . join(',', $j) . ']}';
+				}
+				$grammar = join(',', $r);
+				return $grammar;
+			}
+			return '';
 		}
 
 		function actionCleanup($r) {
@@ -217,195 +448,6 @@
 			View::renderMessage($req, View::MSG_INFO);
 		}
 
-		function actionVersion($r) {
-			$page = intval($r[0]);
-			if (!$page)
-				throw new Exception('Page ID not specified!');
-
-			$a = $this->getAggregator(0);
-			$data = $a->get($page, '`id`, `title`, `author`');
-
-			if (!$data['id'])
-				throw new Exception('Page not found!');
-
-			$aa = $this->getAggregator(1);
-			$adata = $aa->get(intval($data['author']), '`fio`');
-			$alink = "<a href=\"/authors/id/{$data['author']}\">{$adata['fio']}</a>";
-			$plink = "<a href=\"/pages/version/{$page}\">{$data['title']}</a>";
-
-			$storage = SUB_DOMEN . '/cache/pages/' . $page;
-			$p = array();
-			$d = @dir($storage);
-			if ($d)
-				while (($entry = $d->read()) !== false)
-					if (is_file($storage . '/' . $entry) && ($version = intval(basename($entry, '.html'))))
-						$p[] = $version;
-
-			switch ($_REQUEST['action']) {
-			case 'view':
-				View::addKey('title', $alink . ' - ' . $plink . ' <span style="font-size: 80%;">[update: ' . date('d.m.Y', $version) . ']</span>');
-				$version = intval($_REQUEST['version']);
-				$cnt = @file_get_contents("$storage/$version.html");
-				$cnt1 = @gzuncompress/**/($cnt);
-				if ($cnt1 !== false) $cnt = $cnt1;
-				$cnt = $this->prepareForGrammar($cnt, true);
-				View::addKey('preview', mb_convert_encoding($cnt, 'UTF-8', 'CP1251'));
-				View::addKey('grammar', $this->fetchGrammarSuggestions($page));
-				$this->view->renderTPL('pages/view');
-			default:
-				View::addKey('title', $alink . ' - ' . $plink);
-				rsort($p);
-				$l = count($p) - 1;
-				$row = array('root' => $this->_name, 'page' => $page);
-				foreach ($p as $idx => $version) {
-					$row = array_merge($data, $row, $adata);
-					$row['view'] = Loc::lget('view');
-					$row['diff'] = Loc::lget('diff');
-					$row['version'] = $version;
-					$row['prew'] = intval($p[$idx + 1]);
-					$row['timestamp'] = date('d.m.Y h:i:s', $version);
-					$row['size'] = fs(filesize("$storage/$version.html"));
-					echo patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
-				}
-			}
-			$uid = $this->user->ID();
-			if ($uid) {
-				$ha = $this->getAggregator(3);
-				$s = $a->dbc->select('history', '`user` = ' . $uid . ' and `page` = ' . $page, '`id` as `0`');
-				if ($s && ($r = @mysql_result($s, 0)))
-					$ha->upToDate(array(intval($r)));
-			}
-		}
-
-		public function actionDiff($r) {
-			$page = intval($r[0]);
-			if (!$page)
-				throw new Exception('Page ID not specified!');
-
-			$a = $this->getAggregator(0);
-			$data = $a->get($page, '`id`, `title`, `author`');
-			if ($data['id'] != $page)
-				throw new Exception('Resource not found o__O');
-
-			$u = explode(',', $r[1]);
-			$cur= intval($u[0]);
-			$old= intval($u[1]);
-
-			if (!($cur * $old))
-				throw new Exception('Old or current version not found');
-
-			$storage = SUB_DOMEN . '/cache/pages/' . $page;
-
-
-			$d = array(false => '=&gt;', true => '&lt;=');
-			$show_old = $_REQUEST['showold'] == 'true';
-			$aa = $this->getAggregator(1);
-			$adata = $aa->get(intval($data['author']), '`fio`');
-			$alink = "<a href=\"/authors/id/{$data['author']}\">{$adata['fio']}</a>";
-			$plink = "<a href=\"/pages/version/{$page}\">{$data['title']}</a>";
-			$old_d = date('d.m.Y', $old);
-			$cur_d = date('d.m.Y', $cur);
-			View::addKey('title', $alink . ' - ' . $plink . " <span style=\"font-size: 80%;\">[$old_d <a href=\"" . ($show_old ? $cur . ',' . $old : '?showold=true') . "\">" . $d[$show_old] . "</a> $cur_d]</span>");
-
-			$cur .= '.html';
-			$old .= '.html';
-			$t1 = @file_get_contents($storage . '/' . $old);
-			$t2 = @file_get_contents($storage . '/' . $cur);
-			$_t1 = @gzuncompress/**/($t1); if ($_t1 !== false) $t1 = $_t1;
-			$_t2 = @gzuncompress/**/($t2); if ($_t2 !== false) $t2 = $_t2;
-
-
-			$t1 = trim(str_replace(array("\r", "\n"), '', $t1));
-			$t1 = strip_tags($t1, '<dd><p><br><u><i><s>');
-			$t1 = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $t1);
-			$t1 = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $t1);
-
-			$t2 = trim(str_replace(array("\r", "\n"), '', $t2));
-			$t2 = strip_tags($t2, '<dd><p><br><u><i><s>');
-			$t2 = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $t2);
-			$t2 = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $t2);
-
-//			$t1 = preg_replace('"<([^>]+)>((<br\s*/>|\s)*)</\1>"', '\2', $t1);
-//			$t1 = preg_replace('"</([^>]+)>((<br\s*/>|\s|\&nbsp;)*)?<\1>"i', '\2', $t1);
-//			$t2 = preg_replace('"<([^>]+)>((<br\s*/>|\s)*)</\1>"', '\2', $t2);
-//			$t2 = preg_replace('"</([^>]+)>((<br\s*/>|\s|\&nbsp;)*)?<\1>"i', '\2', $t2);
-//			@ob_end_flush();
-//			@ob_end_flush();
-			require_once 'core_diff.php';
-			define('PHP_EOL', "\n");
-			ob_start();
-//			echo '<pre>';
-			$io = new DiffIO(1024);
-			$io->show_new = !$show_old;
-			$db = new DiffBuilder($io);
-			$h = $db->diff($t1, $t2);//, intval($_REQUEST['notdeep']) ? $db->DIFF_TEXT_SPLITTERS2 : $db->DIFF_TEXT_SPLITTERS);
-			$c = ob_get_contents();
-			ob_end_clean();
-
-			$c = $this->prepareForGrammar($c);
-
-			$old = str_replace(PHP_EOL, '<br />', join('", "', $h[0]));
-			$new = str_replace(PHP_EOL, '<br />', join('", "', $h[1]));
-			View::addKey('grammar', $this->fetchGrammarSuggestions($page));
-			View::addKey('preview', $c);
-			View::addKey('h_old', $old);
-			View::addKey('h_new', $new);
-			$this->view->renderTPL('pages/view');
-		}
-
-		function prepareForGrammar($c, $cleanup = false) {
-			if ($cleanup) {
-				$c = strip_tags($c, '<dd><p><br><u><b><i><s>');
-				$c = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $c);
-				$c = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $c);
-			} else
-				$c = str_replace('<br />', PHP_EOL, $c);
-
-			$c = preg_replace('"<([^>]+)>(\s*)</\1>"', '\2', $c);
-			$c = preg_replace('"</([^>]+)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
-			$idx = 0;
-			$p = 0;
-			while (preg_match('"<(([\w]+)([^>/]*))>"', substr($c, $p), $m, PREG_OFFSET_CAPTURE)) {
-				$p += intval($m[0][1]);
-				$sub = $m[0][0];
-				if (strpos($sub, 'class="pin"') === false) {
-					$idx++;
-					$tag = $m[2][0];
-					$attr = $m[3][0];
-					$u = "<$tag node=\"$idx\"$attr>";
-					$c = substr_replace($c, $u, $p, strlen($sub));
-					$p += strlen($u);
-				} else
-					$p += strlen($sub);
-			}
-			return str_replace(PHP_EOL, '<br />', $c);
-		}
-
-		function fetchGrammarSuggestions($page, $approved = 1) {
-			$zone = str_replace("/{$this->_name}/", '', $_SERVER['REQUEST_URI']);
-			$ga = $this->getAggregator(4);
-			$d = $ga->fetch(array('nocalc' => true, 'desc' => 0
-			, 'filter' => "`page` = $page and `zone` = '$zone'"// and `approved`"
-			, 'collumns' => '`id`, `user`, `range`, `replacement`'
-			));
-			if ($d['total']) {
-				$r = array();
-				foreach ($d['data'] as &$row)
-					$r[$row['range']][] = $row;
-
-				foreach ($r as $range => $data) {
-					$j = array();
-					foreach ($data as $row) {
-						$row['replacement'] = str_replace(array("\n", "\r", '"'), array('<br />\\n', '', '&quot;'), $row['replacement']);
-						$j[] = patternize('{"i": {%id}, "u": {%user}, "r": "{%replacement}"}', $row);
-					}
-					$r[$range] = '{"range": "' . $range . '", "suggestions": [' . join(',', $j) . ']}';
-				}
-				$grammar = join(',', $r);
-				return $grammar;
-			}
-			return '';
-		}
 	}
 
 ?>

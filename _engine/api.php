@@ -35,6 +35,7 @@
 				'rating' => 0
 			, 'products' => 0
 			, 'rss' => 0
+			, 'grammar' => 0
 			, 'nop'
 			);
 		}

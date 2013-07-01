@@ -1,5 +1,5 @@
 <?php
-	error_reporting(E_ALL ^ E_NOTICE);
+	error_reporting(0);//E_ALL ^ E_NOTICE);
 	define('SUB_DOMEN', dirname(__FILE__));
 	define('SAVE_SESSION_ACTIVITY', 0);
 	define('USE_TIMELEECH', 0);
@@ -26,5 +26,6 @@
 	ob_start("ob_gzhandler");
 
 	$app->run();
+	msqlDB::o()->close();
 	ob_end_flush();
 ?>

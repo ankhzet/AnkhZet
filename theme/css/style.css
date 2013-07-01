@@ -33,6 +33,11 @@ input {
 	vertical-align: middle;
 }
 
+sub, sup {
+	font-size: 9px;
+	line-height: 1px;
+}
+
 li {
 	list-style: none;
 }
@@ -344,6 +349,17 @@ span.multi {
 	margin-right: 5px;
 }
 
+.diff-to-fresh, .diff-to-new {
+	background: #4dd;
+	border-radius: 3px;
+	margin: -1px;
+	padding: 2px;
+	color: blue;
+}
+.diff-to-fresh {
+	background: #4d4;
+}
+
 /* Grammar Nazzi */
 
 .grammar-highlight {
@@ -407,3 +423,12 @@ span.multi {
 	display: block;
 }
 
+.grammar-hint {
+	float: right;
+	font-size: 70%;
+	color: #888;
+}
+
+.uri-pages-id .grammar-hint {
+	display: none;
+}

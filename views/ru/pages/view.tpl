@@ -1,5 +1,5 @@
 				<div class="cnt-item">
-					<span style="float: right; font-size: 70%; color: #888;">
+					<span class="grammar-hint">
 						Чтобы пометить опечатку, выделите ее мышью и нажмите [Ctrl + Enter].<br />
 						Чтобы включить/выключить пометки нажмите [Ctrl + Shift + Enter].
 					</span>

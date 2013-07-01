@@ -2,7 +2,7 @@
 	Options +FollowSymlinks
 	RewriteEngine On
 
-	RewriteRule \.(?:css|js|html?)$ compress.php
+	RewriteRule \.(?:js|html?)$ compress.php
 	RewriteRule ([^\.]+)\.(?:xml)$ api.php?action=$1
 
 	RewriteCond %{REQUEST_URI} !/theme

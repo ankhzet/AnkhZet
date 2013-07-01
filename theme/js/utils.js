@@ -117,6 +117,20 @@ var
 				gn.makeGrammarNotes();
 			});
 		}
+		this.deleteNote = function (id) {
+			var href = '/api.php?action=grammar&delete=1&id=' + id;
+			upform.init({
+				title: 'Удаление пометки'
+			, content: '<div class="static">Вы действительно хотите удалить эту пометку?</div>'
+			, controls: [
+				{action: "javascript:grammarNazzi.doDelete(this, " + id + ")", caption: 'Удалить'}
+			, upform.BTN_CLOSE]
+			, onready: function(){
+				upform.show();
+			}
+			});
+			return false;
+		}
 		this.makeGrammarNotes = function() {
 			if (typeof grammar == 'undefined') return;
 			var n = [], g = [];
@@ -125,8 +139,11 @@ var
 				var o = this.takeOffset(grammar[i].range);
 				if (!o) continue;
 				var r = [], s = grammar[i].suggestions;
+				var pattern = ' <span class="pull_right">[<a href="/api.php?action=grammar&delete=1&id={%id}" class="button" onclick="return grammarNazzi.deleteNote({%id})">delete</a>]</span>';
 				for (var j in s)
-					r.push('<div class="suggestion">' + s[j].r + '</div>');
+					r.push('<div class="suggestion">' + s[j].r
+					+ ((!!admin) ? patternize(pattern, {"id": s[j].i}) : '')
+					+ '</div>');
 
 				n[i] = o;
 				g[i] = r;
@@ -172,7 +189,7 @@ var
 			for (var i in n)
 				this.makeTip(grammar[i].range, g[i], n[i], s[i]);
 
-			$('.grammar-tip').click(function () {grammarNazzi.highlite($(this).attr('range'));});
+			$('.grammar-tip:first').click(function () {grammarNazzi.highlite($(this).attr('range'));});
 		}
 		this.makeTip = function(range, suggestions, o, t) {
 			var div = $(document.createElement('DIV'));
@@ -258,7 +275,7 @@ var
 		}
 		this.getZone = function() {
 			var uri = document.location.href;
-			var m = uri.match(/\/pages\/((version\/\d+\/|diff\/\d+)[^$]+)/i);
+			var m = uri.match(/\/pages\/((version\/\d+|diff\/\d+)[^$]+)/i);
 			return m ? m[1] : null;
 		}
 		this.toggleButton = function(button, enabled) {
@@ -266,6 +283,39 @@ var
 				$(button).removeClass('disabled').attr('disabled', false);
 			else
 				$(button).addClass('disabled').attr('disabled', 'disabled');
+		}
+		this.doDelete = function(a, id) {
+			if ($(a).attr('disabled') == 'disabled') return false;
+			this.toggleButton(a, false);
+			$.post('/api.php?action=grammar', {"delete": 1, "id": id}
+			, function(data, status) {
+				if (status == 'success') {
+					grammarNazzi.toggleButton(a, true);
+					if (data.result == 'ok') {
+						for (var i in grammar) {
+							var s = grammar[i].suggestions;
+							var idx = -1;
+							for (var j in s)
+								if (parseInt(s[j].i) == parseInt(id)) {
+									idx = j;
+									break;
+								}
+
+							if (idx != -1)
+								grammar[i].suggestions.splice(idx, 1);
+
+							if (grammar[i].suggestions.length <= 0)
+								grammar.splice(i, 1);
+						}
+						grammarNazzi.show = 1;
+						grammarNazzi.queueNotes();
+						upform.close();
+						return;
+					} else
+						alert(data.data);
+				} else
+					alert('Request error');
+			}, 'json');
 		}
 		this.send = function(a) {
 			if ($(a).attr('disabled') == 'disabled') return false;

@@ -6,8 +6,8 @@
 
 	if (is_file($source_file)) {
 		$extension = strtolower(pathinfo($source_file, PATHINFO_EXTENSION));
-		$mime = array('css' => 'text/css', 'js' => 'application/javascript', 'htm' => 'text/html', 'html' => 'text/html');
-		header("Content-Type: " . $mime[$extension]);
+//		$mime = array('css' => 'text/css', 'js' => 'application/javascript', 'htm' => 'text/html', 'html' => 'text/html');
+//		header("Content-Type: " . $mime[$extension]);
 		ob_start("ob_gzhandler");
 		readfile($source_file);
 		ob_end_flush();
