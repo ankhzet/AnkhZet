@@ -12,5 +12,7 @@
 						text_old = ["{%h_old%}"]
 					, text_new = ["{%h_new%}"]
 					, grammar = [{%grammar%}]
+					, admin = <?=intval($this->ctl->userModer)?>
+
 					;
 				</script>

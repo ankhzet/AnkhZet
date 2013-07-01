@@ -30,7 +30,7 @@
 			: $data;
 	}
 
-	function JSON_result($result, $data) {
+	function JSON_result($result, $data = null) {
 		die('{"result": "' . addslashes($result) . '"' . (($data || is_array($data)) ? ', ' . format($data, 'data') : '') . '}');
 	}
 ?>
