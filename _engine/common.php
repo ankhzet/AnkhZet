@@ -1,7 +1,11 @@
 <?php
-	define(THUMB_ROOT, '/data/thumbnails');
+	define('THUMB_ROOT', '/data/thumbnails');
 
 	mb_internal_encoding('UTF-8');
+
+	function post($field) {
+		return isset($_REQUEST[$field]) ? $_REQUEST[$field] : null;
+	}
 
 	function mb_ucfirst($str, $utf8 = true) {
 		if ($utf8) $str = mb_convert_encoding($str, 'CP1251');
@@ -254,8 +258,11 @@
 						$str = join(PHP_EOL, array_slice($l, 0, $lines));
 				}
 				preg_match('/(.*[\.!\?]+)[^\.!\?]*$/is', $str, $matches);
-				preg_match('/^(.+)([\.!\?]+)\P{L}*$/isu', rtrim($matches[1]), $matches);
-				$str = rtrim($matches[1]) . $matches[2] . '..';
+				if (!!$matches) {
+					preg_match('/^(.+)([\.!\?]+)\P{L}*$/isu', rtrim(@$matches[1]), $matches);
+					$str = rtrim(@$matches[1]) . @$matches[2] . '..';
+				} else
+					break;
 			} while (mb_strlen($matches[1]) <= 0);
 			$str = str_replace(PHP_EOL, '<br />', close_tags($str));
 		}
@@ -282,8 +289,11 @@
 						$str = join(PHP_EOL, array_slice($l, 0, $lines));
 				}
 				preg_match('/^[^\.!\?]*([\.!\?]+.*)/is', $str, $matches);
-				preg_match('/\P{L}*([\.!\?]+)(.+)$/isu', rtrim($matches[1]), $matches);
-				$str = $matches[1] . '..' . rtrim($matches[2]);
+				if (!!$matches) {
+					preg_match('/\P{L}*([\.!\?]+)(.+)$/isu', rtrim($matches[1]), $matches);
+					$str = $matches[1] . '..' . rtrim($matches[2]);
+				} else
+					break;
 			} while (mb_strlen($matches[1]) <= 0);
 			$str = str_replace(PHP_EOL, '<br />', close_tags($str));
 		}

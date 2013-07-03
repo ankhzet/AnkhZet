@@ -12,10 +12,11 @@
 			$this->response= $resp;
 			if ($view != null) {
 				$front = FrontEnd::getInstance();
-				$title = $front->get('config')->get('site-title');
-				View::addKey('site', isset($title) ? strip_tags($title) : '');
+				$title = strip_tags($front->get('config')->get('site-title'));
+				View::addKey('site', $title);
+				View::addKey('title', $title);
+				View::addKey('moder', '');
 			}
-			View::addKey('title', $view->title);
 			$view->ctl      = $this;
 		}
 
@@ -33,7 +34,7 @@
 						if (!(($i = intval($action)) || ($action == 'page'))) {
 							$lshort = Loc::lget($locuid1 = 'titles.' . $action);
 							$loc = ($lshort != $locuid1) ? $lshort : Loc::lget($locuid2 = 'titles.' . join('', $p) . $action);
-							if ($loc != $ldocuid) {
+							if ($loc != $locuid1) {
 								$p[] = $action;
 								$l[] = $loc;
 								$a[] = '<a href="/' . join('/', $p) . '">' . $loc . '</a>';
@@ -58,7 +59,7 @@
 
 		public function action() {
 			$r = $this->request->getList();
-			$page = strtolower(trim($r[0]));
+			$page = strtolower(isset($r[0]) ? trim($r[0]) : '');
 			$this->user = User::get();
 			$this->userACL = intval($this->user->_get(User::COL_ACL));
 			$this->userModer = $this->userACL >= ACL::ACL_MODER;
@@ -117,11 +118,11 @@
 	}
 
 	class AdminViewController extends Controller {
-		public function action($r) {
+		public function action() {
 			$fe = FrontEnd::getInstance();
 			foreach ($fe->viewroot as $idx => $root)
 				$fe->viewroot[$idx] .= '/admin';
-			parent::action($r);
+			parent::action();
 		}
 	}
 

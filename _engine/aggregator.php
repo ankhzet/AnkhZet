@@ -22,8 +22,8 @@
 		}
 
 		public function add(array $data) {
-			if (!$data[time])
-				$data[time] = time();
+			if (!$data['time'])
+				$data['time'] = time();
 			$s = $this->dbc->insert($this->TBL_INSERT, $data, true);
 			return $s ? intval(@mysql_result($s, 0)) : 0;
 		}
@@ -31,7 +31,7 @@
 		public function update(array $data, $id, $low = false) {
 			if (!$data['time'])
 				$data['time'] = time();
-			$s = $this->dbc->update($this->TBL_INSERT, $data, array(id => $id), $low);
+			$s = $this->dbc->update($this->TBL_INSERT, $data, array('id' => $id), $low);
 			return $s ? $id : 0;
 		}
 
@@ -45,14 +45,14 @@
 
 		public function fetch(array $params) {
 			//$page, $pagesize, $collumns = null, $desc = true, $filter = ''
-			$numrows = $params[pagesize];
-			$limit = ($numrows > 1) ? ' limit ' . ($params[page] * $numrows)  . ', ' . $numrows : ($numrows == 1 ? ' limit 1' : '');
-			$order = ($params[desc] === 0) ? '' : ' order by ' . ($params[order] ? $params[order] : '`time`') . ($params[desc] ? ' desc' : ' asc');
+			$numrows = isset($params['pagesize']) ? $params['pagesize'] : 0;
+			$limit = ($numrows > 1) ? ' limit ' . ($params['page'] * $numrows)  . ', ' . $numrows : ($numrows == 1 ? ' limit 1' : '');
+			$order = ($params['desc'] === 0) ? '' : ' order by ' . ($params['order'] ? $params['order'] : '`time`') . ($params['desc'] ? ' desc' : ' asc');
 
 			$s = $this->dbc->select(
 					$this->TBL_FETCH
-				, $params[filter] . $order . $limit
-				, (($numrows != 1 && !$params['nocalc']) ? 'SQL_CALC_FOUND_ROWS ' : '') . ($params[collumns] ? $params[collumns] : '*')
+				, $params['filter'] . $order . $limit
+				, (($numrows != 1 && !$params['nocalc']) ? 'SQL_CALC_FOUND_ROWS ' : '') . ($params['collumns'] ? $params['collumns'] : '*')
 			);
 
 			if ($numrows != 1 && !$params['nocalc'])

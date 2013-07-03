@@ -4,8 +4,8 @@
 
 	function _PTT($matches) {
 		$key = strtolower($matches[1]);
-		$par = strtolower($matches[3]);
-		$fn  = strtolower($matches[5]);
+		$par = isset($matches[3]) ? strtolower($matches[3]) : '';
+		$fn  = isset($matches[5]) ? strtolower($matches[5]) : '';
 		if (!$key)
 			return '{%' . $key . ':' . $par . ($fn ? '#' . $fn : '') . '%}';
 
@@ -95,10 +95,10 @@
 			$this->request= $fe->getRequest();
 			$config = $fe->get('config');
 			$l = $this->request->getList(true);
-			$page = $l[0] ? strtolower($l[0]) : $config->get('main-controller');
-			self::$keys[page] = $page;
-			self::$keys[host] = 'http://' . $_SERVER['HTTP_HOST'];
-			self::$keys[root] = 'http://' . make_domen($_SERVER['HTTP_HOST'], '');
+			$page = isset($l[0]) ? strtolower($l[0]) : $config->get('main-controller');
+			self::$keys['page'] = $page;
+			self::$keys['host'] = 'http://' . $_SERVER['HTTP_HOST'];
+			self::$keys['root'] = 'http://' . make_domen($_SERVER['HTTP_HOST'], '');
 			self::$instance = $this;
 		}
 
@@ -139,7 +139,7 @@
 			do {
 				$contents1 = $contents2;
 				$contents2 = preg_replace('/\\\n/', '<br />', $contents1);
-				$contents2 = preg_replace_callback('/\{\%([^\:\%\#]+)(\:([^\#\%]+))?(\#([^\%]+))?\%\}/', _PTT, $contents2);
+				$contents2 = preg_replace_callback('/\{\%([^\:\%\#]+)(\:([^\#\%]+))?(\#([^\%]+))?\%\}/', '_PTT', $contents2);
 			} while ($contents1 != $contents2);
 			return $contents2;
 		}
@@ -166,8 +166,8 @@
 			$file = self::findTPL($template, true);
 			if (!$file) throw new Exception("Template [$template] don't exists!");
 			$compiled = str_replace($template . '.tpl', 'cache/' . $template. '.tpl', $file);
-			$m = @filemtime($compiled);
-			$c = @filemtime($file);
+			$m = is_file($compiled) ? filemtime($compiled) : 0;
+			$c = is_file($file) ? filemtime($file) : 0;
 //			echo "compile $file ($c) => $compiled ($m) ?<br />";
 			if (!$m || ($m < $c)) {
 				if (VIEW_COMPILE_MSGS)
@@ -178,7 +178,7 @@
 				$code = self::process(file_get_contents($file));
 
 				$cpl = '';
-				$t = "\nif (DEFINE_{%name}) {\ndefine('{DEFINE_{%name}}', 0);\n{%code}\n}\n\n";
+				$t = "\nif (!defined('DEFINE_{%name}')) {\ndefine('{DEFINE_{%name}}', 0);\n{%code}\n}\n\n";
 				foreach (self::$pctpl as $fcpl) {
 					$name = strtoupper(str_replace('-', '_', basename($fcpl, '.tpl')));
 					$a = array('code' => self::getTpl($fcpl), 'name' => $name);

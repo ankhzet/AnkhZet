@@ -108,9 +108,13 @@
 //       print_r($acl);
 			foreach ($acl as $name => $value) {
 				$id = @$value['id'];
-				$pr = @self::$data[$acl[$value['parent']]['id']];
-				$al = @$value['allow'];
-				$dl = @$value['disallow'];
+				if (isset($value['parent']) && $p = $value['parent'])
+					$pr = self::$data[$acl[$p]['id']];
+				else
+					$pr = array();
+
+				$al = isset($value['allow']) ? $value['allow'] : null;
+				$dl = isset($value['disallow']) ? $value['disallow'] : null;
 //         echo "[ACL::{$pr}::$name={{$id}:[$al/$dl]}]<br>";
 				self::addACL((int)$id, $name, $pr);
 //				self::allow($id, make_route($al));
