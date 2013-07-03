@@ -29,7 +29,6 @@
 
 AddDefaultCharset utf-8
 
-
 AddOutputFilterByType GZIP text/css
 AddOutputFilterByType GZIP application/rss+xml
 AddOutputFilterByType GZIP application/javascript

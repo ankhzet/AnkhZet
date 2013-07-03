@@ -189,7 +189,7 @@ var
 			for (var i in n)
 				this.makeTip(grammar[i].range, g[i], n[i], s[i]);
 
-			$('.grammar-tip:first').click(function () {grammarNazzi.highlite($(this).attr('range'));});
+			$('.grammar-tip').click(function () {grammarNazzi.highlite($(this).attr('range'));});
 		}
 		this.makeTip = function(range, suggestions, o, t) {
 			var div = $(document.createElement('DIV'));
@@ -352,7 +352,7 @@ var
 		}
 		this.showForm = function(text, code) {
 			upform.init({
-					title: 'Grammar Nazzi [' + code + ']!'
+					title: 'Grammar Naz<sup style="color: #633">z</sup>i!'
 				, content: patternize(
 					'<input type="hidden" class="grammar-code" value="{%code}"/>'
 				+ '<textarea class="grammar-before" disabled="disabled">{%text}</textarea><br />'
