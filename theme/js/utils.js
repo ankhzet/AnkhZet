@@ -189,7 +189,7 @@ var
 			for (var i in n)
 				this.makeTip(grammar[i].range, g[i], n[i], s[i]);
 
-			$('.grammar-tip:first').click(function () {grammarNazzi.highlite($(this).attr('range'));});
+			$('.grammar-tip').click(function () {grammarNazzi.highlite($(this).attr('range'));});
 		}
 		this.makeTip = function(range, suggestions, o, t) {
 			var div = $(document.createElement('DIV'));
