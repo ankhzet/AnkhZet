@@ -1,20 +1,24 @@
 <?php
 
-	function capitalize($str) {
-		return strtoupper($str[0]) . substr($str, 1);
-	}
-
 	class ConfigController extends AdminViewController {
 		protected $_name = 'config';
 
 		public function actionMain($r) {
-			if ($_POST[action] == save) {
+			$config = FrontEnd::getInstance()->get('config');
+			$tzh = TimeZoneHelper::get();
+			$zones = $tzh->getZones();
+			if ($_POST['action'] == 'save') {
 				$data = $_POST;
 
-				if (!isset($data[db][debug]))
-					$data[db][debug] = 0;
+				if (!isset($data['db']['debug']))
+					$data['db']['debug'] = 0;
 
-				$config = &FrontEnd::getInstance()->get('config');
+				$offset = intval($config->get('main.time-offset'));
+				$abbr = $tzh->getAbbreviations($offset);
+				$zone = $zones[$config->get('main.time-zone')];
+				$city = $abbr[$zone][0];
+				$data['main']['timezone'] = "$zone/$city";
+
 				foreach ($data as $section => $params)
 					if (($s = $config->get($section)))
 						foreach ($params as $param => $value)
@@ -24,6 +28,9 @@
 				$config->save();
 				header('Location: /config');
 			}
+
+			$this->view->zones = $zones;
+			$this->view->offsets = $offsets = $tzh->getOffsets($c = $config->get('time.zone') ? $c : 'Europe');
 
 			$this->view->renderTPL('functions/config');
 		}

@@ -38,16 +38,19 @@ img {border: none;}
 
 /* Inputs
 -----------------------------------------------------------------------------*/
-input, textarea {
+input, textarea, select {
 	border: 1px solid #fff;
 	margin-top: -3px;
 	border-color: white;
 	background-color: #cdf;
 }
-input:hover, textarea:hover {
+input:hover, textarea:hover, select:hover {
 	border: 1px solid #aaa;
 }
-
+select {
+	font-family: Consolas, "Courier New";
+		width: 50%;
+}
 
 .btn {
 	display: inline-block;

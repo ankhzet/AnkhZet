@@ -5,6 +5,29 @@
 		global $cf;
 		return htmlspecialchars($cf->get($param));
 	}
+
+	function genSelect($list, $sel, $keys = false) {
+		$v = array();
+		$r = array();
+		foreach ($list as $key => $item) {
+			if (strpos($key, '=') !== false) {
+				$key = explode('=', $key);
+				$key = $key[0];
+			}
+
+			$_key = str_pad(abs($key), 2, '0', STR_PAD_LEFT);
+			$s = ($key == $sel) ? ' selected="selected"' : '';
+			if ($keys)
+				$_key = (($key >= 0) ? "+$_key" : "-$_key") . ' ';
+			else
+				$_key = '';
+
+			$r[$key] = true;
+			$v[] = "<option value=\"$key\"{$s}>{$_key}$item</option>";
+		}
+
+		return join('', $v);
+	}
 ?>
 
 <div id=config>
@@ -16,6 +39,14 @@
 		<div><label>Название сайта:</label><input type=text name="main[site-title]" value="<?echo getv('main.site-title')?>" /></div>
 		<div><label>e-mail администратора:</label><input type=text name="main[site-admin]" value="<?echo getv('main.site-admin')?>" /></div>
 		<div><label>e-mail нотификатор:</label><input type=text name="main[mail-notifier]" value="<?echo getv('main.mail-notifier')?>" /></div>
+		<div>
+			<label>Временная зона:</label>
+			<select name="main[time-zone]"><?=genSelect($this->zones, getv('main.time-zone'))?></select>
+		</div>
+		<div>
+			<label>&nbsp;</label>
+			<select name="main[time-offset]"><?=genSelect($this->offsets, getv('main.time-offset'), true)?></select>
+		</div>
 
 		<h3><span></span>Настройки подключения к БД MySQL</h3>
 		<div><label>Имя БД:</label><input type=text name="db[dbname]" value="<?echo getv('db.dbname')?>" /></div>
