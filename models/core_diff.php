@@ -115,7 +115,7 @@ class DiffSubsplitter {
 
 			// array_search() has VERY LOW performance for searching string's (access via array keys is 20 times faster, e.g. 0.05 msec versus 1.0 sec)
 			$m = crc32($line); // why hash? hash consumes ~32bit, while text line can be > 4 bytes long (most of the time)
-			$idx = intval(@$u[$m]);
+			$idx = isset($u[$m]) ? intval($u[$m]) : 0;
 			if (!$idx) {
 				$idx = $i++;
 				$h[$idx] = $line;
@@ -127,7 +127,7 @@ class DiffSubsplitter {
 //		TimeLeech::addTimes('seq::hash1()?'.rand());
 		foreach ($l2 as $j => $line) {
 			$m = crc32($line);
-			$idx = intval(@$u[$m]);
+			$idx = isset($u[$m]) ? intval($u[$m]) : 0;
 			if (!$idx) {
 				$idx = $i++;
 				$h[$idx] = $line;
@@ -143,8 +143,8 @@ class DiffSubsplitter {
 //		debug2(array($c1, $c2));
 		$n1 = array();
 		$n2 = array();
-		foreach ($h1 as $hash) $n1[$hash] = intval(@$n1[$hash]) + 1;
-		foreach ($h2 as $hash) $n2[$hash] = intval(@$n2[$hash]) + 1;
+		foreach ($h1 as $hash) $n1[$hash] = isset($n1[$hash]) ? intval($n1[$hash]) + 1 : 1;
+		foreach ($h2 as $hash) $n2[$hash] = isset($n2[$hash]) ? intval($n2[$hash]) + 1 : 1;
 
 		arsort($n1);
 		$d = array();
@@ -284,7 +284,7 @@ class DiffBuilder {
 		if ($t1 == $t2)
 			$f = 100;
 		else
-			if (strlen($t1) < 20000)
+			if (strlen($t1) + strlen($t2) < 40000)
 				$s = similar_text(preg_replace('/\W/', '', $t1), preg_replace('/\W/', '', $t2), $f);
 			else
 				$f = 100;
@@ -335,7 +335,7 @@ class DiffBuilder {
 		$u = array();
 		foreach ($this->l1 as $entity) {
 			$m = crc32($entity); // why hash? hash consumes ~32bit, while text line can be > 4 bytes long (most of the time)
-			$idx = intval(@$u[$m]);
+			$idx = isset($u[$m]) ? intval($u[$m]) : 0;
 			if (!$idx) {
 				$this->hash[$idx = $i++] = $entity;
 				$u[$m] = $idx;
@@ -344,7 +344,7 @@ class DiffBuilder {
 		}
 		foreach ($this->l2 as $entity) {
 			$m = crc32($entity); // why hash? hash consumes ~32bit, while text line can be > 4 bytes long (most of the time)
-			$idx = intval(@$u[$m]);
+			$idx = isset($u[$m]) ? intval($u[$m]) : 0;
 			if (!$idx) {
 				$this->hash[$idx = $i++] = $entity;
 				$u[$m] = $idx;
@@ -395,6 +395,7 @@ class DiffBuilder {
 		$c2 = $this->c2;
 		$this->out = array();
 		$c = $this->fts[$idx];
+		$cc = count($this->fts);
 		while (($i < $c1) && (($t = $this->h1[$i]) != $c)) {
 			$this->out[] = array(-1, $t);
 			$i++;
@@ -412,14 +413,17 @@ class DiffBuilder {
 				$j++;
 				$idx++;
 			}
-			$c = $this->fts[$idx];
-			while (($i < $c1) && (($t = $this->h1[$i]) != $c)) {
-				$this->out[] = array(-1, $t);
-				$i++;
+
+			if ($idx < $cc) {
+				$c = $this->fts[$idx];
+				while (($i < $c1) && (($t = $this->h1[$i]) != $c)) {
+					$this->out[] = array(-1, $t);
+					$i++;
+				}
 			}
 		}
-		while (($j < $c2) && (($t = $this->h2[$j]) != $c)) {
-			$this->out[] = array(1, $t);
+		while ($j < $c2) {
+			$this->out[] = array(1, $this->h2[$j]);
 			$j++;
 		}
 		$o = 0;

@@ -13,9 +13,8 @@
 		}
 
 		public static function read($class, $source) {
-			$config = self::$_configs[$source];
-			if (isset($config))
-				return $config;
+			if (isset(self::$_configs[$source]))
+				return self::$_configs[$source];
 			else {
 				$class = 'Config_' . $class;
 				$config = new $class($source);
@@ -54,7 +53,7 @@
 			if ((!isset($data)) && ($param[0] != 'main'))
 				return $this->get(array_merge(array('main'), $param));
 			else
-				return $data;
+				return isset($data) ? $data : null;
 		}
 
 		public function set($param, $value) {

@@ -70,9 +70,9 @@
 			}
 		}
 
-		public function action($r) {
-			$author = intval($_REQUEST['author']);
-			$group = intval($_REQUEST['group']);
+		public function action() {
+			$author = intval(post('author'));
+			$group = intval(post('group'));
 			if (!$author && $group) {
 				$ga = $this->getAggregator(2);
 				$g = $ga->get($group, '`author`, `title`');
@@ -90,7 +90,7 @@
 				$this->author_link = $a['link'];
 			}
 
-			parent::action($r);
+			parent::action();
 			if ($author)
 				View::addKey('title'
 				, "<a href=\"/{$this->_name}?author={$author}\">{$this->author_fio}</a> - "
@@ -182,10 +182,11 @@
 
 			$ha = $this->getAggregator(3);
 			$uid = $this->user->ID();
-			switch ($action = $_REQUEST['action']) {
+			switch ($action = post('action')) {
 			case 'view':
-				View::addKey('title', $alink . ' - ' . $plink . ' <span style="font-size: 80%;">[update: ' . date('d.m.Y', $version) . ']</span>');
-				$version = intval($_REQUEST['version']);
+				View::addKey('title', $alink . ' - ' . $plink);
+				View::addKey('moder', '<span style="font-size: 80%;">[update: ' . gmdate('d.m.Y', $version) . ']</span>');
+				$version = intval(post('version'));
 				$cnt = @file_get_contents("$storage/$version.html");
 				$cnt1 = @gzuncompress/**/($cnt);
 				if ($cnt1 !== false) $cnt = $cnt1;
@@ -201,15 +202,16 @@
 				$oldest = $p[count($p) - 1];
 
 				if ($uid) $f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`time`'));
-				$lastseen = ($uid && $f['total']) ? intval($f['data'][0]['time']) : intval($_COOKIE["ls_{$page}"]);
+				$lastseen = ($uid && $f['total']) ? intval($f['data'][0]['time']) : intval(post("ls_{$page}"));
 				$lastseen = $lastseen ? $lastseen : $newest;
 
-				$diffopen = ($v = intval($_REQUEST['version'])) ? $v : $lastseen;
+				$diffopen = ($v = intval(post('version'))) ? $v : $lastseen;
 
-				$ldate = date('d.m.Y', $newest);
+				$ldate = gmdate('d.m.Y', $newest);
 				$full = Loc::lget('full_last_version');
 				$last = $newest ? "<span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>" : '';
-				View::addKey('title', "$alink - $plink{$last}");
+				View::addKey('title', "$alink - $plink");
+				View::addKey('moder', $last);
 				if ($l >= 0)
 					foreach ($p as $idx => $version) {
 						$row = array_merge($data, $row, $adata);
@@ -238,7 +240,7 @@
 			}
 
 			if ($action == 'view')
-				$this->updateTrace($page, intval($_REQUEST['version']));
+				$this->updateTrace($page, intval(post('version')));
 		}
 
 		function updateTrace($page_id, $version) {
@@ -251,7 +253,7 @@
 				$t = time() + 2592000;
 				preg_match('/(.*\.|^)([^\.]+\.[^\.]+)$/i', $_SERVER['HTTP_HOST'], $m);
 				$m = '.' . $m[2];
-				setcookie("ls_{$page_id}", max(intval($_COOKIE["ls_{$page_id}"]), $version), $t, "/", $m);
+				setcookie("ls_{$page_id}", max(intval(post("ls_{$page_id}")), $version), $t, "/", $m);
 			}
 		}
 
@@ -276,7 +278,7 @@
 
 
 			$d = array(false => '=&gt;', true => '&lt;=');
-			$show_old = $_REQUEST['showold'] == 'true';
+			$show_old = post('showold') == 'true';
 			$aa = $this->getAggregator(1);
 			$adata = $aa->get(intval($data['author']), '`fio`');
 			$alink = "<a href=\"/authors/id/{$data['author']}\">{$adata['fio']}</a>";
@@ -308,7 +310,6 @@
 //			@ob_end_flush();
 //			@ob_end_flush();
 			require_once 'core_diff.php';
-			define('PHP_EOL', "\n");
 			ob_start();
 //			echo '<pre>';
 			$io = new DiffIO(1024);
@@ -389,7 +390,7 @@
 		function actionCleanup($r) {
 			$save = intval($r[0]) ? intval($r[0]) : 3;
 			$save = max(2, $save);
-			$force = intval($_REQUEST['force']);
+			$force = intval(post('force'));
 			$dir = SUB_DOMEN . '/cache/pages';
 			$d = @dir($dir);
 			$p = array();

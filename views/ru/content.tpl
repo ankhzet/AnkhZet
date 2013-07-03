@@ -21,7 +21,7 @@
 		case ACL::ACL_ADMINS:
 			return str_replace(
 				array('{%profile}', '{%url}')
-			, array($profile, ($u = $_SERVER[REQUEST_URI]) ? '&url=' . $u : '')
+			, array($profile, ($u = $_SERVER['REQUEST_URI']) ? '&url=' . $u : '')
 			, @file_get_contents(View::findTPL('ap-drop', true))
 			) . '<a href="/user/logout">Выход</a>';
 		default:
