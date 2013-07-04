@@ -436,3 +436,39 @@ span.multi {
 .uri-pages-id .grammar-hint {
 	display: none;
 }
+
+/* ui */
+
+.ui-updates {
+	position: relative;
+	display: inline-block;
+	margin: -1px 0 0 1px;
+
+	float: right;
+}
+*:hover>.ui-updates {
+	margin-top: 0;
+}
+
+.ui-updates div {
+	-moz-border-radius: 3px;
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+	border: 1px solid #fff;
+
+	padding: 1px 3px;
+	height: 10px;
+	line-height: 10px;
+	font-size: 9px;
+	font-weight: bold;
+	background: #666;
+	color: #00f;
+	text-shadow: 1px 1px 0 #5e5;
+}
+
+.ui-updates.green div {
+	background: #4d4;
+}
+*:hover>.ui-updates.green div {
+	background: #9f9;
+}
