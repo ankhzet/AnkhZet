@@ -59,23 +59,23 @@
 
 		public function action() {
 			$r = $this->request->getList();
-			$page = strtolower(isset($r[0]) ? trim($r[0]) : '');
+			$page = strtolower(trim(uri_frag($r, 0, '', 0)));
 			$this->user = User::get();
 			$this->userACL = intval($this->user->_get(User::COL_ACL));
 			$this->userModer = $this->userACL >= ACL::ACL_MODER;
 
 			if (USE_TIMELEECH) TimeLeech::addTimes('ctl::action' . $page . '()');
 
-			$ta = 'titles.' . $this->_name . $page;
+			$ta = "titles.{$this->_name}$page";
 			View::addKey('root', $this->_name);
-			View::addKey('title', strip_tags((($page != '') && ($t2 = Loc::lget($ta)) != $ta) ? $t2 : Loc::lget('titles.' . $this->_name)));
+			View::addKey('title', strip_tags((($page != '') && ($t2 = Loc::lget($ta)) != $ta) ? $t2 : Loc::lget("titles.{$this->_name}")));
 			View::addKey('grip', $this->buildGrip(array_merge(array($this->_name), $r)));
 
 			if ($page) {
 				View::addKey('page', $this->_name . ($page != $this->_name ? '-' . $page : ''));
 				$action = 'action' . ucfirst($page);
 
-				if (false !== array_search($action, get_class_methods(get_class($this))))
+				if (method_exists($this, $action))
 					return $this->$action(array_slice($r, 1));
 			} else
 				View::addKey('page', $this->_name);
@@ -88,7 +88,7 @@
 			echo '</center>';
 		}
 		public function actionMain($r) {
-			$page = strtolower($r[0] ? $r[0] : $this->_name);
+			$page = strtolower(uri_frag($r, 0, $this->_name, 0));
 			if ($page == $this->_name)
 				return $this->view->renderTPL($this->_name);
 
@@ -96,15 +96,15 @@
 			$loc = Loc::Locale();
 			$fe = FrontEnd::getInstance();
 			$r  = $fe->viewroot[0] . '/';
-			$static = $r . $loc . '/static/' . $page . '.tpl';
+			$static = "$r{$loc}/static/{$page}.tpl";
 			if (!file_exists($static))
 				return $this->action404($r);
 
 
-			View::$keys[title] = strip_tags(Loc::lget('titles.' . $page));
+			View::$keys['title'] = strip_tags(Loc::lget('titles.' . $page));
 			if ($this->userModer) {
 				$a = array('page' => $page, 'edit' => Loc::lget('edit'), 'delete' => Loc::lget('delete'));
-				View::$keys[smoder] = patternize('<span class="pull_right">[<a href="/statics/edit/{%page}">{%edit}</a> | <a href="/statics/delete/{%page}">{%delete}</a>]</span>', $a);
+				View::$keys['smoder'] = patternize('<span class="pull_right">[<a href="/statics/edit/{%page}">{%edit}</a> | <a href="/statics/delete/{%page}">{%delete}</a>]</span>', $a);
 			}
 //			View::$keys['content'] =
 			echo @file_get_contents($static);
@@ -112,7 +112,7 @@
 		}
 
 		function action404($r) {
-			View::$keys[title] = '404 - Not Found';
+			View::$keys['title'] = '404 - Not Found';
 			$this->view->renderTPL('http/404');
 		}
 	}

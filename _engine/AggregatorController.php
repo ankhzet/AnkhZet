@@ -12,6 +12,7 @@
 		var $ID_PATTERN = '<b>ID: {%id}</b><br />';
 		var $MODER_EDIT = '<span class="pull_right">[<a href="/{%root}/edit/{%id}">{%edit}</a> | <a href="/{%root}/delete/{%id}">{%delete}</a>]</span>';
 		var $LIST_ITEM  = '<li>ID: <a href="/{%root}/id/{%id}">{%id}</a><br />{%time}<br />{%moder}</li>';
+		var $ADD_MODER  = 1;
 
 		var $EDIT_STRINGS = array('title', 'content');
 		var $EDIT_FLOATS  = array();
@@ -28,7 +29,7 @@
 
 		function actionInit($r) {
 			if (User::ACL() >= ACL::ACL_ADMINS) {
-				$aggregator = $this->getAggregator(intval($r[0]));
+				$aggregator = $this->getAggregator(uri_frag($r, 0));
 				if ($aggregator->init())
 					$this->view->renderMessage('Initialization succesfull.', View::MSG_INFO);
 				else
@@ -50,7 +51,7 @@
 		}
 
 		public function actionId($r) {
-			$id = intval($r[0]);
+			$id = uri_frag($r, 0);
 			if ($id) {
 				$aggregator = $this->getAggregator();
 				$entry = $aggregator->get($id);
@@ -59,16 +60,15 @@
 
 				$entry['utime'] = ($utime = intval($entry['time']));
 				$entry['time'] = date('d.m.Y', $utime);
-				$entry[root] = $this->_name;
+				$entry['root'] = $this->_name;
 
 				if ($this->userModer) {
-					$entry[page] = 1;
-					$entry[edit] = Loc::lget('edit');
-					$entry[delete] = Loc::lget('delete');
-					$entry[moder] = patternize($this->MODER_EDIT, $entry);
-					View::addKey('moder', $entry[moder]);
+					$entry['page'] = 1;
+					$entry['edit'] = Loc::lget('edit');
+					$entry['delete'] = Loc::lget('delete');
+					View::addKey('moder', $entry['moder'] = patternize($this->MODER_EDIT, $entry));
 				} else
-					$entry[moder] = '';
+					$entry['moder'] = '';
 
 				echo $this->makeIDItem($aggregator, $entry);
 			} else
@@ -80,13 +80,13 @@
 		}
 
 		function actionPage($r) {
-			if ($this->userModer)
+			if ($this->userModer && $this->ADD_MODER)
 				View::addKey('moder', '<span class="pull_right">[<a href="/' . $this->_name . '/add">' . Loc::lget('add') . '</a>]</span>');
+
 			$aggregator = $this->getAggregator();
-			$page = ($page = intval($r[0])) ? $page : 1;
-			$this->page = $page;
+			$this->page = $page = uri_frag($r, 0, 1);
 			$params = array('page' => $page - 1, 'pagesize' => $aggregator->FETCH_PAGE, 'desc' => true);
-			if ($this->query) $params['filter'] = $this->query;
+			if (isset($this->query)) $params['filter'] = $this->query;
 			$this->data = $aggregator->fetch($this->prepareFetch($params));
 
 			$total = intval($this->data['total']);
@@ -119,18 +119,19 @@
 				$n = join($this->LIST_JOINER, $n);
 			}
 
-			if ($last > 1) $this->view->pages = '<ul class="pages">' . PHP_EOL . $aggregator->generatePageList($page, $last, $this->_name . '/', $this->link) . '</ul>' . PHP_EOL;
+			$p = ($last > 1) ? $aggregator->generatePageList($page, $last, $this->_name . '/', $this->link) : '';
+			$this->view->pages = "<ul class=\"pages\">\n$p</ul>\n";
 
-			$this->view->data = $n ? ($this->USE_UL_WRAPPER ? '<ul class="' . $this->_name . '">' . PHP_EOL . $n . PHP_EOL . '</ul>' : $n) : Loc::lget($this->_name . '_nodata');
-			$this->view->renderTPL($this->_name . '/index');
+			$this->view->data = $n ? ($this->USE_UL_WRAPPER ? "<ul class=\"{$this->_name}\">\n$n\n</ul>" : $n) : Loc::lget($this->_name . '_nodata');
+			$this->view->renderTPL("{$this->_name}/index");
 		}
 
 		function actionAdd($r) {
 			$error = array();
-			if ($_REQUEST[action] == 'add') {
+			if (post('action') == 'add') {
 				$v = array();
 				foreach ($this->EDIT_STRINGS as $key) {
-					${$key} = str_replace(PHP_EOL, '<br />', trim($_REQUEST[$key]));
+					${$key} = str_replace(PHP_EOL, '<br />', trim(post($key)));
 					$v[$key] = ${$key};
 					if (array_search($key, $this->EDIT_REQUIRES) !== false)
 							if (${$key} == '')
@@ -138,7 +139,7 @@
 				}
 
 				foreach ($this->EDIT_FLOATS as $key) {
-					${$key} = (float)(trim($_REQUEST[$key]));
+					${$key} = (float)(trim(post($key)));
 					$v[$key] = ${$key};
 					if (array_search($key, $this->EDIT_REQUIRES) !== false)
 							if (${$key} <= 0)
@@ -146,14 +147,14 @@
 				}
 
 				foreach ($this->EDIT_FILES as $key) {
-					${$key} = trim($_REQUEST[$key]);
+					${$key} = trim(post($key));
 					$v[$key] = ${$key};
 					if (array_search($key, $this->EDIT_REQUIRES) !== false)
 							if (${$key} == '')
 								$error[$key] = true;
 				}
 
-				$this->view->id = $id = intval($_REQUEST[id]);
+				$this->view->id = $id = post_int('id');
 				if (!count($error)) {
 					$aggregator = $this->getAggregator();
 
@@ -177,7 +178,7 @@
 					foreach ($this->EDIT_FILES as $key)
 						if ($v[$key]) { // file transmitted
 							$file = basename($v[$key]);
-							$path = SUB_DOMEN . '/data/' . $this->_name . '/';
+							$path = SUB_DOMEN . "/data/{$this->_name}/";
 							$temp = ($v[$key] == $file) ? $path . $file : SUB_DOMEN . $v[$key];
 							$new = $path . $file;
 							if ($new == $temp) {
@@ -187,12 +188,12 @@
 
 							$i = pathinfo($file);
 							$e = $i['extension'];
-							$e = $e ? '.' . $e : '';
+							$e = $e ? ".{$e}" : '';
 							$base = basename($file, $e);
 							$i = 0;
 							while (is_file($path . $file)) { // same filename as new existing
 								$i++;
-								$file = $base . '_' . $i . $e;
+								$file = "{$base}_{$i}$e";
 							}
 							@rename(SUB_DOMEN . $v[$key], $path . $file);
 							$v[$key] = $file;
@@ -201,8 +202,8 @@
 					$id = $id ? $aggregator->update($v, $id) : $aggregator->add($v);
 
 					if ($id) {
-						locate_to('/' . $this->_name . ($this->kind ? '?kind=' . $this->kind : ''));
-						die();
+						$kind = $this->kind ? "?kind={$this->kind}" : '';
+						locate_to("/{$this->_name}$kind");
 					} else
 						throw new Exception('Insertion failed o_O');
 				}
@@ -212,7 +213,8 @@
 		}
 
 		public function actionEdit($r) {
-			$id = intval($r[0]);
+			$id = uri_frag($r, 0);
+			$this->view->id = $id;
 			if ($id) {
 				$aggregator = $this->getAggregator();
 				$entry = $aggregator->get($id);
@@ -221,21 +223,20 @@
 					${$key} = str_replace('<br />', PHP_EOL, trim($entry[$key]));
 					$_REQUEST[$key] = ${$key};
 				}
-				$this->view->id = $id;
 			} else
 				throw new Exception('Entry ID not specified');
 
-			$this->view->renderTPL($this->_name . '/add');
+			$this->view->renderTPL("{$this->_name}/add");
 			return $id;
 		}
 
 		public function actionDelete($r) {
-			$id = intval($r[0]);
+			$id = uri_frag($r, 0);
 			if ($id) {
 				$aggregator = $this->getAggregator();
 				if (count($this->EDIT_FILES)) {
 					$d = $aggregator->get($id, '`' . join('`, `', $this->EDIT_FILES) . '`');
-					$path = SUB_DOMEN . '/data/' . $this->_name . '/';
+					$path = SUB_DOMEN . "/data/{$this->_name}/";
 					foreach ($this->EDIT_FILES as $key)
 						if ($d[$key])
 							@unlink($path . $d[$key]);
@@ -243,11 +244,12 @@
 
 				$s = $aggregator->delete($id);
 				if ($s) {
-					$ret = $_REQUEST['return'];
-					if ($ret)
-						locate_to('/' . ($ret ? $ret : $this->_name));
-					else
-						locate_to('/' . $this->_name . (($page = intval($_REQUEST[page])) ? '/page/' . $page : ''));
+					if ($ret = post('return'))
+						locate_to("/$ret");
+					else {
+						$page = uri_frag($_REQUEST, 'page', 1);
+						locate_to("/{$this->_name}/page/$page");
+					}
 				} else
 					throw new Exception('Deletion failed o_O');
 			} else

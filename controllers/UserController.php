@@ -8,15 +8,15 @@
 		protected $_name = 'user';
 
 		public function actionEdit($r) {
-			if (User::ACL() == ACL::ACL_GUEST) header('Location: /user/login');
+			if (User::ACL() == ACL::ACL_GUEST) locate_to('/user/login');
 			$u = User::get();
 			$fields = array('name', 'pass', 'pass2');
-			if ($_REQUEST['action'] == 'edit') {
+			if (post('action') == 'edit') {
 				foreach ($fields as $field) $this->view->editdata[$field] = escapeField($field);
 				$this->view->editstate = User::update($this->view->editdata);
 
 				$this->view->renderTPL('user/profile');
-				if (0 == count($this->view->editstate)) {
+				if (!$this->view->editstate) {
 					echo '<div style="clear: both">';
 					$this->view->renderMessage(Loc::lget('saved'), View::MSG_INFO);
 					echo '</div>';
@@ -31,9 +31,9 @@
 			$params = array('name', 'email', 'pass', 'pass2', 'captcha');
 			$this->view->regdata = array();
 			foreach ($params as $param)
-				$this->view->regdata[$param] = addslashes($_REQUEST[$param]);
+				$this->view->regdata[$param] = addslashes(post($param));
 
-			if ($_REQUEST[action] == 'registration') {
+			if (post('action') == 'registration') {
 				$this->view->regstate = User::register($this->view->regdata);
 
 				if (!count($this->view->regstate)) {
@@ -52,8 +52,8 @@
 					$uid = $uid = intval($r[0]['id']);
 					$s->gen($uid);
 					$s->write(SAM::SAM_COOKIES, false);
-					$location = $_REQUEST['url'] ? $_REQUEST['url'] : '/user';
-					if (!preg_match('/^\//', $location)) $location = '/' . $location;
+					$location = uri_frag($_REQUEST, 'url', '/user', 0);
+					if (!preg_match('/^\//', $location)) $location = "/$location";
 					locate_to($location);
 				}
 			}
@@ -62,33 +62,33 @@
 
 		public function actionRestore($r) {
 			$tpl = 'restorepass';
-			if ($_REQUEST[action] == 'restore') {
+			if (post('action') == 'restore') {
 				sleep(1);
-				$l[email] = addslashes($_REQUEST[email]);
+				$l['email'] = addslashes(post('email'));
 				$this->view->restoredata = User::checkRegData($l);
 				if ($this->view->restoredata[User::FLD_LOGIN] != User::ERR_LOGIN) {
 					$u = new User();
-					$u->_set(User::COL_LOGIN, $l[email], true);
+					$u->_set(User::COL_LOGIN, $l['email'], true);
 					if (!intval($u->_get(User::COL_ID)))
-						$this->view->restoredata[unknown] = 1;
+						$this->view->restoredata['unknown'] = 1;
 					else {
 						$newpass = User::genPassword(10 + rand(0, 5));
-						if (User::passReminder($l[email], $newpass, true)) {
+						if (User::passReminder($l['email'], $newpass, true)) {
 							$tpl = 'login';
 							$this->view->restore = 1;
 						}
 					}
 				}
 			}
-			$this->view->renderTPL('user/' . $tpl);
+			$this->view->renderTPL("user/$tpl");
 		}
 
 		public function actionMain($r) {
 			$u = User::get();
 			$uid = intval($u->_get(User::COL_ID));
-			$id = intval($r[0]);
+			$id = uri_frag($r, 0);
 			if ($id && ($id != $uid)) {
-				if ($u->_get(User::COL_ACL) == ACL::ACL_GUEST) header('Location: /user/login');
+				if ($u->_get(User::COL_ACL) == ACL::ACL_GUEST) locate_to('/user/login');
 				$u = User::get($id);
 				if ($id != intval($u->_get(User::COL_ID)))
 					throw new Exception('Нет пользователя с таким ID');
@@ -112,8 +112,8 @@
 			require_once "session.php";
 			require_once "dbengine.php";
 			$s = Ses::get(SAM::SAM_COOKIES);
-			$l = $_POST['login'];
-			$p = $_POST['pass'];
+			$l = post('login');
+			$p = post('pass');
 			if ($l && $p) {
 				$d = msqlDB::o();
 //				echo "[" . md5($p . User::PASS_SALT) . "]<br>";
@@ -130,9 +130,8 @@
 				$uid = $uid = intval($r[0]['id']);
 				$s->gen($uid);
 				$s->write(SAM::SAM_COOKIES, false);
-				$location = $_REQUEST['url'] ? $_REQUEST['url'] : '';
-				if (!preg_match('/^\//', $location)) $location = '/' . $location;
-				locate_to($location);
+				$location = uri_frag($_REQUEST, 'url', '', 0);
+				locate_to(preg_match('-^/-', $location) ? $location : "/$location");
 				return;
 			}
 			$this->view->renderTPL('user/login');

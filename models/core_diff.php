@@ -233,7 +233,7 @@ class DiffSubsplitter {
 				foreach ($sequence as $hash) {
 					if ($e != $hash) break;
 					$h1[$i] = 0;
-					$e = $h1[++$i];
+					$e = (++$i < $c1) ? $h1[$i] : null;
 					$t .= PHP_EOL . $h[$hash];
 				}
 				$u1[] = $t;
@@ -252,7 +252,7 @@ class DiffSubsplitter {
 				foreach ($sequence as $hash) {
 					if ($e != $hash) break;
 					$h2[$i] = 0;
-					$e = $h2[++$i];
+					$e = (++$i < $c2) ? $h2[$i] : null;
 					$t .= PHP_EOL . $h[$hash];
 				}
 				$u2[] = $t;

@@ -53,7 +53,7 @@
 	$c2 = count($e);
 	$e = join('', $e);
 
-	if ($a_id = intval($_REQUEST['a'])) {
+	if ($a_id = post_int('a')) {
 		require_once 'core_updates.php';
 		$w = new AuthorWorker();
 		msqlDB::o()->debug = 1;

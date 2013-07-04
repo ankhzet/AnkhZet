@@ -131,7 +131,7 @@
 			$l = array();
 
 //			echo '<pre>';
-			cfg_add_recurse(&$l, array(), '', $data);
+			cfg_add_recurse($l, array(), '', $data);
 //			debug2($l, 'list');
 //			die('asdadasdasdadadas');
 			$contents = PHP_EOL . join(PHP_EOL, $l);
@@ -170,7 +170,7 @@
 		$root = $param ? array_merge($parent, array($param)) : $parent;
 
 		foreach ($a as $par => $sub)
-			if (count($pp = cfg_add_recurse(&$array, $root, $par, $sub))) {
+			if (count($pp = cfg_add_recurse($array, $root, $par, $sub))) {
 				$array[] = '[' . join('.', array_merge($root, array($par))) . ']';
 				foreach ($pp as $par => $sub)
 					$array[] = $par . ' = ' . $sub;

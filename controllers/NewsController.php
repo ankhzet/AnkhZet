@@ -31,10 +31,8 @@
 		}
 
 		public function makeItem(&$aggregator, &$row) {
-			$row[content] = safeSubstr($row[content], 300);
+			$row['content'] = safeSubstr($row['content'], 300);
 			html_escape(&$row, array('title', 'source'));
-			if ($row['moder'])
-				$row['moder'] = $row['moder'] . '<br/>';
 			return patternize($this->LIST_ITEM, $row);
 		}
 

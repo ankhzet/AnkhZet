@@ -7,7 +7,7 @@
 			$config = FrontEnd::getInstance()->get('config');
 			$tzh = TimeZoneHelper::get();
 			$zones = $tzh->getZones();
-			if ($_POST['action'] == 'save') {
+			if (post('action') == 'save') {
 				$data = $_POST;
 
 				if (!isset($data['db']['debug']))

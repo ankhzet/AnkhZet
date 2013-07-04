@@ -7,6 +7,18 @@
 		return isset($_REQUEST[$field]) ? $_REQUEST[$field] : null;
 	}
 
+	function post_int($field) {
+		return isset($_REQUEST[$field]) ? intval($_REQUEST[$field]) : 0;
+	}
+
+	function uri_frag(&$uri, $frag, $default = null, $cast_to_int = true) {
+		$frag = isset($uri[$frag])
+			? $uri[$frag]
+			: $default;
+
+		return $cast_to_int ? intval($frag) : $frag;
+	}
+
 	function mb_ucfirst($str, $utf8 = true) {
 		if ($utf8) $str = mb_convert_encoding($str, 'CP1251');
 		$str = ucfirst(strtolower($str));
@@ -33,6 +45,7 @@
 	function fs($i) {
 		$m = array('байт', 'Кб', 'Мб', 'Гб');
 		$s = 0;
+		$u = 0;
 		while ($i > 1024) {
 			$u = $i % 1024;
 			$i = floor($i / 1024);
@@ -369,9 +382,7 @@
 /* ---------- Pattern templates handling -----------------
  */
 
-	function patt_key($value) {
-		return '{%' . $value . '}';
-	}
+	function patt_key($value) { return '{%' . $value . '}'; }
 
 	function patternize($pattern, &$data) {
 		return str_replace(array_map('patt_key', array_keys($data)), $data, $pattern);

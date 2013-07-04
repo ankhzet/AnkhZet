@@ -7,7 +7,6 @@
 	class UpdatesController extends AggregatorController {
 		protected $_name = 'updates';
 
-		var $USE_UL_WRAPPER = false;
 		var $MODER_EDIT = '<span class="pull_right">[<a href="/{%root}/delete/{%id}">{%delete}</a>]</span>';
 		var $EDIT_STRINGS = array();
 		var $EDIT_FILES   = array();
@@ -43,7 +42,7 @@
 		';
 		const UPDATES_CHECK = '<span class="pull_right">[<a href="/updates/trace">{%checkupdates}</a>]</span>';
 		const UPDATES_HIDDEN = '<span class="pull_right">[<a href="/updates?hidden={%hidden}">{%check}</a>]</span>';
-		const UPDATES_RSS = '<span class="pull_right">[<a href="/api.php?action=rss&channel={%uid}">{%rss}</a>]</span>';
+		const UPDATES_RSS = '<span class="pull_right">[<a href="/rss.xml?channel={%uid}">{%rss}</a>]</span>';
 
 		var $diff_sign = array(-1 => 'color:red', 0 => '', 1 => 'color:green');
 
@@ -62,35 +61,35 @@
 		}
 
 		function actionPage($r) {
-			$hidden = intval($_REQUEST['hidden']);
+			$uid = $this->user->ID();
+			$hidden = uri_frag($_REQUEST, 'hidden', 0);
+			$hidden_f = intval(!$hidden);
 			$loc = array(
 				'checkupdates' => Loc::lget('checkupdates')
 			, 'check' => Loc::lget($hidden ? 'checktraced' : 'checkhidden')
 			, 'rss' => Loc::lget('RSS')
-			, 'uid' => $this->user->ID()
-			, 'hidden' => !$hidden
+			, 'uid' => $uid
+			, 'hidden' => $hidden_f
 			);
+
 			View::addKey('moder', patternize(self::UPDATES_RSS . ' ' . self::UPDATES_CHECK . ' ' . self::UPDATES_HIDDEN, $loc));
 			$this->query = '`user` = ' . $this->user->ID();
 			$aggregator = $this->getAggregator();
-			$page = ($page = intval($r[0])) ? $page : 1;
-			$this->page = $page;
+			$this->page = $page = uri_frag($r, 0, 1);
 			$this->link = $hidden ? '?hidden=1' : '';
 			$params = array('page' => $page - 1, 'pagesize' => $aggregator->FETCH_PAGE, 'desc' => true);
 			$params['collumns'] = 'h.*, p.`author`, a.`fio`, p.`title`, p.`description`, p.`size` as `new_size`, p.`time` as `updated`, (p.`size` <> h.`size`) as `upd`';
-			$params['filter'] = '`user` = ' . $this->user->ID() . ' and `trace` = ' . ($hidden ? 0 : 1);
+			$params['filter'] = "`user` = $uid and `trace` = $hidden_f";
 			$params['order'] = '`upd` desc, `time`';
 
 			$aggregator->TBL_FETCH = '`history` h left join `pages` p on p.`id` = h.`page` left join `authors` a on a.`id` = p.`author`';
 			$this->data = $aggregator->fetch($this->prepareFetch($params));
 
-			$total = intval($this->data['total']);
-			$last  = intval(ceil($total / $aggregator->FETCH_PAGE));
+			$last  = intval(ceil($this->data['total'] / $aggregator->FETCH_PAGE));
 			$last  = $last < 1 ? 1 : $last;
-			if ($last < $page) {
-				header('location: /' . $this->_name . '/page/' . $last);
-				die();
-			}
+			if ($last < $page)
+				locate_to("/{$this->_name}/page/{$last}");
+
 			$c = count($this->data['data']);
 
 			$n = '';
@@ -126,13 +125,13 @@
 			. '<li style="float: left; margin: 0 -100% 0 5px; position: relative;"><input type=checkbox class="multi-check" /> С отмеченными: <a href="javascript:void(0)" alt="/updates/uptodate" class="multi link">Прочитано</a> | <a href="javascript:void(0)" alt="/updates/hide" confirm="1" class="multi link">Не отслеживать</a></li>'
 			. PHP_EOL . (($last > 1) ? $aggregator->generatePageList($page, $last, $this->_name . '/', $this->link) : '<li>&nbsp;</li>') . '</ul>' . PHP_EOL;
 
-			$this->view->data = $n ? ($this->USE_UL_WRAPPER ? '<ul class="' . $this->_name . '">' . PHP_EOL . $n . PHP_EOL . '</ul>' : $n) : Loc::lget($this->_name . '_nodata');
-			$this->view->renderTPL($this->_name . '/index');
+			$this->view->data = $n ? $n : Loc::lget("{$this->_name}_nodata");
+			$this->view->renderTPL("{$this->_name}/index");
 		}
 
 		public function actionUptodate($r) {
-			$trace = $_REQUEST['id'];
-			if (!@count($trace))
+			$trace = uri_frag($_REQUEST, 'id', 0, 0);
+			if (!$trace)
 				throw new Exception('Trace ID not specified!');
 
 			$idx = array();
@@ -146,8 +145,8 @@
 		}
 
 		public function actionHide($r) {
-			$trace = $_REQUEST['id'];
-			if (!@count($trace))
+			$trace = uri_frag($_REQUEST, 'id', 0, 0);
+			if (!$trace)
 				throw new Exception('Trace ID not specified!');
 
 			$idx = array();
@@ -155,16 +154,16 @@
 				$idx[] = intval($id);
 
 			$ha = $this->getAggregator(0);
-			$ha->markTrace($idx, intval(!intval($_REQUEST['traced'])));
-			if ($_REQUEST['silent']) die();
-			locate_to('/' . $this->_name);
+			$ha->markTrace($idx, intval(!uri_frag($_REQUEST, 'traced')));
+			if (uri_frag($_REQUEST, 'silent')) die();
+			locate_to("/{$this->_name}");
 		}
 
 		public function actionTrace($r) {
 			$uid = $this->user->ID();
 			$ha = $this->getAggregator(0);
-			$aid = intval($r[0]);
-			$pid = intval($r[1]);
+			$aid = uri_frag($r, 0);
+			$pid = uri_frag($r, 1);
 			$a = array();
 			if (!$aid) {
 				$s = $ha->dbc->select('`history` h, `pages` p', "h.`user` = $uid and h.`page` = p.`id` group by p.`author`", 'p.`author` as `0`');
@@ -203,7 +202,7 @@
 
 		function actionCheck($r) {
 			$h = $this->getAggregator();
-			$a = $h->authorsToUpdate($this->user->ID(), intval($r[0]));
+			$a = $h->authorsToUpdate($this->user->ID(), uri_frag($r, 0));
 			if (count($a)) {
 				require_once 'core_updates.php';
 				$u = new AuthorWorker();

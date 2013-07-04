@@ -54,7 +54,7 @@
 				$login = $data[self::T_LOGIN];
 				$a = array();
 				foreach ($this->acls as $acl => $acls)
-					if (($id = $acls[id]) && ($id !== $data[self::T_ACL]))
+					if (($id = $acls['id']) && ($id !== $data[self::T_ACL]))
 						$a[] = '<a href="/admin/promote/?login=' . $login . '&acl=' . $id . '">' . $acl . '</a>';
 
 				return 'Дать права доступа: ' . join(', ', $a) . '';
@@ -137,7 +137,7 @@
 
 		public function actionKick($r) {
 			$this->makeSub('userlist', 'Список пользователей', 'Удаление пользователя');
-			$id = intval($r[0]);
+			$id = uri_frag($r, 0);
 			if ($this->userSelf($id))
 				$this->view->renderMessage('Вы не можете удалить сами себя.', View::MSG_ERROR);
 			else {
@@ -214,7 +214,7 @@
 
 		function editContents($lang, $file, $template) {
 			$this->makeSub('templates/' . $lang, 'Редактирование шаблонов', 'Редактирование шаблона "' . $template . '"');
-			$contents = $_REQUEST['editor'];
+			$contents = post('editor');
 			if (isset($contents)) {
 				$contents = preg_replace('/((\.\.\/)+)/', $this->view->host . '/', stripslashes($contents));
 				if (@file_put_contents($file, $contents) === false) {
@@ -232,31 +232,33 @@
 		}
 
 		public function actionShare($r) {
-			$file = '/data/share/' . urldecode($r[1]) . ($r[2] ? '.' . $r[2] : '');
-			switch ($r[0]) {
+			$f1 = uri_frag($r, 1, '', 0);
+			$f2 = uri_frag($r, 2, '', 0);
+			$file = '/data/share/' . urldecode($f1) . ($f2 ? ".{$f2}" : '');
+			switch (uri_frag($r, 0)) {
 			case 'upload':
-				if ($_REQUEST[action] == 'upload') {
-					$r = fileLoad($_FILES[file], '/data/share/');
+				if (post('action') == 'upload') {
+					$r = fileLoad($_FILES['file'], '/data/share/');
 					if ($r[0] < 0)
 						throw new Exception('err_fileupload' . (-intval($r[0])));
-					header('Location: /share');
+					locate_to('/share');
 				} else
 					$this->view->renderTPL('functions/upload');
 				break;
 			case 'delete':
-				$this->makeSub('/share', Loc::lget('titles.share'), 'Просмотр файла [' . $file . ']');
+				$this->makeSub('/share', Loc::lget('titles.share'), "Просмотр файла [{$file}]");
 				$filename = SUB_DOMEN . $file;
 				if (!file_exists($filename))
 					$filename = mb_convert_encoding($filename, 'CP-1251', 'UTF-8');
 				if (file_exists($filename)) {
 					if (!@unlink($filename))
 						throw new Exception('Ошибка при удалении "' . $file . '"');
-					header('Location: /share');
+					locate_to('/share');
 				} else
-					throw new Exception('Файл "' . $file . '" не найден');
+					throw new Exception("Файл \"{$file}\" не найден");
 				break;
 			case 'show':
-				$this->makeSub('/share', Loc::lget('titles.share'), 'Просмотр файла [' . $file . ']');
+				$this->makeSub('/share', Loc::lget('titles.share'), "Просмотр файла [{$file}]");
 				$filename = SUB_DOMEN . $file;
 				if (!file_exists($filename))
 					$filename = mb_convert_encoding($filename, 'CP-1251', 'UTF-8');

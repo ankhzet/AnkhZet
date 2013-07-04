@@ -1,7 +1,7 @@
 <?php
 
 	function escapeField($f) {
-			return trim(addslashes(htmlspecialchars(strip_tags($_POST[$f]))));
+			return trim(addslashes(htmlspecialchars(strip_tags(post($f)))));
 		}
 
 	class FeedbackController extends Controller {
@@ -22,8 +22,8 @@
 			}
 
 			require_once 'captcha.php';
-			$c = new Captcha(addslashes(trim($_REQUEST['rid'])));
-			$captcha = trim($_REQUEST['captcha']);
+			$c = new Captcha(addslashes(trim(post('rid'))));
+			$captcha = trim(post('captcha'));
 			if (!($captcha && $c->valid($captcha)))
 				$e['captcha'] = true;
 
@@ -37,7 +37,7 @@
 				$contents = $msg;
 
 				$m->sendMsg($title, $subject, $contents);
-				header('Location: /feedback/success');
+				locate_to('/feedback/success');
 				return;
 			}
 			$this->view->errors = $e;

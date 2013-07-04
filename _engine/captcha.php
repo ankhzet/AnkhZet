@@ -1,12 +1,8 @@
 <?
-	define(ROOT, dirname(dirname(__FILE__)));
-	define(ENGINE_ROOT, ROOT . '/_engine');
-	define(CTL_ROOT, ROOT . '/controllers');
-	define(VIEWS_ROOT, ROOT . '/views');
-	define(MODELS_ROOT, ROOT . '/models');
-	define(SUB_CTLS, SUB_DOMEN . '/controllers');
-	define(SUB_VIEWS, SUB_DOMEN . '/views');
-	define(SUB_MODELS, SUB_DOMEN . '/models');
+	if (!defined('ROOT')) {
+		define('ROOT', dirname(dirname(__FILE__)));
+		define('ENGINE_ROOT', ROOT . '/_engine');
+	}
 
 	require_once 'dbengine.php';
 	require_once 'session.php';

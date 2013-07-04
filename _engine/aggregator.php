@@ -46,16 +46,23 @@
 		public function fetch(array $params) {
 			//$page, $pagesize, $collumns = null, $desc = true, $filter = ''
 			$numrows = isset($params['pagesize']) ? $params['pagesize'] : 0;
-			$limit = ($numrows > 1) ? ' limit ' . ($params['page'] * $numrows)  . ', ' . $numrows : ($numrows == 1 ? ' limit 1' : '');
-			$order = ($params['desc'] === 0) ? '' : ' order by ' . ($params['order'] ? $params['order'] : '`time`') . ($params['desc'] ? ' desc' : ' asc');
+			$page = isset($params['page']) ? intval($params['page']) : 0;
+			$limit = ($numrows > 1) ? ' limit ' . ($page * $numrows)  . ', ' . $numrows : ($numrows == 1 ? ' limit 1' : '');
+			$desc = isset($params['desc']) ? ($params['desc'] ? ' desc' : $params['desc']) : 0;
+			$order = isset($params['order']) ? $params['order'] : '`time`';
+			$order = ($desc !== 0) ? " order by $order $desc" : '';
+			$nocalc = isset($params['nocalc']) ? $params['nocalc'] : 0;
+			$filter = isset($params['filter']) ? $params['filter'] : '';
+			$collumns = isset($params['collumns']) ? $params['collumns'] : '*';
+			$countrows = $numrows != 1 && !$nocalc;
 
 			$s = $this->dbc->select(
 					$this->TBL_FETCH
-				, $params['filter'] . $order . $limit
-				, (($numrows != 1 && !$params['nocalc']) ? 'SQL_CALC_FOUND_ROWS ' : '') . ($params['collumns'] ? $params['collumns'] : '*')
+				, "$filter{$order}$limit"
+				, $countrows ? "SQL_CALC_FOUND_ROWS $collumns" : $collumns
 			);
 
-			if ($numrows != 1 && !$params['nocalc'])
+			if ($countrows)
 				if ($s) {
 					$s1 = $this->dbc->query('SELECT FOUND_ROWS()');
 					$t  = @mysql_fetch_row($s1);
@@ -64,11 +71,7 @@
 			else
 				$total = $s ? $this->dbc->rows($s) : 0;
 
-			$this->data = array(
-				'result' => $s
-			, 'data' => $this->dbc->fetchrows($s)
-			, 'total' => intval($total)
-			);
+			$this->data = array('result' => $s, 'data' => $this->dbc->fetchrows($s), 'total' => intval($total));
 			$link = &$this->data;
 			return $link;
 		}
