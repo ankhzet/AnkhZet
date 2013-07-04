@@ -21,15 +21,15 @@ var mapEn = (
 	"c|y|-").split('|');
 
 var mapRu = (
-	"э|ю|я|щ|" +
-	"ч|ш|х|ё|" +
-	"ж|" +
-	"а|б|в|г|" +
-	"д|е|з|и|" +
-	"й|к|л|м|" +
-	"н|о|п|р|" +
-	"с|т|у|ф|" +
-	"ц|ы|--").split('|');
+	"СЌ|СЋ|СЏ|С‰|" +
+	"С‡|С€|С…|С‘|" +
+	"Р¶|" +
+	"Р°|Р±|РІ|Рі|" +
+	"Рґ|Рµ|Р·|Рё|" +
+	"Р№|Рє|Р»|Рј|" +
+	"РЅ|Рѕ|Рї|СЂ|" +
+	"СЃ|С‚|Сѓ|С„|" +
+	"С†|С‹|--").split('|');
 
 
 function inArray(char, array) {
@@ -113,10 +113,10 @@ $(document).ready(function() {
 		if (this.href.indexOf("delete") >= 0)
 			$(this).click(function() {
 				upform.init({
-					title: 'Удаление'
-				, content: '<div class="static">Вы действительно хотите выполнить это действие?<br/>[<span style="color: red;">' + this.href + '</span>]</div>'
+					title: 'РЈРґР°Р»РµРЅРёРµ'
+				, content: '<div class="static">Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ РІС‹РїРѕР»РЅРёС‚СЊ СЌС‚Рѕ РґРµР№СЃС‚РІРёРµ?<br/>[<span style="color: red;">' + this.href + '</span>]</div>'
 				, controls: [
-					{action: "javascript:locate('" + encodeURIComponent(href) + "')", caption: 'Удалить'}
+					{action: "javascript:locate('" + encodeURIComponent(href) + "')", caption: 'РЈРґР°Р»РёС‚СЊ'}
 				, upform.BTN_CLOSE]
 				, onready: function(){
 					upform.show();

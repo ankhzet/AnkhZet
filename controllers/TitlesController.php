@@ -7,7 +7,7 @@
 			if (is_array($locstr))
 				build_loc(&$a, $locstr, $prefix . $key . '.');
 			else {
-				$v = array(key => $prefix . $key, str => $locstr, odd => (count($l) % 2) ? '' : ' class="odd"');
+				$v = array('key' => $prefix . $key, 'str' => $locstr, 'odd' => (count($l) % 2) ? '' : ' class="odd"');
 				$a[] = patternize($patt, &$v);
 			}
 		if (count($a))
@@ -50,23 +50,23 @@
 
 		public function actionMain($r) {
 			$c = Config::read('INI', 'locale.ini');
-			$lang = $r[1];
+			$lang = uri_frag($r, 1, 0, 0);
 			if (array_search($lang, Loc::$LOC_ALL) === false)
 				$lang = Loc::Locale();
 			$loc = $c->get($lang);
 			ksort($loc);
 
-			switch ($_REQUEST[action]) {
+			switch (post('action')) {
 			case 'add':
-				$page = stripslashes($_REQUEST[page]);
-				$title = str_replace('=', '&#61;', htmlspecialchars($_REQUEST[title]));
+				$page = stripslashes(post('page'));
+				$title = str_replace('=', '&#61;', htmlspecialchars(post('title')));
 				$c->set(array($lang, $page), $title);
 				$c->save();
-				locate_to('/' . $this->_name);
+				locate_to("/{$this->_name}");
 				break;
 			}
 			$l = array();
-			build_loc(&$l, $loc);
+			build_loc($l, $loc);
 
 			echo <<<here
 <div id="config">

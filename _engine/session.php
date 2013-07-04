@@ -1,6 +1,7 @@
 <?php
 
 	require_once 'dbengine.php';
+	require_once 'common.php';
 	require_once 'dbtable.php';
 	require_once 'localization.php';
 	require_once 'user.php';
@@ -26,9 +27,9 @@
 			switch ($by) {
 			case SAM::SAM_NONE   : ;
 				break;
-			case SAM::SAM_COOKIES: $this->read($_COOKIE['ssid'], intval($_COOKIE['user']), intval($_COOKIE['locale']));
+			case SAM::SAM_COOKIES: $this->read(uri_frag($_COOKIE, 'ssid', null, 0), uri_frag($_COOKIE, 'user'), uri_frag($_COOKIE, 'locale'));
 				break;
-			case SAM::SAM_URI    : $this->read($_REQUEST['ssid'], intval($_REQUEST['user']), intval($_REQUEST['locale']));
+			case SAM::SAM_URI    : $this->read(uri_frag($_REQUEST,'ssid', null, 0), uri_frag($_REQUEST, 'user'), uri_frag($_REQUEST, 'locale'));
 				break;
 			}
 			if (SAVE_SESSION_ACTIVITY && $this->valid()) {

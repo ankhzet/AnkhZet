@@ -352,7 +352,7 @@ var
 		}
 		this.showForm = function(text, code) {
 			upform.init({
-					title: 'Grammar Nazzi [' + code + ']!'
+					title: 'Grammar Naz<sup style="color: #633">z</sup>i!'
 				, content: patternize(
 					'<input type="hidden" class="grammar-code" value="{%code}"/>'
 				+ '<textarea class="grammar-before" disabled="disabled">{%text}</textarea><br />'

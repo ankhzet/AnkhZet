@@ -168,7 +168,7 @@
 			);
 			$res  = array();
 			foreach ($flds as $field) {
-				$value = $regdata[$field];
+				$value = uri_frag($regdata, $field, null, 0);
 				switch ($field) {
 				case self::FLD_NAME:
 					if (!(preg_match(PAT_NAME, $value)))

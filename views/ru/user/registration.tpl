@@ -1,10 +1,10 @@
 <?php
-	$rdat = $this->regdata ? $this->regdata : array();
+	$rdat = isset($this->regdata) ? $this->regdata : array();
 	require_once 'captcha.php';
 	$c = new Captcha();
 	$rid = $c->generate();
 
-	$errs = $this->regstate ? $this->regstate : array();
+	$errs = isset($this->regstate) ? $this->regstate : array();
 	$e = '';
 	if (count($errs) > 0) {
 		foreach ($errs as $err)
@@ -14,14 +14,14 @@
 
 	$this->errors = $errs;
 	function error($view, $key) {
-		echo ' for="i' . $key . '"' . ($view->errors[$key] ? ' style="color: red;"' : '');
+		echo ' for="i' . $key . '"' . (isset($view->errors[$key]) ? ' style="color: red;"' : '');
 	}
 ?>
 			<form class="register" action="?" method="post">
 				<br />
 				<input type=hidden name=action value=registration />
 				<input type=hidden name=rid value="<?=$rid?>" />
-				<input type=hidden name=url value="<?=htmlspecialchars($_REQUEST['url'])?>" />
+				<input type=hidden name=url value="<?=htmlspecialchars(post('url'))?>" />
 
 				<input id=iemail type="text" name="email" value="<?=$rdat['email']?>" /><label<?=error($this, 'email')?>>Электронная почта<span>*</span></label><br /><br />
 				<input id=ipass type=password name="pass" value="<?=$rdat['pass']?>" /><label<?=error($this, 'pass')?>>Пароль<span>*</span></label><br /><br />

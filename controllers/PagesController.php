@@ -8,7 +8,8 @@
 		protected $_name = 'pages';
 
 		var $USE_UL_WRAPPER = false;
-		var $MODER_EDIT = '<span class="pull_right">[<a href="/{%root}/delete/{%id}">{%delete}</a>]</span>';
+		var $MODER_EDIT   = '<span class="pull_right">[<a href="/{%root}/delete/{%id}">{%delete}</a>]</span>';
+		var $ADD_MODER    = 0;
 		var $EDIT_STRINGS = array();
 		var $EDIT_FILES   = array();
 		var $EDIT_REQUIRES= array();
@@ -71,8 +72,8 @@
 		}
 
 		public function action() {
-			$author = intval(post('author'));
-			$group = intval(post('group'));
+			$author = post_int('author');
+			$group = post_int('group');
 			if (!$author && $group) {
 				$ga = $this->getAggregator(2);
 				$g = $ga->get($group, '`author`, `title`');
@@ -151,13 +152,15 @@
 
 			View::addKey('grammar', $this->fetchGrammarSuggestions(intval($row['id'])));
 			View::addKey('preview', $row['content']);
+			View::addKey('h_old', '');
+			View::addKey('h_new', '');
 			$this->view->renderTPL('pages/view');
 			$this->updateTrace($page, $version);
 			return '';//patternize($this->ID_PATTERN, $row);
 		}
 
 		function actionVersion($r) {
-			$page = intval($r[0]);
+			$page = uri_frag($r, 0);
 			if (!$page)
 				throw new Exception('Page ID not specified!');
 
@@ -185,14 +188,16 @@
 			switch ($action = post('action')) {
 			case 'view':
 				View::addKey('title', $alink . ' - ' . $plink);
-				View::addKey('moder', '<span style="font-size: 80%;">[update: ' . gmdate('d.m.Y', $version) . ']</span>');
-				$version = intval(post('version'));
+				View::addKey('moder', '<span style="font-size: 80%;">[update: ' . date('d.m.Y', $version) . ']</span>');
+				$version = post_int('version');
 				$cnt = @file_get_contents("$storage/$version.html");
 				$cnt1 = @gzuncompress/**/($cnt);
 				if ($cnt1 !== false) $cnt = $cnt1;
 				$cnt = $this->prepareForGrammar($cnt, true);
 				View::addKey('preview', mb_convert_encoding($cnt, 'UTF-8', 'CP1251'));
 				View::addKey('grammar', $this->fetchGrammarSuggestions($page));
+				View::addKey('h_old', '');
+				View::addKey('h_new', '');
 				$this->view->renderTPL('pages/view');
 			default:
 				rsort($p);
@@ -202,12 +207,12 @@
 				$oldest = $p[count($p) - 1];
 
 				if ($uid) $f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`time`'));
-				$lastseen = ($uid && $f['total']) ? intval($f['data'][0]['time']) : intval(post("ls_{$page}"));
+				$lastseen = ($uid && $f['total']) ? intval($f['data'][0]['time']) : post_int("ls_{$page}");
 				$lastseen = $lastseen ? $lastseen : $newest;
 
-				$diffopen = ($v = intval(post('version'))) ? $v : $lastseen;
+				$diffopen = ($v = post_int('version')) ? $v : $lastseen;
 
-				$ldate = gmdate('d.m.Y', $newest);
+				$ldate = date('d.m.Y', $newest);
 				$full = Loc::lget('full_last_version');
 				$last = $newest ? "<span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>" : '';
 				View::addKey('title', "$alink - $plink");
@@ -218,7 +223,7 @@
 						$row['view'] = Loc::lget('view');
 						$row['diff'] = Loc::lget('diff');
 						$row['version'] = $version;
-						$row['prew'] = intval($p[$idx + 1]);
+						$row['prew'] = ($idx < $l) ? intval($p[$idx + 1]) : 0;
 						$row['timestamp'] = date('d.m.Y h:i:s', $version);
 						$row['size'] = fs(filesize("$storage/$version.html"));
 						$t = '<a href="/{%root}/diff/{%page}/{%version},{%prev}" {%oldest}>{%time}</a>';
@@ -240,25 +245,25 @@
 			}
 
 			if ($action == 'view')
-				$this->updateTrace($page, intval(post('version')));
+				$this->updateTrace($page, post_int('version'));
 		}
 
 		function updateTrace($page_id, $version) {
 			if ($uid = $this->user->ID()) {
 				$ha = $this->getAggregator(3);
-				$s = $ha->dbc->select('history', '`user` = ' . $uid . ' and `page` = ' . $page_id, '`id` as `0`');
+				$s = $ha->dbc->select('history', "`user` = $uid and `page` = $page_id", '`id` as `0`');
 				if ($s && ($r = @mysql_result($s, 0)))
 					$ha->upToDate(array(intval($r)), $version);
 			} else {
 				$t = time() + 2592000;
 				preg_match('/(.*\.|^)([^\.]+\.[^\.]+)$/i', $_SERVER['HTTP_HOST'], $m);
 				$m = '.' . $m[2];
-				setcookie("ls_{$page_id}", max(intval(post("ls_{$page_id}")), $version), $t, "/", $m);
+				setcookie("ls_{$page_id}", max(post_int("ls_{$page_id}"), $version), $t, "/", $m);
 			}
 		}
 
 		public function actionDiff($r) {
-			$page = intval($r[0]);
+			$page = uri_frag($r, 0);
 			if (!$page)
 				throw new Exception('Page ID not specified!');
 
@@ -267,14 +272,14 @@
 			if ($data['id'] != $page)
 				throw new Exception('Resource not found o__O');
 
-			$u = explode(',', $r[1]);
-			$cur= intval($u[0]);
-			$old= intval($u[1]);
+			$u = explode(',', uri_frag($r, 1, '', 0));
+			$cur = intval($u[0]);
+			$old = intval($u[1]);
 
 			if (!($cur * $old))
 				throw new Exception('Old or current version not found');
 
-			$storage = SUB_DOMEN . '/cache/pages/' . $page;
+			$storage = SUB_DOMEN . "/cache/pages/$page";
 
 
 			$d = array(false => '=&gt;', true => '&lt;=');
@@ -311,18 +316,17 @@
 //			@ob_end_flush();
 			require_once 'core_diff.php';
 			ob_start();
-//			echo '<pre>';
 			$io = new DiffIO(1024);
 			$io->show_new = !$show_old;
 			$db = new DiffBuilder($io);
-			$h = $db->diff($t1, $t2);//, intval($_REQUEST['notdeep']) ? $db->DIFF_TEXT_SPLITTERS2 : $db->DIFF_TEXT_SPLITTERS);
+			$h = $db->diff($t1, $t2);
 			$c = ob_get_contents();
 			ob_end_clean();
 
 			$c = $this->prepareForGrammar($c);
 
-			$old = str_replace(PHP_EOL, '<br />', join('", "', $h[0]));
-			$new = str_replace(PHP_EOL, '<br />', join('", "', $h[1]));
+			$old = count($h[0]) ? str_replace(PHP_EOL, '<br />', join('", "', $h[0])) : '';
+			$new = count($h[1]) ? str_replace(PHP_EOL, '<br />', join('", "', $h[1])) : '';
 			View::addKey('grammar', $this->fetchGrammarSuggestions($page));
 			View::addKey('preview', $c);
 			View::addKey('h_old', $old);
@@ -388,9 +392,9 @@
 		}
 
 		function actionCleanup($r) {
-			$save = intval($r[0]) ? intval($r[0]) : 3;
+			$save = uri_frag($r, 0, 3);
 			$save = max(2, $save);
-			$force = intval(post('force'));
+			$force = post_int('force');
 			$dir = SUB_DOMEN . '/cache/pages';
 			$d = @dir($dir);
 			$p = array();

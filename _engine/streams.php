@@ -55,12 +55,12 @@
 
 		function url_stat($path) {
 			self::real($path, $path);
-			return stat($path);
+			return @stat($path);
 		}
 
 		function stream_stat($path) {
 			self::real($path, $path);
-			return stat($path);
+			return @stat($path);
 		}
 
 		function stream_metadata($path, $option, $var) {

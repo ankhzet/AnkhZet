@@ -1,18 +1,20 @@
 <?php
 	$p1 = '<div class="cnt-item">
-		<div class="title">
-			<span class="head"> <a href="/authors/id/{%id}">{%fio}</a></span>
-			<span class="link size" style="width: 150px;">{%time}</span>
-			<span class="link" style="width: 50%;">Прошло с последнего обновления: <b>{%delta}</b></span>
-		</div>
-	</div>';
+					<div class="title">
+						<span class="head"> <a href="/authors/id/{%id}">{%fio}</a></span>
+						<span class="link size" style="width: 150px;">{%time}</span>
+						<span class="link" style="width: 50%;">Прошло с последнего обновления: <b>{%delta}</b></span>
+					</div>
+				</div>
+				';
 	$p2 = '<div class="cnt-item">
-		<div class="title">
-			<span class="head"> <a href="/pages/version/{%id}">{%title}</a></span>
-			<span class="link size" style="width: 150px;">{%time}</span>
-			<span class="link" style="width: 50%;">Прошло с изменения страницы: <b>{%delta}</b></span>
-		</div>
-	</div>';
+					<div class="title">
+						<span class="head"> <a href="/pages/version/{%id}">{%title}</a></span>
+						<span class="link size" style="width: 150px;">{%time}</span>
+						<span class="link" style="width: 50%;">Прошло с изменения страницы: <b>{%delta}</b></span>
+					</div>
+				</div>
+				';
 	$t = time();
 	require_once 'core_authors.php';
 	$a = AuthorsAggregator::getInstance();
@@ -53,7 +55,7 @@
 	$c2 = count($e);
 	$e = join('', $e);
 
-	if ($a_id = intval($_REQUEST['a'])) {
+	if ($a_id = post_int('a')) {
 		require_once 'core_updates.php';
 		$w = new AuthorWorker();
 		msqlDB::o()->debug = 1;
@@ -71,7 +73,8 @@
 		return "{$d}д. {$h}ч. {$m}м.";
 	}
 ?>
-	<h4>Очередь на проверку обновлений (<?=$c1?>):</h4>
-<?=$r?>
-	<h4>Обновления произведений (<?=$c2?>):</h4>
-<?=$e?>
+				<h4>Очередь на проверку обновлений (<?=$c1?>):</h4>
+				<?=$r?>
+
+				<h4>Обновления произведений (<?=$c2?>):</h4>
+				<?=$e?>

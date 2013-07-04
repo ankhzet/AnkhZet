@@ -95,7 +95,7 @@
 		}
 
 		public function actionCheck($r) {
-			$id = intval($r[0]);
+			$id = uri_frag($r, 0);
 			if (!$id)
 				throw new Exception('Author ID not specified!');
 
@@ -110,29 +110,28 @@
 		}
 
 		function actionUpdate($r) {
-			$limit = intval($r[0]);
-			$limit = $limit ? $limit : 1;
+			$limit = uri_frag($r, 0, 1);
 
 			require_once 'core_updates.php';
 			$u = new AuthorWorker();
 			$left = $u->serveQueue($limit);
 			if ($left)
-				locate_to('/authors/update/' . $left);
+				locate_to("/authors/update/$left");
 		}
 
 		function actionAdd($r) {
 			$error = array();
-			if ($_REQUEST[action] == 'add') {
+			if (post('action') == 'add') {
 				$v = array();
 				foreach ($this->EDIT_STRINGS as $key) {
-					${$key} = str_replace(PHP_EOL, '<br />', trim($_REQUEST[$key]));
+					${$key} = str_replace(PHP_EOL, '<br />', trim(post($key)));
 					$v[$key] = ${$key};
 					if (array_search($key, $this->EDIT_REQUIRES) !== false)
 							if (${$key} == '')
 								$error[$key] = true;
 				}
 
-				if (preg_match('/(https?\:\/\/samlib\.ru)?(\/(\w\/[^\/]+))/i', $link, $m)) {
+				if (preg_match('/(https?\:\/\/samlib\.ru)?(\/?(\w\/[^\/]+))/i', $link, $m)) {
 					$link = str_replace(array('%', '\'', '"'), '', $m[3]);
 					$a = $this->getAggregator();
 					$d = $a->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`link` like '%$link%'", 'collumns' => '`id`'));
@@ -146,20 +145,19 @@
 				} else
 					$error['link'] = true;
 
-				$this->view->id = $id = intval($_REQUEST[id]);
-				if (!count($error)) {
+				$this->view->id = $id = post_int('id');
+				if (!$error) {
 					$aggregator = $this->getAggregator();
 					$id = $id ? $aggregator->update($v, $id) : $aggregator->add($v);
 
-					if ($id) {
+					if ($id)
 						locate_to('/' . $this->_name . ($this->kind ? '?kind=' . $this->kind : ''));
-						die();
-					} else
+					else
 						throw new Exception('Insertion failed o_O');
 				}
 			}
 			$this->view->errors = $error;
-			$this->view->renderTPL($this->_name . '/add');
+			$this->view->renderTPL("{$this->_name}/add");
 		}
 	}
 ?>

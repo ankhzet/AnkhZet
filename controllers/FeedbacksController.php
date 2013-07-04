@@ -81,7 +81,7 @@
 
 		public function actionView($r) {
 			$l = explode(',', Loc::lget('mail'));
-			$id = intval($r[0]);
+			$id = uri_frag($r, 0);
 
 			$m = new SA_Mail();
 			$f = $m->fetchMessage($id);
@@ -111,8 +111,8 @@
 		}
 
 		public function actionDomark($r) {
-			$id = intval($r[0]);
-			$mark = intval($r[1]);
+			$id = uri_frag($r, 0);
+			$mark = uri_frag($r, 1);
 
 			$m = new SA_Mail();
 			$f = $m->markMessage($id, $mark);
