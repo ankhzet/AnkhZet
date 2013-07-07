@@ -8,8 +8,9 @@
 	require_once 'AggregatorController.php';
 
 	class AuthorsController extends AggregatorController {
-		protected $_name = 'authors';
+		protected $_name  = 'authors';
 
+		var $ALWAYS_ADD   = 1;
 		var $USE_UL_WRAPPER = false;
 		var $EDIT_STRINGS = array('fio', 'link');
 		var $EDIT_FILES   = array();
