@@ -22,7 +22,7 @@
 							<a href="/pages/version/{%id}">{%title}</a>
 						</span>
 						<span class="link size" style="width: 150px;">{%time}</span>
-						<span class="link size" style="width: 150px; color: {%color};"><b>{%delta}</b></span>
+						<span class="link size" style="width: 30%; color: {%color};"><b>{%delta}</b></span>
 					</div>
 				</div>
 				';
@@ -33,8 +33,19 @@
 	$u = array();
 	if ($d['total'])
 		foreach ($d['data'] as &$row) {
-			$row['delta'] = (($pos = $row['size'] > 0) ? '+' : '-') . fs(abs($row['size'] * 1024));
-			$row['color'] = $pos ? 'green' : 'red';
+			$val = $row['value'];
+			switch ($row['kind']) {
+			case UPKIND_SIZE:
+				$row['delta'] = (($pos = $val > 0) ? '+' : '-') . fs(abs($val * 1024));
+				$row['color'] = $pos ? 'green' : 'red';
+				break;
+			case UPKIND_GROUP:
+				$g = GroupsAggregator::getInstance();
+				$gd = $g->get($val, '`id`, `title`');
+				$row['delta'] = patternize('перенесено из <a href="/pages?group={%id}">{%title}</a>', $gd);
+				$row['color'] = 'blue';
+				break;
+			}
 			$row['time'] = date('d.m.Y h:i:s', intval($row['time']));
 			$u[] = patternize($p3, $row);
 		}

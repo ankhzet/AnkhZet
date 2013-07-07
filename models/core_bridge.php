@@ -1,11 +1,12 @@
 <?php
-	$r_default_context = stream_context_get_default(array(
+/*	$r_default_context = stream_context_get_default(array(
 		'http' => array(
-			'proxy' => 'tcp://proxy.munged.edu:8080',
+			'proxy' => 'http://localhost:8080',
 			'request_fulluri' => true
 		)
-	));
+	));*/
 
+	static $curl;
 	function url_get_contents($link, $params = null) {
 		ob_start();
 		$response = '';
@@ -13,8 +14,10 @@
 		$t = 0;
 		$kbps = 0;
 		try {
-			$c = curl_init($link);
-			/**/
+			static $curl;
+			$c = $curl ? $curl : ($curl = curl_init());
+			curl_setopt($c, CURLOPT_URL, $link);
+			/*/
 //			curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
 			curl_setopt($c, CURLOPT_PROXY, "http://localhost:8080");
 			curl_setopt($c, CURLOPT_PROXYPORT, 8080);
@@ -25,7 +28,6 @@
 			$response = ob_get_contents();
 			$len = strlen($response);
 			$kbps = fs($len / $t);
-			curl_close($c);
 		} catch (Exception $e) {
 		}
 		ob_end_clean();

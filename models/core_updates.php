@@ -8,6 +8,10 @@
 
 	require_once 'core_comparator.php';
 
+	define('UPKIND_SIZE', 0);
+	define('UPKIND_GROUP', 1);
+	define('UPKIND_DELETE', 2);
+
 	class AuthorWorker {
 		public function check($author_id) {
 			$g = AuthorsAggregator::getInstance();
@@ -83,8 +87,8 @@
 						'author' => $author_id
 					, 'group' => $groups[$idx][0]
 					, 'link' => $inline[$idx]
-					, 'title' => $title
-					, 'description' => $groups[$idx][2]
+					, 'title' => htmlspecialchars($title, ENT_QUOTES)
+					, 'description' => htmlspecialchars($groups[$idx][2], ENT_QUOTES)
 					));
 					$gi[$gid] = $idx;
 				}
@@ -103,18 +107,28 @@
 			if (count($check)) { // ok, there are smth to check
 				$diff = array();
 				$pa = PagesAggregator::getInstance();
+				$ua = UpdatesAggregator::getInstance();
 				$d = $pa->fetch(array(
 					'filter' => '`author` = ' . $author_id . ' and (`link` in ("' . join('", "', array_keys($check)) . '"))'
 				, 'nocalc' => 1, 'desc' => 0
-				, 'collumns' => '`id`, `link`, `size`'
+				, 'collumns' => '`id`, `link`, `size`, `group`'
 				));
 				if ($d['total']) { // there are smth in db, check it if size diff
 					foreach ($d['data'] as $row) {
 						$data = $check[$link = $row['link']]; // recently parsed data about page at @link
 						unset($check[$link]); // don't check it later in this function
 
+						$page_id = $row['id'];
 						if (intval($row['size']) <> $data[2])
-							$diff[$row['id']] = $link; // check it
+							$diff[$page_id] = $link; // check it
+
+						$new_group = $gi[$old_group = intval($row['group'])];
+						if ($new_group != $data[0]) {
+							echo patternize(Loc::lget('page_changed_group'), $row) . '<br />';
+							$new_group = array_search($data[0], $gi);
+							$pa->update(array('group' => $new_group), $page_id);
+							$ua->changed($page_id, UPKIND_GROUP, $old_group);
+						}
 					}
 				}
 				if (count($diff))
@@ -129,8 +143,8 @@
 							'author' => $author_id
 						, 'group' => $gid
 						, 'link' => $link
-						, 'title' => htmlspecialchars($data[1])
-						, 'description' => htmlspecialchars($data[3])
+						, 'title' => htmlspecialchars($data[1], ENT_QUOTES)
+						, 'description' => htmlspecialchars($data[3], ENT_QUOTES)
 						, 'size' => 0 // later it will be updated with diff checker
 						));
 						$diff[$pid] = $link;
@@ -218,7 +232,7 @@
 
 					if (intval($row['size']) <> ($size = intval($size[2]))) {
 						$pa->update(array('size' => $size, 'time' => $time), $page);
-						$ua->queue($page, $size - intval($row['size']));
+						$ua->changed($page, UPKIND_SIZE, $size - intval($row['size']));
 						echo " &nbsp;save to [/cache/pages/$page/$time.html]...<br />";
 						echo ' &nbsp;updated (' . $size . 'KB).<br />';
 					}
@@ -293,7 +307,8 @@
 		var $collumns = array(
 			'`id` int auto_increment null'
 		, '`page` int not null'
-		, '`size` int null default 0'
+		, '`kind` tinyint null default 0'
+		, '`value` int null default 0'
 		, '`time` int not null'
 		, 'primary key (`id`)'
 		);
@@ -310,15 +325,15 @@
 		function getUpdates($page) {
 			$d = $this->fetch(array(
 				'filter' => 'u.`page` = p.`id` and a.`id` = p.`author` and g.`id` = p.`group`'
-			, 'collumns' => 'p.`id`, p.`title`, u.`size`, a.`fio`, p.`author`, g.`title` as `group_title`, p.`group`, u.`time`'
+			, 'collumns' => 'p.`id`, p.`title`, u.`kind`, u.`value`, a.`fio`, p.`author`, g.`title` as `group_title`, p.`group`, u.`time`'
 			, 'desc' => true
 			, 'page' => $page
 			));
 			return $d;
 		}
 
-		function queue($page, $size) {
-			return $this->add(array('page' => $page, 'size' => $size));
+		function changed($page, $kind, $value) {
+			return $this->add(array('page' => $page, 'kind' => $kind, 'value' => $value));
 		}
 	}
 
