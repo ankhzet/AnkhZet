@@ -46,7 +46,7 @@
 				<span class="head">{%timestamp}</span>
 				<span class="link size">{%size}</span>
 			</div>
-			<div class="text">[ <a href="/{%root}/version/{%page}?action=view&version={%version}">{%view}</a> | {%diff}: {%prev} ]</div>
+			<div class="text">[ <a href="/{%root}/version/{%page}?action=view&version={%version}">{%view}</a><span class="v-diff {%last}">&nbsp;| {%diff}: {%prev}</span> ]</div>
 		</div>
 		';
 		const VERSION_PATT2 = '
@@ -237,7 +237,8 @@
 								$u[] = patternize($t, $row);
 							}
 
-						$row['prev'] = count($u) ? '&rarr; ' . join(' | &rarr; ', $u) . ' ' : '';
+						$row['prev'] = count($u) ? '&rarr; <div class="versions"><div>' . join('', $u) . '</div></div>' : '';
+						$row['last'] = !$idx ? 'last' : '';
 						echo patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
 					}
 				else

@@ -472,3 +472,54 @@ span.multi {
 *:hover>.ui-updates.green div {
 	background: #9f9;
 }
+
+
+/* - */
+
+.v-diff {
+	display: none;
+	padding: 0;
+	position: relative;
+	margin: -1px;
+}
+*:hover>*>.v-diff {
+	display: inline-block;
+}
+
+.versions {
+	overflow: hidden;
+	height: 20px;
+	width: 60px;
+	display: inline-block;
+	position: relative;
+	margin: -5px 0;
+}
+.versions:hover {
+	overflow: visible;
+	z-index: 100;
+}
+
+.versions div {
+	border: 1px solid transparent;
+	width: auto;
+	position: absolute;
+	border-radius: 3px;
+	margin: 0;
+	padding: 2px 1px;
+}
+.versions:hover div {
+	border: 1px solid #333;
+	background: #ddd;
+}
+
+.versions a {
+	display: block;
+	margin: -1px 1px 1px;
+	margin: -1px auto;
+	padding: 0 2px;
+}
+.versions a:hover {
+	display: block;
+	background: #eee;
+	border-radius: 2px;
+}
