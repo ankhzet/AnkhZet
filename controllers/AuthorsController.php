@@ -7,6 +7,8 @@
 
 	require_once 'AggregatorController.php';
 
+	define('PAGES_PER_GROUP', 3);
+
 	class AuthorsController extends AggregatorController {
 		protected $_name  = 'authors';
 
@@ -52,6 +54,7 @@
 					</div>
 					<div class="text">
 						{%g:desc}
+						{%g:pages}
 					</div>
 				</div>
 ';
@@ -82,12 +85,26 @@
 			$ga = $this->getAggregator(1);
 			$g = $ga->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => '`author` = ' . $row['id'], 'collumns' => '`id`, `title`, `link`, `description`'));
 			$a = array();
+			$pa = $this->getAggregator(3);
 			if ($g['total'])
 				foreach ($g['data'] as $rowg) {
-					$row['g:id'] = $rowg['id'];
+					$row['g:id'] = ($group_id = intval($rowg['id']));
 					$row['g:link'] = preg_match('/^[\/\\\]/', $rowg['link']) ? $rowg['link'] : "/{$row['link']}/{$rowg['link']}";
 					$row['g:title'] = $rowg['title'];
 					$row['g:desc'] = $rowg['description'];
+					$d = $pa->fetch(array('desc' => 0, 'filter' => "`group` = $group_id limit 3", 'collumns' => '`id`, `title`'));
+					$t = $d['total'];
+					$u = array();
+					if ($t) {
+						foreach ($d['data'] as $rowp) {
+							$u[] = patternize('&rarr; <a href="/pages/version/{%id}">{%title}</a>', $rowp);
+						}
+						if ($t > PAGES_PER_GROUP) {
+							$t = array('left' => $t - PAGES_PER_GROUP, 'link' => "/pages?group=$group_id");
+							$u[] = patternize(Loc::lget('group_more'), $t);
+						}
+					}
+					$row['g:pages'] = join('<br />', $u);
 					$a[] = patternize($this->GROUP_ITEM, $row);
 				}
 
