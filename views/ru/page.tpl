@@ -28,6 +28,15 @@
 	</div>
 	<div id="content">
 		<div class="content uri-{%page%}">
+<?php
+	$r = explode('-', {%page#var%});
+	$p2 = array('add' => 1, 'edit' => 1, 'delete' => 1);
+	$static = ($r[0] == 'feedback') || ($r[0] == 'main' && $r[1] != '') || isset($p2[$r[1]]);
+	if ($static) {
+		View::addKey('stat-p1', '<div style="text-align: center;"><div style="display: inline-block; width: 80%; text-align: left;">');
+		View::addKey('stat-p2', '</div></div>');
+	}
+?>
 {%patt:ustatic%}
 		</div>
 	</div>

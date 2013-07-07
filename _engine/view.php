@@ -59,6 +59,8 @@
 				case 'upper':
 					$e = 'mb_strtoupper(' . $e . ')';
 					break;
+				case 'var':
+					return $e;
 				default:
 				}
 			return '<?=' . $e . '?>';

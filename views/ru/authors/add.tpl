@@ -15,7 +15,7 @@
 			<input type=hidden name=action value="add" />
 			<input type=hidden name=id value="<?=$id?>" />
 			<input id=ilink type="text" name="link" value="<?=$link?>" /><label for=ilink<?error($this, 'link')?>>URL</label><br /><br />
-			<input id=iname type="text" name="fio" value="<?=$fio?>" /><label for=iname<?error($this, 'fio')?>>FIO</label><br /><br />
+			<input id=iname type="text" value="<?=$fio?>" disabled /><label for=iname<?error($this, 'fio')?>>FIO</label><br /><br />
 
 			<label><?=$moder_link?></label><input type="submit" value="Добавить/изменить" />
 		</form>
