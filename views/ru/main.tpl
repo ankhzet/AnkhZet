@@ -2,7 +2,7 @@
 	$p1 = '<div class="cnt-item">
 					<div class="title">
 						<span class="head"> <a href="/authors/id/{%id}">{%fio}</a></span>
-						<span class="link size" style="width: 150px;">{%time}</span>
+						<span class="link size" style="width: 150px; text-align: right;">{%time}</span>
 						<span class="link" style="width: 50%;">Прошло с последнего обновления: <b>{%delta}</b></span>
 					</div>
 				</div>
@@ -10,7 +10,7 @@
 	$p2 = '<div class="cnt-item">
 					<div class="title">
 						<span class="head"> <a href="/pages/version/{%id}">{%title}</a></span>
-						<span class="link size" style="width: 150px;">{%time}</span>
+						<span class="link size" style="width: 150px; text-align: right;">{%time}</span>
 						<span class="link" style="width: 50%;">Прошло с изменения страницы: <b>{%delta}</b></span>
 					</div>
 				</div>
@@ -21,7 +21,7 @@
 							<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages?group={%group}">{%group_title}</a>:
 							<a href="/pages/version/{%id}">{%title}</a>
 						</span>
-						<span class="link size" style="width: 150px;">{%time}</span>
+						<span class="link size" style="width: 150px; text-align: right;">{%time}</span>
 						<span class="link size" style="width: 30%; color: {%color};"><b>{%delta}</b></span>
 					</div>
 				</div>
