@@ -34,6 +34,7 @@
 	if ($d['total'])
 		foreach ($d['data'] as &$row) {
 			$val = $row['value'];
+			if (!$val) continue;
 			switch ($row['kind']) {
 			case UPKIND_SIZE:
 				$row['delta'] = (($pos = $val > 0) ? '+' : '-') . fs(abs($val * 1024));
@@ -42,11 +43,12 @@
 			case UPKIND_GROUP:
 				$g = GroupsAggregator::getInstance();
 				$gd = $g->get($val, '`id`, `title`');
+				if ($gd['id'] != $val) $gd = array('id' => $val, 'title' => '&lt;удалено&gt;');
 				$row['delta'] = patternize('перенесено из <a href="/pages?group={%id}">{%title}</a>', $gd);
 				$row['color'] = 'blue';
 				break;
 			}
-			$row['time'] = date('d.m.Y h:i:s', intval($row['time']));
+			$row['time'] = date('d.m.Y H:i:s', intval($row['time']));
 			$u[] = patternize($p3, $row);
 		}
 
@@ -60,7 +62,7 @@
 	if ($d['total'])
 		foreach ($d['data'] as &$row) {
 			$row['delta'] = tmDelta($row['time']);
-			$row['time'] = date('d.m.Y h:i:s', intval($row['time']));
+			$row['time'] = date('d.m.Y H:i:s', intval($row['time']));
 			$r[] = patternize($p1, $row);
 		}
 
@@ -84,7 +86,7 @@
 		$d = $p->get($idx, '`id`, `title`, `link`, `time`');
 		foreach ($d as $idx => &$row) {
 			$row['delta'] = tmDelta($row['time']);
-			$row['time'] = date('d.m.Y h:i:s', intval($row['time']));
+			$row['time'] = date('d.m.Y H:i:s', intval($row['time']));
 			$e[] = patternize($p2, $row);
 		}
 	}

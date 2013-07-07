@@ -87,8 +87,8 @@
 						'author' => $author_id
 					, 'group' => $groups[$idx][0]
 					, 'link' => $inline[$idx]
-					, 'title' => htmlspecialchars($title, ENT_QUOTES)
-					, 'description' => htmlspecialchars($groups[$idx][2], ENT_QUOTES)
+					, 'title' => addslashes(htmlspecialchars($title, ENT_QUOTES))
+					, 'description' => addslashes(htmlspecialchars($groups[$idx][2], ENT_QUOTES))
 					));
 					$gi[$gid] = $idx;
 				}
@@ -122,10 +122,12 @@
 						if (intval($row['size']) <> $data[2])
 							$diff[$page_id] = $link; // check it
 
-						$new_group = $gi[$old_group = intval($row['group'])];
-						if ($new_group != $data[0]) {
+						$old_group = intval($row['group']);
+						$new_group_i = isset($gi[$old_group]) ? $gi[$old_group] : null;
+						if ($new_group_i != $data[0]) {
 							echo patternize(Loc::lget('page_changed_group'), $row) . '<br />';
 							$new_group = array_search($data[0], $gi);
+//							debug(array($new_group_i, $data[0], $new_group, $gi[$new_group]));
 							$pa->update(array('group' => $new_group), $page_id);
 							$ua->changed($page_id, UPKIND_GROUP, $old_group);
 						}
@@ -143,8 +145,8 @@
 							'author' => $author_id
 						, 'group' => $gid
 						, 'link' => $link
-						, 'title' => htmlspecialchars($data[1], ENT_QUOTES)
-						, 'description' => htmlspecialchars($data[3], ENT_QUOTES)
+						, 'title' => addslashes(htmlspecialchars($data[1], ENT_QUOTES))
+						, 'description' => addslashes(htmlspecialchars($data[3], ENT_QUOTES))
 						, 'size' => 0 // later it will be updated with diff checker
 						));
 						$diff[$pid] = $link;
@@ -328,6 +330,7 @@
 			, 'collumns' => 'p.`id`, p.`title`, u.`kind`, u.`value`, a.`fio`, p.`author`, g.`title` as `group_title`, p.`group`, u.`time`'
 			, 'desc' => true
 			, 'page' => $page
+			, 'pagesize' => $this->FETCH_PAGE
 			));
 			return $d;
 		}

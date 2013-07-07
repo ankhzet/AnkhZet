@@ -104,7 +104,7 @@
 							$u[] = patternize(Loc::lget('group_more'), $t);
 						}
 					}
-					$row['g:pages'] = join('<br />', $u);
+					$row['g:pages'] = (!$u) ? '' : '<br />' . join('<br />', $u);
 					$a[] = patternize($this->GROUP_ITEM, $row);
 				}
 
