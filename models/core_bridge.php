@@ -1,12 +1,11 @@
 <?php
-/*	$r_default_context = stream_context_get_default(array(
+	$r_default_context = stream_context_get_default(array(
 		'http' => array(
 			'proxy' => 'http://localhost:8080',
 			'request_fulluri' => true
 		)
-	));*/
+	));
 
-	static $curl;
 	function url_get_contents($link, $params = null) {
 		ob_start();
 		$response = '';

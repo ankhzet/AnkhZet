@@ -87,8 +87,8 @@
 						'author' => $author_id
 					, 'group' => $groups[$idx][0]
 					, 'link' => $inline[$idx]
-					, 'title' => htmlspecialchars($title, ENT_QUOTES)
-					, 'description' => htmlspecialchars($groups[$idx][2], ENT_QUOTES)
+					, 'title' => addslashes(htmlspecialchars($title, ENT_QUOTES))
+					, 'description' => addslashes(htmlspecialchars($groups[$idx][2], ENT_QUOTES))
 					));
 					$gi[$gid] = $idx;
 				}
@@ -122,10 +122,12 @@
 						if (intval($row['size']) <> $data[2])
 							$diff[$page_id] = $link; // check it
 
-						$new_group = $gi[$old_group = intval($row['group'])];
-						if ($new_group != $data[0]) {
+						$old_group = intval($row['group']);
+						$new_group_i = isset($gi[$old_group]) ? $gi[$old_group] : null;
+						if ($new_group_i != $data[0]) {
 							echo patternize(Loc::lget('page_changed_group'), $row) . '<br />';
 							$new_group = array_search($data[0], $gi);
+//							debug(array($new_group_i, $data[0], $new_group, $gi[$new_group]));
 							$pa->update(array('group' => $new_group), $page_id);
 							$ua->changed($page_id, UPKIND_GROUP, $old_group);
 						}
@@ -143,8 +145,8 @@
 							'author' => $author_id
 						, 'group' => $gid
 						, 'link' => $link
-						, 'title' => htmlspecialchars($data[1], ENT_QUOTES)
-						, 'description' => htmlspecialchars($data[3], ENT_QUOTES)
+						, 'title' => addslashes(htmlspecialchars($data[1], ENT_QUOTES))
+						, 'description' => addslashes(htmlspecialchars($data[3], ENT_QUOTES))
 						, 'size' => 0 // later it will be updated with diff checker
 						));
 						$diff[$pid] = $link;
@@ -230,13 +232,15 @@
 					$pa->dbc->open();
 					/* - */
 
-					if (intval($row['size']) <> ($size = intval($size[2]))) {
-						$pa->update(array('size' => $size, 'time' => $time), $page);
-						$ua->changed($page, UPKIND_SIZE, $size - intval($row['size']));
-						echo " &nbsp;save to [/cache/pages/$page/$time.html]...<br />";
-						echo ' &nbsp;updated (' . $size . 'KB).<br />';
+					if ($size) {
+						if (intval($row['size']) <> ($size = intval($size[2]))) {
+							$pa->update(array('size' => $size, 'time' => $time), $page);
+							$ua->changed($page, UPKIND_SIZE, $size - intval($row['size']));
+							echo " &nbsp;save to [/cache/pages/$page/$time.html]...<br />";
+							echo ' &nbsp;updated (' . $size . 'KB).<br />';
+						}
+						$q->dbc->delete($q->TBL_DELETE, '`page` = ' . $page);
 					}
-					$q->dbc->delete($q->TBL_DELETE, '`page` = ' . $page);
 					$done++;
 					if (($timeout > 0) && (time() - $t > $timeout))
 						return $left - $done;
@@ -283,12 +287,17 @@
 //				debug($g[2]);
 				preg_match_all('/<dl>(.*?)<\/dl>/i', $block, $t);
 //				debug($t, htmlspecialchars($block));
-				foreach ($t[1] as $link) {
-					preg_match('/<a href="?([^ >"]+)"?>(.*?)<\/a>[^<]*<b>(.*?)k<\/b>/i', $link, $t2);
-					preg_match('/<dd>(.*)/i', $link, $t3);
+				foreach ($t[1] as $link)
+					if (preg_match('/<a href="?([^ >"]+)"?>(.*?)<\/a>[^<]*<b>(.*?)k<\/b>/i', $link, $t2)) {
+						preg_match('/<dd>(.*)/i', $link, $t3);
 //					debug($t2, htmlspecialchars($link));
-					$links[$id][$t2[1]] = array($idx, strip_tags($t2[2]), intval($t2[3]), strip_tags($t3[1], '<br><p>'));
-				}
+						$links[$id][$t2[1]] = array(
+							$idx
+						, strip_tags($t2[2])
+						, intval($t2[3])
+						, isset($t3) ? strip_tags($t3[1], '<br><p>') : ''
+						);
+					}
 //				debug($links[$id], "Group #$id");
 			}
 //			debug($m);
@@ -327,7 +336,8 @@
 				'filter' => 'u.`page` = p.`id` and a.`id` = p.`author` and g.`id` = p.`group`'
 			, 'collumns' => 'p.`id`, p.`title`, u.`kind`, u.`value`, a.`fio`, p.`author`, g.`title` as `group_title`, p.`group`, u.`time`'
 			, 'desc' => true
-			, 'page' => $page
+			, 'page' => $page - 1
+			, 'pagesize' => $this->FETCH_PAGE
 			));
 			return $d;
 		}

@@ -26,7 +26,7 @@
 
 //				debug($config);
 				$config->save();
-				header('Location: /config');
+				locate_to('/config');
 			}
 
 			$this->view->zones = $zones;

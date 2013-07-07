@@ -22,14 +22,14 @@
 		}
 
 		public function add(array $data) {
-			if (!$data['time'])
+			if (!isset($data['time']))
 				$data['time'] = time();
 			$s = $this->dbc->insert($this->TBL_INSERT, $data, true);
 			return $s ? intval(@mysql_result($s, 0)) : 0;
 		}
 
 		public function update(array $data, $id, $low = false) {
-			if (!$data['time'])
+			if (!isset($data['time']))
 				$data['time'] = time();
 			$s = $this->dbc->update($this->TBL_INSERT, $data, array('id' => $id), $low);
 			return $s ? $id : 0;

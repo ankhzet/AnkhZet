@@ -35,6 +35,9 @@
 	if ($static) {
 		View::addKey('stat-p1', '<div style="text-align: center;"><div style="display: inline-block; width: 80%; text-align: left;">');
 		View::addKey('stat-p2', '</div></div>');
+	} else {
+		View::addKey('stat-p1', '');
+		View::addKey('stat-p2', '');
 	}
 ?>
 {%patt:ustatic%}
