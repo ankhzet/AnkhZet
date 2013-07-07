@@ -390,5 +390,5 @@
 
 	function html_escape(&$row, $fields) {
 		foreach ($fields as $field)
-			$row[$field] = str_replace('"', '&#34;', nl2br(htmlspecialchars($row[$field])));
+			$row[$field] = nl2br(htmlspecialchars($row[$field], ENT_QUOTES));
 	}

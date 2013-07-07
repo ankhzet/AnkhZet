@@ -13,6 +13,7 @@
 		var $MODER_EDIT = '<span class="pull_right">[<a href="/{%root}/edit/{%id}">{%edit}</a> | <a href="/{%root}/delete/{%id}">{%delete}</a>]</span>';
 		var $LIST_ITEM  = '<li>ID: <a href="/{%root}/id/{%id}">{%id}</a><br />{%time}<br />{%moder}</li>';
 		var $ADD_MODER  = 1;
+		var $ALWAYS_ADD = 0;
 
 		var $EDIT_STRINGS = array('title', 'content');
 		var $EDIT_FLOATS  = array();
@@ -80,7 +81,7 @@
 		}
 
 		function actionPage($r) {
-			if ($this->userModer && $this->ADD_MODER)
+			if ($this->userModer && $this->ADD_MODER || $this->ALWAYS_ADD)
 				View::addKey('moder', '<span class="pull_right">[<a href="/' . $this->_name . '/add">' . Loc::lget('add') . '</a>]</span>');
 
 			$aggregator = $this->getAggregator();

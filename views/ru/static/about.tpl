@@ -1,4 +1,4 @@
-<table style="width: 100%; padding: 0px 10%;" cellspacing="10">
+<table style="width: 100%;" cellspacing="10">
 <tbody>
 <tr>
 <td>

@@ -138,9 +138,9 @@
 				return '<unknown>';
 		}
 
-		function readable($short = false) {
+		function readable() {
 			if ($this->_get(self::COL_ACL) > ACL::ACL_GUEST) {
-				return $this->_get(self::COL_NAME) . ($short ? '' : ' ' . $this->_get(self::COL_SURNAME));
+				return $this->_get(self::COL_NAME);
 			} else
 				return Loc::lget('acl_guest');
 		}

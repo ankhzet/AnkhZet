@@ -452,6 +452,13 @@
 			$req = patternize($force ? Loc::lget('deleted') : Loc::lget('do_delete'), $data);
 			echo $msg . '<br />' . $req;
 			View::renderMessage($req, View::MSG_INFO);
+
+			$o = msqlDB::o();
+			$o->query('drop table if exists `temp`');
+			$o->query('create table `temp` (id int null)');
+			$o->query('insert into `temp` (SELECT g.id FROM `groups` g left join `pages` p on g.id = p.`group` where p.id is null)');
+			$o->query('delete from `groups` where id in (select * from `temp`)');
+			$o->query('drop table `temp`');
 		}
 
 	}

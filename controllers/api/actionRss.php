@@ -93,7 +93,7 @@
 					, 'samlib' => "$alink/$link"
 					, 'link' => $i[$page_id]['link']
 					, 'link2' => "{$data['link']}pages/id/{$page_id}"
-					, 'pubdate' => date('d.m.Y h:i:s', $row['time'])
+					, 'pubdate' => date('d.m.Y H:i:s', $row['time'])
 					, 'description' => safeSubstr($row['description'], 200, 3)
 					);
 				}

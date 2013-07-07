@@ -11,6 +11,8 @@
 			return '
 			<ul class="menu">
 				<li><a href="/">Главная</a></li>
+				<li><a href="/authors">Авторы</a></li>
+				<li><a href="/feedback">Фидбэк</a></li>
 				<li><a href="/about">О сайте</a></li>
 			</ul>
 ';
@@ -20,6 +22,7 @@
 				<li><a href=\"/\">Главная</a></li>
 				<li><a href=\"/authors\">Авторы</a></li>
 				<li><a href=\"/updates\">Обновления{$last}</a></li>
+				<li><a href=\"/feedback\">Фидбэк</a></li>
 				<li><a href=\"/about\">О сайте</a></li>
 			</ul>
 ";
