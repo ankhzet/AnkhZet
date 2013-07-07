@@ -109,16 +109,6 @@
 			$u->check($id);
 		}
 
-		function actionUpdate($r) {
-			$limit = uri_frag($r, 0, 1);
-
-			require_once 'core_updates.php';
-			$u = new AuthorWorker();
-			$left = $u->serveQueue($limit);
-			if ($left)
-				locate_to("/authors/update/$left");
-		}
-
 		function actionAdd($r) {
 			$error = array();
 			if (post('action') == 'add') {

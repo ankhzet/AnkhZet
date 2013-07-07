@@ -1,5 +1,6 @@
 <?php
 	require_once 'core_bridge.php';
+	require_once 'aggregator.php';
 
 	require_once 'core_authors.php';
 	require_once 'core_queue.php';
@@ -194,6 +195,7 @@
 
 				$c = new PageComparator();
 				$pa = PagesAggregator::getInstance();
+				$ua = UpdatesAggregator::getInstance();
 				$worker_stamp = md5(uniqid(rand(), 1));
 				foreach ($pages as $row) {
 					$page = intval($row['id']); // id of Page
@@ -216,6 +218,7 @@
 
 					if (intval($row['size']) <> ($size = intval($size[2]))) {
 						$pa->update(array('size' => $size, 'time' => $time), $page);
+						$ua->queue($page, $size - intval($row['size']));
 						echo " &nbsp;save to [/cache/pages/$page/$time.html]...<br />";
 						echo ' &nbsp;updated (' . $size . 'KB).<br />';
 					}
@@ -279,6 +282,43 @@
 			preg_match('/<h3>(.*?)<br/i', $html, $t);
 			$t = preg_replace('/:$/', '', $t[1]);
 			return array($groups, $inline, $links, $t);
+		}
+	}
+
+	class UpdatesAggregator extends Aggregator {
+		static $instance = null;
+		var $TBL_FETCH  = '`updates` u, `pages` p, `authors` a, `groups` g';
+		var $TBL_INSERT = 'updates';
+		var $TBL_DELETE = 'updates';
+		var $collumns = array(
+			'`id` int auto_increment null'
+		, '`page` int not null'
+		, '`size` int null default 0'
+		, '`time` int not null'
+		, 'primary key (`id`)'
+		);
+
+		var $FETCH_PAGE = 10;
+
+		static public function getInstance($args = null) {
+			if (!isset(self::$instance))
+				self::$instance = new self($args);
+
+			return self::$instance;
+		}
+
+		function getUpdates($page) {
+			$d = $this->fetch(array(
+				'filter' => 'u.`page` = p.`id` and a.`id` = p.`author` and g.`id` = p.`group`'
+			, 'collumns' => 'p.`id`, p.`title`, u.`size`, a.`fio`, p.`author`, g.`title` as `group_title`, p.`group`, u.`time`'
+			, 'desc' => true
+			, 'page' => $page
+			));
+			return $d;
+		}
+
+		function queue($page, $size) {
+			return $this->add(array('page' => $page, 'size' => $size));
 		}
 	}
 

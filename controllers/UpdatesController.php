@@ -51,6 +51,9 @@
 			case 0: return HistoryAggregator::getInstance();
 			case 1: return AuthorsAggregator::getInstance();
 			case 2: return PagesAggregator::getInstance();
+			case 3:
+				require_once 'core_updates.php';
+				return UpdatesAggregator::getInstance();
 			}
 		}
 
@@ -140,8 +143,8 @@
 
 			$ha = $this->getAggregator(0);
 			$ha->upToDate($idx);
-			if ($_REQUEST['silent']) die();
-			locate_to('/' . $this->_name);
+			if (uri_frag($_REQUEST, 'silent')) die();
+			locate_to("/{$this->_name}");
 		}
 
 		public function actionHide($r) {
@@ -200,7 +203,7 @@
 			}
 		}
 
-		function actionCheck($r) {
+		function actionAuthors($r) {
 			$h = $this->getAggregator();
 			$a = $h->authorsToUpdate($this->user->ID(), uri_frag($r, 0));
 			if (count($a)) {
@@ -211,5 +214,16 @@
 			} else
 				echo Loc::lget('nothing_to_update') . '<br />';
 		}
+
+		function actionPages($r) {
+			$limit = uri_frag($r, 0, 1);
+
+			require_once 'core_updates.php';
+			$u = new AuthorWorker();
+			$left = $u->serveQueue($limit);
+			if ($left)
+				locate_to("/authors/update/$left");
+		}
+
 	}
 ?>
