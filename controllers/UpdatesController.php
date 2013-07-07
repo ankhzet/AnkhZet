@@ -44,6 +44,8 @@
 		const UPDATES_HIDDEN = '<span class="pull_right">[<a href="/updates?hidden={%hidden}">{%check}</a>]</span>';
 		const UPDATES_RSS = '<span class="pull_right">[<a href="/rss.xml?channel={%uid}">{%rss}</a>]</span>';
 
+		const AUTHOR_FILTER = '<a href="/updates?{%hidden}author={%id}" class="filter {%color}">{%fio}</a>';
+
 		var $diff_sign = array(-1 => 'color:red', 0 => '', 1 => 'color:green');
 
 		function getAggregator($p = 0) {
@@ -65,8 +67,10 @@
 
 		function actionPage($r) {
 			$uid = $this->user->ID();
+			$author = uri_frag($_REQUEST, 'author', 0);
 			$hidden = uri_frag($_REQUEST, 'hidden', 0);
 			$hidden_f = intval(!$hidden);
+			$author_f = $author ? " and p.`author` = $author" : '';
 			$loc = array(
 				'checkupdates' => Loc::lget('checkupdates')
 			, 'check' => Loc::lget($hidden ? 'checktraced' : 'checkhidden')
@@ -79,10 +83,13 @@
 			$this->query = '`user` = ' . $this->user->ID();
 			$aggregator = $this->getAggregator();
 			$this->page = $page = uri_frag($r, 0, 1);
-			$this->link = $hidden ? '?hidden=1' : '';
+			$l = array();
+			if ($hidden) $l[] = "hidden=1";
+			if ($author) $l[] = "author=$author";
+			$this->link = (!$l) ? '' : '?' . join('&', $l);
 			$params = array('page' => $page - 1, 'pagesize' => $aggregator->FETCH_PAGE, 'desc' => true);
 			$params['collumns'] = 'h.*, p.`author`, a.`fio`, p.`title`, p.`description`, p.`size` as `new_size`, p.`time` as `updated`, (p.`size` <> h.`size`) as `upd`';
-			$params['filter'] = "`user` = $uid and `trace` = $hidden_f";
+			$params['filter'] = "`user` = $uid and `trace` = $hidden_f $author_f";
 			$params['order'] = '`upd` desc, `time`';
 
 			$aggregator->TBL_FETCH = '`history` h left join `pages` p on p.`id` = h.`page` left join `authors` a on a.`id` = p.`author`';
@@ -100,9 +107,6 @@
 				$idx = array();
 				foreach ($this->data['data'] as &$row)
 					$idx[] = $row['id'];
-
-//				$updates = $aggregator->fetchUpdates($this->user->ID(), $idx);
-//				debug($updates);
 
 				$i = 0;
 				foreach($this->data['data'] as &$row) {
@@ -129,6 +133,23 @@
 			. PHP_EOL . (($last > 1) ? $aggregator->generatePageList($page, $last, $this->_name . '/', $this->link) : '<li>&nbsp;</li>') . '</ul>' . PHP_EOL;
 
 			$this->view->data = $n ? $n : Loc::lget("{$this->_name}_nodata");
+
+			$a = $aggregator->authorsToUpdate($this->user->ID(), 1);
+			if (count($a)) {
+				$aa = $this->getAggregator(1);
+				$d = $aa->get($a, '`id`, `fio`');
+				$a = array();
+				if (!!$d) {
+					$p = str_replace('{%hidden}', $hidden ? 'hidden=1&' : '', self::AUTHOR_FILTER);
+					foreach ($d as &$row) {
+						$row['color'] = ($row['id'] == $author) ? 'selected' : '';
+						$a[] = patternize($p, $row);
+					}
+				}
+				$this->view->authors = join(', ', $a);
+			} else
+				$this->view->authors = '#';
+
 			$this->view->renderTPL("{$this->_name}/index");
 		}
 

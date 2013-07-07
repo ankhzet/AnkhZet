@@ -523,3 +523,13 @@ span.multi {
 	background: #eee;
 	border-radius: 2px;
 }
+
+/* - */
+
+.content-header .filter {
+	font-weight: normal;
+}
+.content-header .filter.selected {
+	font-weight: bold;
+	color: blue;
+}
