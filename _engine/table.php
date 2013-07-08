@@ -28,10 +28,10 @@
 		}
 
 		public function __construct($link, $tables, $fields = '', $colnames = '*') {
-			$this->order = $this->params['order'];
-			$this->dir   = $this->params['dir'] == 'desc' ? 'desc' : '';
-			$this->pagesize = intval($this->params['pagesize']) > 1 ? intval($this->params['pagesize']) : self::DEF_PAGESIZE;
-			$this->page = intval($this->params['page']) ? intval($this->params['page']) : 1;
+			$this->order = uri_frag($this->params, 'order', null, 0);
+			$this->dir   = uri_frag($this->params, 'dir', 'asc', 0);
+			$this->pagesize = uri_frag($this->params, 'pagesize', self::DEF_PAGESIZE, 1);
+			$this->page = uri_frag($this->params, 'page', 1);
 			if (isset($this->order) && ($this->order != '')) $fields .= ' ORDER BY ' . $this->order . ' ' . $this->dir;
 			$this->link = $link;
 			$this->maxrows = $this->pagesize;
@@ -56,14 +56,14 @@
 			echo '<table id="datatable">' . PHP_EOL;
 			$this->renderHeader();
 
-			$r = '';
+			$res = '';
 			$odd = array(false=>'', true=>' class=oddline');
 			$o   = false;
 			for ($i = $from; $i < $to; $i++) {
 				$row = $this->array[$i];
 				if ($o = !$o) $res .= '<tr class="odd">' . PHP_EOL; else $res .= '<tr>' . PHP_EOL;
 				foreach ($c as $col)
-					if ($t[$col] != '-') $res .= '  <td>'.$this->prepareRow($col, $row).'</td>' . PHP_EOL;
+					if (!isset($t[$col]) || $t[$col] != '-') $res .= '  <td>'.$this->prepareRow($col, $row).'</td>' . PHP_EOL;
 				$res .= '</tr>' . PHP_EOL;
 			}
 
@@ -75,8 +75,8 @@
 		function orderLink($col, $title) {
 			if ($col && $title) {
 				$s = $this->params;
-				unset($s[order]);
-				unset($s[dir]);
+				unset($s['rder']);
+				unset($s['dir']);
 				$a = array();
 				foreach ($s as $p => $v) if ($v) $a[] = $p . '=' . $v;
 				return '<a href="?' . join('&', $a) . '&order=' . $col . (($this->order == $col) ? (($this->dir == 'desc') ? '' : '&dir=desc'):'') . '">' .
@@ -93,14 +93,17 @@
 			$i = 0;
 			echo '<tr class="header">' . PHP_EOL;
 			foreach ($c as $col) {
-				if ($t[$col] != '-') {
+				$ttl = isset($t[$col]) ? $t[$col] : '';
+				if ($ttl != '-') {
 					$u = array();
-					if ($v = $w[$col])           $u[] = 'width: ' . $w[$col] . (is_int($v) ? '%' : '');
-					if ($this->order==$col) $u[] = 'text-decoration: underline';
+					if (isset($w[$col]) && $v = $w[$col])
+						$u[] = 'width: ' . $w[$col] . (is_int($v) ? '%' : '');
+
+					if ($this->order == $col) $u[] = 'text-decoration: underline';
 					if (count($u))
-						echo '  <td style="' . join(';', $u) . '">' . $this->orderLink($col, $t[$col]) .'</td>' . PHP_EOL;
+						echo '  <td style="' . join(';', $u) . '">' . $this->orderLink($col, $ttl) .'</td>' . PHP_EOL;
 					else
-						echo '  <td>' . $this->orderLink($col, $t[$col]) .'</td>' . PHP_EOL;
+						echo '  <td>' . $this->orderLink($col, $ttl) .'</td>' . PHP_EOL;
 				}
 			}
 			echo '</tr>' . PHP_EOL;
@@ -117,10 +120,10 @@
 
 		function renderFooter($from, $to) {
 			$a = $this->params;
-			$a[pagesize] = $this->maxrows;
-			if ($this->order) $a[order] = $this->order;
-			if ($this->dir) $a[dir] = $this->dir;
-			unset($a[page]);
+			$a['pagesize'] = $this->maxrows;
+			if ($this->order) $a['order'] = $this->order;
+			if ($this->dir) $a['dir'] = $this->dir;
+			unset($a['page']);
 			$a = $this->paramsToLink($a);
 
 			$c    = $this->columns();

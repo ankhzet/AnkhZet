@@ -80,7 +80,7 @@
 		public function readConfig() {
 			require_once 'config.php';
 			require_once 'acl.php';
-			$config = $this->set('config', Config::read('INI', '_engine/config.ini'));
+			$config = $this->set('config', Config::read('INI', 'cms://config/config.ini'));
 			$timezone = $config->get('main.timezone');
 			date_default_timezone_set($timezone);
 

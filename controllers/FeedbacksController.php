@@ -31,7 +31,7 @@
 		}
 
 		function performReturn() {
-			$ret = str_replace(array('\'', '"'), '', $_REQUEST['return']);
+			$ret = str_replace(array('\'', '"'), '', post('return'));
 			locate_to($ret);
 		}
 
@@ -56,14 +56,14 @@
 						$popup .= '<br>' . $this->reLink('/feedbacks/domark/' . $id . '/' . $a2, $l[$a2], '/feedbacks/' . $ret);
 					$avtor = $this->reLink('/feedbacks/view/' . $id, safeSubstr($s . ' <span>' . $u . '</span>', 110));
 					$date = date('d.m.Y', intval($r['date']));
-					$data = array(avtor => $avtor, popup => $popup, date => $date, un => $a1 ? 'un' : '');
+					$data = array('avtor' => $avtor, 'popup' => $popup, 'date' => $date, 'un' => $a1 ? 'un' : '');
 
 					$m[] = patternize(self::LIST_ITEM, $data);
 				}
 
-			View::addKey(messages, join('', $m));
-			View::addKey(inbox, (strtolower($ret) != 'inbox') ? ' class="normal"' : ' class="bold"');
-			View::addKey(trashbin, (strtolower($ret) != 'trashbin') ? ' class="normal"' : ' class="bold"');
+			View::addKey('messages', join('', $m));
+			View::addKey('inbox', (strtolower($ret) != 'inbox') ? ' class="normal"' : ' class="bold"');
+			View::addKey('trashbin', (strtolower($ret) != 'trashbin') ? ' class="normal"' : ' class="bold"');
 			$this->view->renderTPL('admin/feedback');
 		}
 
@@ -88,11 +88,11 @@
 			if ($f) {
 				$from = stripslashes($f['sender']);
 				$cont = stripslashes($f['subject']);
-				$l    = explode(',', Loc::lget('mail_view'));
+//				$l2   = explode(',', Loc::lget('mail_view'));
 
 				$date = date('d.m.Y', intval($f['date']));
 				$content = stripslashes($f['content']);
-				$data = array(from => $from, contacts => $cont, date => $date, content => $content);
+				$data = array('from' => $from, 'contacts' => $cont, 'date' => $date, 'content' => $content);
 				$msg = patternize(self::MAIL_VIEW, $data);
 
 				$s = $m->messageState($f);
@@ -102,11 +102,11 @@
 				$msg = Loc::lget('Undefined MSGID');
 
 
-			View::addKey(cavtor, $l[3]);
-			View::addKey(cdate, $l[5]);
-			View::addKey(messages, $msg);
-			View::addKey(inbox, ' class="normal"');
-			View::addKey(trashbin, ' class="normal"');
+			View::addKey('cavtor', $l[3]);
+			View::addKey('cdate', $l[5]);
+			View::addKey('messages', $msg);
+			View::addKey('inbox', ' class="normal"');
+			View::addKey('trashbin', ' class="normal"');
 			$this->view->renderTPL('admin/feedback');
 		}
 

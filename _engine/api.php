@@ -69,7 +69,7 @@
 			$allow = !!$r['allow'];
 			$user = $r['user'];
 			$uri = $r['uri'];
-			$file = ENGINE_ROOT . '/config.ini';
+			$file = 'cms://config/config.ini';
 			$config = @file_get_contents($file);
 			$config = preg_replace('/('.$user.'\.disallow\][^\[]*)(\d+\s*\=\s*'.$uri.'\/\*\s*)([^\[]*)\[/isU', '\\1\\3[', $config, 1);
 			if (!$allow) {
@@ -138,11 +138,11 @@
 			locate_to('/');
 		}
 		function actionToggleprofiler($p) {
-			$f = file_get_contents(ROOT . '/index.php');
+			$f = file_get_contents('cms://root/index.php');
 			preg_match('/define\(\'USE_TIMELEECH\',([^\)]+)\)/', $f, $m);
 			$on = intval(trim($m[1]));
 			$f = str_replace($m[0], 'define(\'USE_TIMELEECH\', ' . ($on ? '0' : '1') . ')', $f);
-			file_put_contents(ROOT . '/index.php', $f);
+			file_put_contents('cms://root/index.php', $f);
 			require_once 'view.php';
 			View::clearCache();
 			locate_to('/');

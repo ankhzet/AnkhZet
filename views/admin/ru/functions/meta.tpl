@@ -63,7 +63,7 @@
 		$id = intval($r[0]);
 		$o = msqlDB::o();
 		$o->delete('meta', '`id` = \'' . $id . '\' and `name` != \'generator\'');
-		header('Location: /admin/meta');
+		locate_to('/admin/meta');
 		break;
 	case 'add':
 		$name = addslashes($_REQUEST['name']);
@@ -78,7 +78,7 @@
 			$r = @mysql_fetch_row($s);
 			$id = intval($r[0]);
 		}
-		header('Location: /admin/meta/' . $id);
+		locate_to('/admin/meta/' . $id);
 		break;
 	default      :
 	}

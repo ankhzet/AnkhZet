@@ -6,9 +6,16 @@ function textsplit($text, $splitgroup) {
 	$c = 0;
 	foreach ($l as $line)
 		if (!preg_match($splitgroup[1], $line)) {
-			$r[$c] .= $line;
+			if (isset($r[$c]))
+				$r[$c] .= $line;
+			else
+				$r[$c]  = $line;
 		} else
-			$r[$c++] .= $line;
+			if (isset($r[$c]))
+				$r[$c++] .= $line;
+			else
+				$r[$c++]  = $line;
+
 	return $r;
 }
 
@@ -173,7 +180,7 @@ class DiffSubsplitter {
 				$c++;
 			if ($c >= 2) {
 				while (($i3 < $c1) && (($t = $h1[$i3++]) == $h2[$i4++]))
-					$n[$k[$t]] = 0;
+					$n[isset($k[$t]) ? $k[$t] : 0] = 0;
 
 				$l[$hash] = $c;
 			}
@@ -402,12 +409,13 @@ class DiffBuilder {
 		}
 //		debug(array($this->h1, $i), '>>>');
 		while ($i < $c1 && $j < $c2) {
+			if (!isset($this->fts[$idx])) break;
 			$c = $this->fts[$idx];
 			while (($j < $c2) && (($t = $this->h2[$j]) != $c)) {
 				$this->out[] = array(1, $t);
 				$j++;
 			}
-			while (($i < $c1) && ($t = $this->h1[$i]) == $this->h2[$j]) {
+			while (($i < $c1 && $j < $c2) && ($t = $this->h1[$i]) == $this->h2[$j]) {
 				$this->out[] = array(0, $t);
 				$i++;
 				$j++;

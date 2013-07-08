@@ -19,8 +19,8 @@
 			$this->params = $p;
 			parent::__construct($link, 'users');
 			$this->user = User::get()->_get(User::COL_LOGIN);
-			$c = Config::read('INI', '_engine/config.ini');
-			$this->acls = $c->get(acl);
+			$c = Config::read('INI', 'cms://config/config.ini');
+			$this->acls = $c->get('acl');
 		}
 
 		function columns() {
@@ -79,7 +79,7 @@
 		}
 
 		public function actionMain($r) {
-			if ($r[0])
+			if (uri_frag($r, 0, 0, 0))
 				if (preg_match('/^[a-z]+$/i', $r[0])) {
 					$sub = Loc::lget('titles.admin' . $r[0]);
 					if ($sub)
@@ -95,7 +95,7 @@
 			$c = FrontEnd::getInstance()->get('config');
 			$o = msqlDB::o();
 			$o->query('drop database `' . $c->get('db.dbname') . '`');
-			header('Location: /config');
+			locate_to('/config');
 		}
 
 		public function actionConfirm($r) {
@@ -144,7 +144,7 @@
 				$c = msqlDB::o();
 				$s = $c->delete('users', '`id` = \'' . $id . '\'');
 				if ($s)
-					header('Location: /admin/userlist');
+					locate_to('/admin/userlist');
 				else
 					$this->view->renderMessage('Ошибка при удалении!', View::MSG_ERROR);
 			}
@@ -152,11 +152,11 @@
 		}
 
 		public function actionTemplates($r) {
-			if (strpos($_SERVER[REQUEST_URI], '/admin/templates') !== false)
-				header('Location: /templates');
+			if (strpos($_SERVER['REQUEST_URI'], '/admin/templates') !== false)
+				locate_to('/templates');
 
-			$lang = $r[0] ? $r[0] : Loc::LOC_RU;
-			$content = $r[1];
+			$lang = uri_frag($r, 0, Loc::LOC_RU, 0);
+			$content = uri_frag($r, 1, null, 0);
 			$dir = SUB_VIEWS . '/' . $lang . '/static/';
 			$file = $dir . $content . '.tpl';
 			if (file_exists($file)) {
@@ -225,8 +225,8 @@
 			require_once 'common.php';
 			$contents = htmlspecialchars(file_get_contents($file));
 			$tpl = @file_get_contents(dirname(dirname(__FILE__)) . '/views/editorinclude.tpl');
-			$back = $_REQUEST[back];
-			$data = array(host => 'http://' . make_domen($_SERVER[HTTP_HOST], 'tinymce'), lang => $lang, template => $template, contents => $contents, back => $back ? $back : 'templates/' . $lang);
+			$back = post('back');
+			$data = array('host' => 'http://' . make_domen($_SERVER['HTTP_HOST'], 'tinymce'), 'lang' => $lang, 'template' => $template, 'contents' => $contents, 'back' => $back ? $back : 'templates/' . $lang);
 			$out = patternize($tpl, $data);
 			die($out);
 		}

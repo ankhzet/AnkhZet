@@ -1,6 +1,6 @@
 <?php
-	define(JSON_Ok, 'ok');
-	define(JSON_Fail, 'err');
+	define('JSON_Ok', 'ok');
+	define('JSON_Fail', 'err');
 
 
 	function format ($data, $name = null) {
