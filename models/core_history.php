@@ -68,13 +68,13 @@
 			$t = time() - ($force ? 5 : 60 * 30); // 30 minutes
 			if ($uid)
 				$s = $this->dbc->select('`history` h, `pages` p, `authors` a'
-				, 'h.`user` = ' . $uid . ' and h.`trace` = 1 and h.`page` = p.`id` and a.`id` = p.`author` and a.`time` < ' . $t . ' group by a.`id`'
+				, 'h.`user` = ' . $uid . ' and h.`trace` = 1 and h.`page` = p.`id` and a.`id` = p.`author` and a.`time` < ' . $t . ' group by a.`id` order by `time`'
 				, 'a.`id` as `0`'
 				);
 			else
-				$s = $this->dbc->select('`authors` a'
-				, 'a.`time` < ' . $t
-				, 'a.`id` as `0`'
+				$s = $this->dbc->select('authors'
+				, '`time` < ' . $t . ' order by `time`'
+				, '`id` as `0`'
 				);
 			$a = array();
 			if ($s)

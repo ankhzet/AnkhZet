@@ -1,13 +1,9 @@
 <?php
 
-	define('ROOT', dirname(dirname(__FILE__)));
-	define('ENGINE_ROOT', ROOT . '/_engine');
 	define('CTL_ROOT', ROOT . '/controllers');
 	define('VIEWS_ROOT', ROOT . '/views');
-	define('MODELS_ROOT', ROOT . '/models');
 	define('SUB_CTLS', SUB_DOMEN . '/controllers');
 	define('SUB_VIEWS', SUB_DOMEN . '/views');
-	define('SUB_MODELS', SUB_DOMEN . '/models');
 
 	class FrontEnd {
 		private static $_instance = null;
@@ -81,8 +77,6 @@
 			require_once 'config.php';
 			require_once 'acl.php';
 			$config = $this->set('config', Config::read('INI', 'cms://config/config.ini'));
-			$timezone = $config->get('main.timezone');
-			date_default_timezone_set($timezone);
 
 			ACL::readConfig($config);
 			return $config;

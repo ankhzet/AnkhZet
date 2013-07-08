@@ -1,15 +1,7 @@
 <?php
-	error_reporting(E_ALL);
-	define('SUB_DOMEN', dirname(__FILE__));
-	define('SAVE_SESSION_ACTIVITY', 0);
 	define('USE_TIMELEECH', 0);
-	define('VIEW_COMPILE_MSGS', 0);
-	define('VIEW_COMPILE_ALWAYS', 1);
-	require_once SUB_DOMEN . '/_engine/streams.php';
-	require_once SUB_DOMEN . '/_engine/datetime.php';
-	require_once SUB_DOMEN . '/_engine/common.php';
 
-	set_error_handler("error_handler");
+	require_once 'base.php';
 
 	class Application {
 		var $frontend = null;

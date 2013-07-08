@@ -19,22 +19,13 @@
 			preg_match('/^[\/]*(.*?)[\/]*$/', $a['link'], $link);
 			$link = $link[1] . '/';
 			$url  = 'http://samlib.ru/' . $link;
-//			$hash = base64_encode($link);
-//			$store = SUB_DOMEN . '/cache/' . $hash;
-
-//			if (!is_file($store)) {
-				$html = url_get_contents($url);
-//				if ($html !== false)
-//					file_put_contents($store, gzcompress/**/($html));
-//			} else
-//				$html = gzuncompress/**/(file_get_contents($store));
-
-			$html = mb_convert_encoding($html, 'UTF-8', 'CP1251');
+			$html = url_get_contents($url);
 			if (($html === false) || trim($html) == '') {
 				echo Loc::lget('samlib_down');
 				return false;
 			}
 
+			$html = mb_convert_encoding($html, 'UTF-8', 'CP1251');
 			$data = $this->parseAuthor($html);
 			$groups = $data[0];
 			$inline = $data[1];

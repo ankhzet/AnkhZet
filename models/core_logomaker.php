@@ -1,15 +1,5 @@
 <?php
-	define(SUB_DOMEN, dirname(dirname(__FILE__)));
-	define(ROOT, dirname(SUB_DOMEN) . '/www');
-	define(ENGINE_ROOT, ROOT . '/_engine');
-	define(MODELS_ROOT, ROOT . '/models');
-	define(SUB_MODELS, SUB_DOMEN . '/models');
-	set_include_path(join(PATH_SEPARATOR, array(ENGINE_ROOT, SUB_MODELS, MODELS_ROOT, get_include_path())));
-
-	require_once 'common.php';
-	require_once 'acl.php';
-	require_once 'user.php';
-	require_once 'toolkit.php';
+	require_once '../base.php';
 	require_once 'json.php';
 
 	$resize = !intval($_REQUEST['noresize']);
