@@ -22,7 +22,7 @@ class msqlDB {
 
 	private function __construct() {
 		require_once 'config.php';
-		$c = Config::read('INI', '_engine/config.ini');
+		$c = Config::read('INI', 'cms://config/config.ini');
 		$this->debug    = $c->get('db.debug');
 		$this->db       = $c->get('db.dbname');
 		$this->host     = $c->get('db.host');

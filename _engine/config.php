@@ -90,7 +90,7 @@
 		}
 
 		public function doRead() {
-			$lines = @file(SUB_DOMEN . '/' . $this->_source);
+			$lines = file($this->_source);
 			if (!$lines) $lines = array();
 			$data = &$this->_data['main'];
 			foreach ($lines as $line) {
@@ -135,7 +135,7 @@
 //			debug2($l, 'list');
 //			die('asdadasdasdadadas');
 			$contents = PHP_EOL . join(PHP_EOL, $l);
-			$f = @fopen(SUB_DOMEN . '/' . $this->_source, 'w');
+			$f = @fopen($this->_source, 'w');
 			if ($f) {
 				flock($f, LOCK_EX);
 				try {

@@ -326,8 +326,8 @@
 
 			$c = $this->prepareForGrammar($c);
 
-			$old = count($h[0]) ? str_replace(PHP_EOL, '<br />', join('", "', $h[0])) : '';
-			$new = count($h[1]) ? str_replace(PHP_EOL, '<br />', join('", "', $h[1])) : '';
+			$old = count($h[0]) ? str_replace(array(PHP_EOL, '\n'), '<br />', join('", "', $h[0])) : '';
+			$new = count($h[1]) ? str_replace(array(PHP_EOL, '\n'), '<br />', join('", "', $h[1])) : '';
 			View::addKey('grammar', $this->fetchGrammarSuggestions($page));
 			View::addKey('preview', $c);
 			View::addKey('h_old', $old);

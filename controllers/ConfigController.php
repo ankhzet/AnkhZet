@@ -1,4 +1,5 @@
 <?php
+	require_once ENGINE_ROOT . '/datetime.php';
 
 	class ConfigController extends AdminViewController {
 		protected $_name = 'config';

@@ -7,7 +7,7 @@
 			if (is_array($locstr))
 				build_loc(&$a, $locstr, $prefix . $key . '.');
 			else {
-				$v = array('key' => $prefix . $key, 'str' => $locstr, 'odd' => (count($l) % 2) ? '' : ' class="odd"');
+				$v = array('key' => $prefix . $key, 'str' => htmlspecialchars($locstr), 'odd' => (count($l) % 2) ? '' : ' class="odd"');
 				$a[] = patternize($patt, &$v);
 			}
 		if (count($a))
@@ -49,8 +49,8 @@
 		}
 
 		public function actionMain($r) {
-			$c = Config::read('INI', 'locale.ini');
-			$lang = uri_frag($r, 1, 0, 0);
+			$c = Config::read('INI', 'cms://root/locale.ini');
+			$lang = uri_frag($r, 0, null, 0);
 			if (array_search($lang, Loc::$LOC_ALL) === false)
 				$lang = Loc::Locale();
 			$loc = $c->get($lang);

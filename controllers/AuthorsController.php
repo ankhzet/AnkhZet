@@ -92,7 +92,7 @@
 					$row['g:link'] = preg_match('/^[\/\\\]/', $rowg['link']) ? $rowg['link'] : "/{$row['link']}/{$rowg['link']}";
 					$row['g:title'] = $rowg['title'];
 					$row['g:desc'] = $rowg['description'];
-					$d = $pa->fetch(array('desc' => 0, 'filter' => "`group` = $group_id limit 3", 'collumns' => '`id`, `title`'));
+					$d = $pa->fetch(array('pagesize' => PAGES_PER_GROUP, 'desc' => 1, 'filter' => "`group` = $group_id", 'collumns' => '`id`, `title`'));
 					$t = $d['total'];
 					$u = array();
 					if ($t) {

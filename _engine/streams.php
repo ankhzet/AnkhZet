@@ -1,6 +1,7 @@
 <?php
 	class URIStream {
 		var $fp;
+		var $path;
 		var $real_path;
 		private static $handlers = array();
 		private static $registered = false;
@@ -14,6 +15,7 @@
 
 		function stream_open($path, $mode, $options, &$opened_path) {
 			$this->real_path = self::real($path, $real_path);
+			$this->path = $path;
 			$this->fp = ($real_path != $path) ? fopen($real_path, $mode) : 0;
 			return !!$this->fp;
 		}
@@ -53,12 +55,17 @@
 			return fseek($this->fp, $offset, $whence);
 		}
 
+		function stream_lock($param) {
+			return flock($this->fp, $param);
+		}
+
 		function url_stat($path) {
 			self::real($path, $path);
 			return @stat($path);
 		}
 
-		function stream_stat($path) {
+		function stream_stat($path = null) {
+			if (!isset($path)) $path = $this->path;
 			self::real($path, $path);
 			return @stat($path);
 		}
@@ -80,5 +87,8 @@
 			return false;
 		}
 	}
-
+ 
+	URIStream::register('root', SUB_DOMEN);
+	URIStream::register('views', SUB_DOMEN . '/views');
 	URIStream::register('logs', SUB_DOMEN . '/logs');
+	URIStream::register('config', SUB_DOMEN . '/_engine');

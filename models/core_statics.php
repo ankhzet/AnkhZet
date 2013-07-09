@@ -1,7 +1,7 @@
 <?php
 	if (ROOT == 'ROOT') die('oO');
 
-	require_once ROOT . '/_engine/aggregator.php';
+	require_once 'aggregator.php';
 
 	class StaticsAggregator extends Aggregator {
 		static $instance = null;
