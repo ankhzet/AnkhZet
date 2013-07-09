@@ -68,7 +68,7 @@
 			$t = time() - ($force ? 5 : 60 * 30); // 30 minutes
 			if ($uid)
 				$s = $this->dbc->select('`history` h, `pages` p, `authors` a'
-				, 'h.`user` = ' . $uid . ' and h.`trace` = 1 and h.`page` = p.`id` and a.`id` = p.`author` and a.`time` < ' . $t . ' group by a.`id` order by `time`'
+				, 'h.`user` = ' . $uid . ' and h.`trace` = 1 and h.`page` = p.`id` and a.`id` = p.`author` and a.`time` < ' . $t . ' group by a.`id` order by a.`time` desc'
 				, 'a.`id` as `0`'
 				);
 			else
@@ -111,7 +111,7 @@
 
 		function traceHistory($uid, $idx) {
 			foreach ($idx as $page_id)
-				$this->add(array('user' => $uid, 'page' => $page_id, 'time' => 0));
+				$this->add(array('user' => $uid, 'page' => $page_id, 'trace' => 0, 'time' => 0));
 		}
 
 	}

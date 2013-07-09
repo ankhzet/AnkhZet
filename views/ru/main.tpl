@@ -26,6 +26,16 @@
 					</div>
 				</div>
 				';
+	$p4 = '<div class="cnt-item">
+					<div class="title">
+						<span class="head">
+							<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages?group={%group}">{%group_title}</a>
+						</span>
+						<span class="link size" style="width: 150px; text-align: right;">{%time}</span>
+						<span class="link size" style="width: 30%; color: {%color};"><b>{%delta}</b></span>
+					</div>
+				</div>
+				';
 	$t = time();
 	require_once 'core_updates.php';
 	$a = UpdatesAggregator::getInstance();
@@ -34,46 +44,53 @@
 	if ($d['total'])
 		foreach ($d['data'] as &$row) {
 			$val = $row['value'];
-			if (!$val) continue;
+//			if (!$val) continue;
+			$row['time'] = date('d.m.Y H:i:s', intval($row['time']));
 			switch ($row['kind']) {
+			case UPKIND_GROUP:
+				$row['delta'] = patternize('перенесено из <a href="/pages?group={%old_id}">{%old_title}</a>', $row);
+				$row['color'] = 'blue';
+				$u[] = patternize($p3, $row);
+				break;
+			case UPKIND_INLINE:
+				$row['delta'] = $val ? 'вложенная группа' : 'не вложенная группа';
+				$row['color'] = 'blue';
+				$u[] = patternize($p4, $row);
+				break;
 			case UPKIND_SIZE:
 				$row['delta'] = (($pos = $val > 0) ? '+' : '-') . fs(abs($val * 1024));
 				$row['color'] = $pos ? 'green' : 'red';
-				break;
-			case UPKIND_GROUP:
-				$g = GroupsAggregator::getInstance();
-				$gd = $g->get($val, '`id`, `title`');
-				if ($gd['id'] != $val) $gd = array('id' => $val, 'title' => '&lt;удалено&gt;');
-				$row['delta'] = patternize('перенесено из <a href="/pages?group={%id}">{%title}</a>', $gd);
-				$row['color'] = 'blue';
-				break;
+			default:
+				$u[] = patternize($p3, $row);
 			}
-			$row['time'] = date('d.m.Y H:i:s', intval($row['time']));
-			$u[] = patternize($p3, $row);
 		}
 
 	$c3 = count($u) . '/' . $d['total'];
 	$u = join('', $u);
 
 	require_once 'core_authors.php';
+	require_once 'core_history.php';
 	$a = AuthorsAggregator::getInstance();
-	$d = $a->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => '`time` < ' . $t . ' limit 50', 'collumns' => '`id`, `fio`, `time`'));
+	$h = HistoryAggregator::getInstance();
+	$idx = $h->authorsToUpdate(0, 1);
+	$d = $a->get($idx, '`id`, `fio`, `time`');
 	$r = array();
-	if ($d['total'])
-		foreach ($d['data'] as &$row) {
+	if (!!$d)
+		foreach ($d as &$row) {
 			$row['delta'] = tmDelta($row['time']);
-			$row['time'] = date('d.m.Y H:i:s', intval($row['time']));
-			$r[] = patternize($p1, $row);
+			$row['time'] = date('d.m.Y H:i:s', $t = intval($row['time']));
+			$r["$t . " . count($r)] = patternize($p1, $row);
 		}
 
 	$c1 = count($r);
+	ksort($r);
 	$r = join('', $r);
 
 	require_once 'core_queue.php';
 	require_once 'core_page.php';
 	$q = QueueAggregator::getInstance();
 	$p = PagesAggregator::getInstance();
-	$d = $q->fetch(array('nocalc' => 1, 'desc' => 0
+	$d = $q->fetch(array('desc' => 0
 	, 'filter' => '(`state` = 0) or (`state` <> 0 and `updated` < ' . ($t - QUEUE_FAILTIME) . ') limit 50'
 	, 'collumns' => '`id` as `0`, `page` as `1`'
 	));
@@ -83,15 +100,15 @@
 		foreach ($d['data'] as &$row)
 			$idx[] = intval($row[1]);
 
-		$d = $p->get($idx, '`id`, `title`, `link`, `time`');
-		foreach ($d as $idx => &$row) {
+		$y = $p->get($idx, '`id`, `title`, `link`, `time`');
+		foreach ($y as $idx => &$row) {
 			$row['delta'] = tmDelta($row['time']);
 			$row['time'] = date('d.m.Y H:i:s', intval($row['time']));
 			$e[] = patternize($p2, $row);
 		}
 	}
 
-	$c2 = count($e);
+	$c2 = count($e) . '/' . $d['total'];
 	$e = join('', $e);
 
 	if ($a_id = post_int('a')) {

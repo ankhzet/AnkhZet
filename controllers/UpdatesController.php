@@ -225,14 +225,21 @@
 		}
 
 		function actionAuthors($r) {
+			require_once 'core_updates.php';
+			$u = new AuthorWorker();
+
 			$h = $this->getAggregator();
-			$a = $h->authorsToUpdate($this->user->ID(), uri_frag($r, 0));
-			if (count($a)) {
-				require_once 'core_updates.php';
-				$u = new AuthorWorker();
+			$a = $h->authorsToUpdate(0, uri_frag($r, 0));
+			if (!!$a)
 				foreach ($a as $id)
 					$u->check($id);
-			} else
+
+			$g = $u->groupsToUpdate(uri_frag($r, 0));
+			if (!!$g)
+				foreach ($g as $id)
+					$u->checkGroup($id);
+
+			if (!$a && !$g)
 				echo Loc::lget('nothing_to_update') . '<br />';
 		}
 
