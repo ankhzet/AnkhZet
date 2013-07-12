@@ -61,6 +61,8 @@
 					break;
 				case 'var':
 					return $e;
+				case 'time':
+					return '<?=date(\'r\')?>';
 				default:
 				}
 			return '<?=' . $e . '?>';

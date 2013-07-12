@@ -13,21 +13,56 @@
 
 				if (!isset($data['db']['debug']))
 					$data['db']['debug'] = 0;
+				if (!isset($data['main']['offline']))
+					$data['main']['offline'] = 0;
 
-				$offset = intval($config->get('main.time-offset'));
-				$abbr = $tzh->getAbbreviations($offset);
-				$zone = $zones[$config->get('main.time-zone')];
-				$city = $abbr[$zone][0];
-				$data['main']['timezone'] = "$zone/$city";
+				$offset = $config->get('main.time-offset');
+				$timezone = $config->get('main.time-zone');
+				$zone = $zones[$timezone];
+				$cities = $tzh->getOffsets($zone);
+				$o = $tzh->getAbbreviations(intval($offset));
+				$o = $o[$zone];
+				$list = explode(', ', $cities[$offset]);
+				$c = array();
+				foreach ($cities as $i => $city_list)
+					$c[$k = intval($i)] = array_merge(explode(', ', $city_list), isset($c[$k = intval($i)]) ? $c[$k = intval($i)] : array());
 
-				foreach ($data as $section => $params)
-					if (($s = $config->get($section)))
-						foreach ($params as $param => $value)
-							$config->set(array($section, $param), stripslashes($value));
+				foreach ($c as $i => $clist) {
+					$c[$i] = array_unique($clist);
+					sort($c[$i]);
+				}
+				ksort($c);
+
+				$lo = intval(array_shift(array_keys($c)));
+				$hi = intval(array_pop(array_keys($c)));
+
+				$p = intval($offset);
+				$i1 = $p - 1;
+				$i2 = $p + 1;
+				if ($i1 < $lo) $i1 = $lo;
+				if ($i2 > $hi) $i2 = $hi;
+
+				$p1 = array_diff($list, $c[$i1]);
+				$p2 = array_diff($list, $c[$i2]);
+				$p = array_intersect($p1, $p2);
+				$found = array_shift($p);
+
+//				debug2(array($p, "$zone/$found", $offset, $timezone, $zone));
+				if ($found)
+					$data['main']['timezone'] = "$zone/$found";
+				else
+					$this->view->renderMessage('Cities from selected timezone overlaps with cities in rear timezones, please, select another cities in same timezone', MSG_ERROR);
+
+				if ($found) {
+					foreach ($data as $section => $params)
+						if (($s = $config->get($section)))
+							foreach ($params as $param => $value)
+								$config->set(array($section, $param), stripslashes($value));
 
 //				debug($config);
-				$config->save();
-				locate_to('/config');
+					$config->save();
+					locate_to('/config');
+				}
 			}
 
 			$this->view->zones = $zones;

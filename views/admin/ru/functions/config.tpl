@@ -11,18 +11,19 @@
 		$r = array();
 		foreach ($list as $key => $item) {
 			if (strpos($key, '=') !== false) {
-				$key = explode('=', $key);
-				$key = $key[0];
-			}
+				$keyp = explode('=', $key);
+				$keyp = $keyp[0];
+			} else
+				$keyp = $key;
 
-			$_key = str_pad(abs($key), 2, '0', STR_PAD_LEFT);
+			$_key = str_pad(abs($keyp), 2, '0', STR_PAD_LEFT);
 			$s = ($key == $sel) ? ' selected="selected"' : '';
 			if ($keys)
-				$_key = (($key >= 0) ? "+$_key" : "-$_key") . ' ';
+				$_key = (($keyp >= 0) ? "+$_key" : "-$_key") . ' ';
 			else
 				$_key = '';
 
-			$r[$key] = true;
+			$r[$keyp] = true;
 			$v[] = "<option value=\"$key\"{$s}>{$_key}$item</option>";
 		}
 

@@ -22,7 +22,7 @@
 						$region = $match[1];
 						$city = $match[2];
 						$this->offsets[$region][$hours][] = $city;
-						$this->abbrevs[$hours][$region][] = $city;
+						$this->abbrevs[$hours][$region][$key][] = $city;
 					}
 				}
 			}
@@ -42,11 +42,13 @@
 				}
 			}
 
-			foreach ($this->abbrevs as $offset => $keys)
-				foreach ($keys as $id => $cities)
-					$this->abbrevs[$offset][$id] = array_unique($this->abbrevs[$offset][$id]);
+			foreach ($this->abbrevs as $hour => $zones)
+				foreach ($zones as $region => $keys)
+					foreach ($keys as $key => $cities)
+						$this->abbrevs[$hour][$region][$key] = array_unique($this->abbrevs[$hour][$region][$key]);
 
 			ksort($this->offsets);
+			ksort($this->abbrevs);
 		}
 
 		function getZones() {

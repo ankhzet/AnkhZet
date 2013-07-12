@@ -30,6 +30,7 @@
 	require_once ENGINE_ROOT . '/localization.php';
 	$config = Config::read('INI', 'cms://config/config.ini');
 	$timezone = $config->get('main.timezone');
+//	debug($timezone);
 	date_default_timezone_set($timezone);
 
 	set_error_handler("error_handler");
