@@ -40,6 +40,7 @@
 		<div><label>Название сайта:</label><input type=text name="main[site-title]" value="<?echo getv('main.site-title')?>" /></div>
 		<div><label>e-mail администратора:</label><input type=text name="main[site-admin]" value="<?echo getv('main.site-admin')?>" /></div>
 		<div><label>e-mail нотификатор:</label><input type=text name="main[mail-notifier]" value="<?echo getv('main.mail-notifier')?>" /></div>
+		<div><label>Сайт оффлайн:</label><input type=checkbox name="main[offline]" <?echo getv('main.offline') ? 'checked ' : '' ?> value="1" /></div>
 		<div>
 			<label>Временная зона:</label>
 			<select name="main[time-zone]"><?=genSelect($this->zones, getv('main.time-zone'))?></select>
