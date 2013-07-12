@@ -20,6 +20,7 @@
 			$a = $g->get($author_id);
 			preg_match('/^[\/]*(.*?)[\/]*$/', $a['link'], $link);
 			$link = $link[1] . '/';
+			$t = getutime();
 			$data = SAMLIBParser::getData($link, 'author');
 			if ($data === false) {
 				echo Loc::lget('samlib_down');
@@ -28,6 +29,9 @@
 				echo Loc::lget('parse_method_unknown');
 				return false;
 			}
+
+			$s = intval((getutime() - $t) * 1000) / 1000;
+			echo "<span style=\"font-size: 80%; color: grey;\">Parser cast for $s sec</span><br />";
 
 			$groups = $data[0];
 			$inline = $data[1];
@@ -432,7 +436,7 @@
 					case UPKIND_INLINE: // group updates
 						$gid = intval($row['page']);
 						$aid = $g[$gid]['author'];
-						$r[] = array('id' => $gid, 'kind' => $kind, 'value' => $row['value']
+						$r[] = array('id' => $gid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
 						, 'group' => $gid
 						, 'group_title' => $g[$gid]['title']
 						, 'author' => $aid
@@ -444,7 +448,7 @@
 						$gid = $p[$pid]['group'];
 						$aid = $p[$pid]['author'];
 						$goid = intval($row['value']);
-						$r[] = array('id' => $gid, 'kind' => $kind, 'value' => $row['value']
+						$r[] = array('id' => $gid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
 						, 'page' => $pid
 						, 'title' => $p[$pid]['title']
 						, 'group' => $gid
@@ -459,7 +463,7 @@
 						$pid = intval($row['page']);
 						$aid = $p[$pid]['author'];
 						$gid = $p[$pid]['group'];
-						$r[] = array('id' => $pid, 'kind' => $kind, 'value' => $row['value']
+						$r[] = array('id' => $pid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
 						, 'page' => $pid
 						, 'title' => $p[$pid]['title']
 						, 'group' => $gid
