@@ -3,6 +3,7 @@
 <head>
 	<title>{%title#unhtml%} - {%site#unhtml%}</title>
 	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<meta name="server-time" content="{%page#time%}" />
 {%TPL:content#meta%}
 <?php
 	if ($uid = User::get()->ID()) {

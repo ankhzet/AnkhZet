@@ -13,8 +13,14 @@
 		}
 
 		function run() {
-			$this->frontend->route();
-			$this->frontend->dispatch(true);
+			if ((User::ACL() < ACL::ACL_ADMINS) && $this->frontend->get('config')->get('main.offline')) {
+				require_once 'view.php';
+				$v = new View();
+				$v->renderTPL('offline');
+			} else {
+				$this->frontend->route();
+				$this->frontend->dispatch(true);
+			}
 		}
 	}
 

@@ -193,6 +193,7 @@
 				$cnt = @file_get_contents("$storage/$version.html");
 				$cnt1 = @gzuncompress/**/($cnt);
 				if ($cnt1 !== false) $cnt = $cnt1;
+				$cnt1 = preg_replace('">([_\.]+)<"', '&gt;\1&lt;', $cnt1);
 				$cnt = $this->prepareForGrammar($cnt, true);
 				View::addKey('preview', mb_convert_encoding($cnt, 'UTF-8', 'CP1251'));
 				View::addKey('grammar', $this->fetchGrammarSuggestions($page));
@@ -298,6 +299,11 @@
 			$_t1 = @gzuncompress/**/($t1); if ($_t1 !== false) $t1 = $_t1;
 			$_t2 = @gzuncompress/**/($t2); if ($_t2 !== false) $t2 = $_t2;
 
+			/*
+			 >_< >.<
+			 */
+			$t1 = preg_replace('">([_\.]+)<"', '&gt;\1&lt;', $t1);
+			$t2 = preg_replace('">([_\.]+)<"', '&gt;\1&lt;', $t2);
 
 			$t1 = trim(str_replace(array("\r", "\n"), '', $t1));
 			$t1 = strip_tags($t1, '<dd><p><br><u><i><s>');

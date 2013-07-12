@@ -353,6 +353,7 @@
 					? "({$trace['class']})?{$trace['type']}{$trace['function']}"
 					: "{$trace['function']}";
 
+
 				$a = array();
 				if ($trace['args'])
 					foreach ($trace['args'] as &$arg) {
@@ -360,7 +361,11 @@
 						case 'integer':
 						case 'int':
 						case 'double': $a[] = $arg; break;
-						case 'string': $a[] = "\"$arg\""; break;
+						case 'string':
+							$arg = str_replace('<br />', PHP_EOL, safeSubstr($arg, 200, 10));
+							$arg = preg_replace('/[' . PHP_EOL . '\s]{2,}/', PHP_EOL, $arg);
+							$a[] = '"' . nl2br(htmlspecialchars($arg)) . '"';
+							break;
 						case 'boolean': $a[] = $arg ? 'true' : 'false'; break;
 						case 'array': $a[] = 'Array()'; break;
 						case 'object': $a[] = '' . get_class($arg) . '()'; break;
@@ -371,6 +376,7 @@
 
 				$call .= '(' . join(', ', $a) . ')';
 				$tab = str_repeat('  ', $c--);
+				if (!$file) {$file = '&lt;anonumuous&gt;'; $line = '?';}
 				$s[] = "{$tab}<span class=\"filename\">{$file} ({$line})</span> <span class=\"call\">{$call}</span>";
 			}
 			$s = array_reverse($s);
@@ -388,8 +394,8 @@
 		, E_NOTICE => 'NOTICE'
 		);
 		$severity = @$severity[$code] ? $severity[$code] : 'ERROR';
-		$date = gmdate('d-m-Y');
-		$time = gmdate('h:i:s');
+		$date = date('d-m-Y');
+		$time = date('H:i:s');
 		$file = str_replace(array(SUB_DOMEN, '\\'), array('', '/'), $file);
 		$line = "\n[{$time}] {$severity} at {$file}:{$line}:\n\t\t\t\t\t\t\t{$msg}\n";
 		$log_file = "cms://logs/error-log-{$date}.php";

@@ -61,6 +61,8 @@
 					break;
 				case 'var':
 					return $e;
+				case 'time':
+					return '<?=date(\'r\')?>';
 				default:
 				}
 			return '<?=' . $e . '?>';
@@ -99,6 +101,7 @@
 			$l = $this->request->getList(true);
 			$page = isset($l[0]) ? strtolower($l[0]) : $config->get('main-controller');
 			self::$keys['page'] = $page;
+			self::$keys['admin'] = $config->get('site-admin');
 			self::$keys['host'] = 'http://' . $_SERVER['HTTP_HOST'];
 			self::$keys['root'] = 'http://' . make_domen($_SERVER['HTTP_HOST'], '');
 			self::$instance = $this;
