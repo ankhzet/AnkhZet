@@ -448,8 +448,7 @@
 						$gid = $p[$pid]['group'];
 						$aid = $p[$pid]['author'];
 						$goid = intval($row['value']);
-						$r[] = array('id' => $gid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
-						, 'page' => $pid
+						$r[] = array('id' => $pid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
 						, 'title' => $p[$pid]['title']
 						, 'group' => $gid
 						, 'group_title' => $g[$gid]['title']
@@ -464,7 +463,6 @@
 						$aid = $p[$pid]['author'];
 						$gid = $p[$pid]['group'];
 						$r[] = array('id' => $pid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
-						, 'page' => $pid
 						, 'title' => $p[$pid]['title']
 						, 'group' => $gid
 						, 'group_title' => $g[$gid]['title']
