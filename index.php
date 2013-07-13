@@ -30,6 +30,7 @@
 
 	$app->run();
 	msqlDB::o()->close();
+	header('Content-Type: text/html');
 	header('X-Frame-Options: SAMEORIGIN');
 	ob_end_flush();
 ?>

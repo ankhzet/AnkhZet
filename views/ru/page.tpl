@@ -44,6 +44,5 @@
 {%patt:ustatic%}
 		</div>
 	</div>
-</div>
 </body>
 </html>

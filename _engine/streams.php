@@ -97,7 +97,7 @@
 			self::real($path, $path);
 			$link = $flags & STREAM_URL_STAT_LINK;
 			if (!$link)
-				if (!is_file($path))
+				if (!(is_file($path) || is_dir($path)))
 					return false;
 				else;
 			else

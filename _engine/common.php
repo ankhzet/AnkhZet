@@ -400,7 +400,7 @@
 		$line = "\n[{$time}] {$severity} at {$file}:{$line}:\n\t\t\t\t\t\t\t{$msg}\n";
 		$log_file = "cms://logs/error-log-{$date}.php";
 
-		if (!is_file($log_file) || !filesize($log_file)) $line = "<?php ?><pre>\n{$line}";
+		if (!is_file($log_file) || !filesize($log_file)) $line = "<?php \n\theader(\"Content-Type: text/html\");?><pre>\n{$line}";
 		if ($f = fopen($log_file, 'a')) {
 			fwrite($f, $line);
 			fclose($f);

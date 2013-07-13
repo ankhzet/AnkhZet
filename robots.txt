@@ -1,0 +1,6 @@
+User-Agent: *
+Disallow: /user/
+Disallow: /admin
+Disallow: /updates
+Disallow: /pages/id
+Crawl-delay: 5
