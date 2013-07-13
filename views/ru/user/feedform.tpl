@@ -1,14 +1,14 @@
 <?php
 	$a = array('name', 'contact', 'msg');
 	foreach ($a as $key)
-		${$key} = stripslashes(htmlspecialchars($_REQUEST[$key]));
+		${$key} = stripslashes(htmlspecialchars(post($key)));
 
 	global $errs;
 	$errs = $this->errors;
 
 	function err($field, $title) {
 		global $errs;
-		echo ($errs[$field])
+		echo (uri_frag($errs, $field, 0))
 			? '<label for="i' . $field . '" style="color: red;">' . $title . ':</label>'
 			: '<label for="i' . $field . '">' . $title . ':</label>';
 	}

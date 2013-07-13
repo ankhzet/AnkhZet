@@ -80,15 +80,16 @@
 				echo Loc::lget('groups_updated') . '<br />';
 				foreach ($new as $idx => $title) {
 //					debug($groups[$idx], $title);
+					$link = isset($inline[$idx]) ? $inline[$idx] : '';
 					$gid = $ga->add(array(
 						'author' => $author_id
 					, 'group' => $groups[$idx][0]
-					, 'link' => $inline[$idx]
+					, 'link' => $link
 					, 'title' => addslashes(htmlspecialchars($title, ENT_QUOTES))
 					, 'description' => addslashes(htmlspecialchars($groups[$idx][2], ENT_QUOTES))
 					));
 					$gi[$gid] = $idx;
-					$gl[$gid] = $inline[$idx];
+					$gl[$gid] = $link;
 				}
 			// ok, groups updated
 			}

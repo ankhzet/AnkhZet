@@ -36,7 +36,7 @@
 				$locid = (!isset(self::$LOC_ALL[$locid])) ? 0 : $locid;
 				self::$locid = $locid >= count(self::$LOC_ALL) ? 0 : $locid;
 				self::$locale= self::$LOC_ALL[$locid];
-				self::$config = self::read('INI', 'locale.ini');
+				self::$config = self::read('INI', 'cms://root/locale.ini');
 			}
 			return self::$locale;
 		}

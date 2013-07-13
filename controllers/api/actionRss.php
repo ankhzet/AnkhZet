@@ -104,7 +104,7 @@
 			$data['items'] = $i;
 //			ob_start("ob_gzhandler");
 			$rss = $rss->format($data);
-			if (!intval($_REQUEST['nogzip'])) {
+			if (!post_int('nogzip')) {
 				$rss = gzcompress($rss);
 				header('Content-Encoding: gzip');
 			}

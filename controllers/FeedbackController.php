@@ -8,6 +8,7 @@
 		protected $_name = 'feedback';
 
 		public function actionMain($r) {
+			$this->view->errors = array();
 			$this->view->renderTPL('user/feedform');
 		}
 
