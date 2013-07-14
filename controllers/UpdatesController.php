@@ -184,10 +184,22 @@
 		}
 
 		public function actionTrace($r) {
-			$uid = $this->user->ID();
-			$ha = $this->getAggregator(0);
 			$aid = uri_frag($r, 0);
 			$pid = uri_frag($r, 1);
+			if ($aid || $pid)
+				$this->traceForUser($this->user->ID(), $aid, $pid);
+			else {
+				$o = msqlDB::o();
+				$s = $o->select('users', '1', '`id`');
+				$r = $s ? $o->fetchrows($s) : array();
+				if (!!$r)
+					foreach ($r as &$row)
+						$this->traceForUser(intval($row['id']), 0, 0);
+			}
+		}
+
+		function traceForUser($uid, $aid, $pid) {
+			$ha = $this->getAggregator(0);
 			$a = array();
 			if (!$aid) {
 				$s = $ha->dbc->select('`history` h, `pages` p', "h.`user` = $uid and h.`page` = p.`id` group by p.`author`", 'p.`author` as `0`');
@@ -198,7 +210,7 @@
 
 			$p = array();
 			foreach ($a as $author) {
-				$added = $ha->traceNew($author, $uid, $pid);
+				$added = $ha->traceNew($author, $uid, $pid, 1);
 
 				if (count($added)) {
 					$pa = $this->getAggregator(2);
@@ -228,13 +240,14 @@
 			require_once 'core_updates.php';
 			$u = new AuthorWorker();
 
+			msqlDB::o()->debug = 1;
 			$h = $this->getAggregator();
 			$a = $h->authorsToUpdate(0, uri_frag($r, 0));
 			if (!!$a)
 				foreach ($a as $id)
 					$u->check($id);
 
-			$g = $u->groupsToUpdate(uri_frag($r, 0));
+			$g = $h->groupsToUpdate(uri_frag($r, 0));
 			if (!!$g)
 				foreach ($g as $id)
 					$u->checkGroup($id);

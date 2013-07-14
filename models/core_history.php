@@ -3,6 +3,9 @@
 
 	require_once 'aggregator.php';
 
+	define('AUTHORS_UPDATE_PER_BATCH', 5);
+	define('GROUPS_UPDATE_PER_BATCH', 10);
+
 	class HistoryAggregator extends Aggregator {
 		static $instance = null;
 		var $TBL_FETCH  = 'history';
@@ -29,7 +32,7 @@
 
 		function fetchUpdates($uid, $traces = null, $colls = '*', $filter = 1) {
 			$d = $this->fetch(array('nocalc' => 1, 'desc' => 0
-			, 'filter' => $traces ? '`id` in (' . join(',', $traces) . ')' : "`user` = $uid and `trace` = 1"
+			, 'filter' => $traces ? '`id` in (' . join(',', $traces) . ')' : "`user` = $uid and `trace` = $filter"
 			, 'collumns' => '`page` as `0`'
 			));
 			if (!$d['total']) return array();
@@ -65,20 +68,38 @@
 		}
 
 		function authorsToUpdate($uid, $force = 0) {
-			$t = time() - ($force ? 5 : 60 * 30); // 30 minutes
+			$t = time() - ($force ? 5 : 60 * 60); // 60 minutes
 			if ($uid)
 				$s = $this->dbc->select('`history` h, `pages` p, `authors` a'
-				, 'h.`user` = ' . $uid . ' and h.`trace` = 1 and h.`page` = p.`id` and a.`id` = p.`author` and a.`time` < ' . $t . ' group by a.`id` order by a.`time` desc'
+				, 	'h.`user` = ' . $uid . ' and h.`trace` = 1'
+					. ' and h.`page` = p.`id` and a.`id` = p.`author` and a.`time` < ' . $t
+					. ' group by a.`id` order by a.`time` limit ' . AUTHORS_UPDATE_PER_BATCH
 				, 'a.`id` as `0`'
 				);
 			else
 				$s = $this->dbc->select('authors'
-				, '`time` < ' . $t . ' order by `time`'
+				, '`time` < ' . $t . ' order by `time` limit ' . AUTHORS_UPDATE_PER_BATCH
 				, '`id` as `0`'
 				);
 			$a = array();
 			if ($s)
 				foreach($this->dbc->fetchrows($s) as $row)
+					$a[] = intval($row[0]);
+
+			return $a;
+		}
+
+		function groupsToUpdate($force = 0) {
+			$dbc = msqlDB::o();
+			$t = time() - ($force ? 5 : 60 * 60); // 60 minutes
+			$s = $dbc->select('groups'
+			, 	'`time` < ' . $t . ' and `link` <> "" and `link` not like "/%"'
+				. ' order by `time` limit ' . GROUPS_UPDATE_PER_BATCH
+			, '`id` as `0`'
+			);
+			$a = array();
+			if ($s)
+				foreach($dbc->fetchrows($s) as $row)
 					$a[] = intval($row[0]);
 
 			return $a;
@@ -95,7 +116,7 @@
 			return $idx;
 		}
 
-		function traceNew($author, $uid, $page = 0) {
+		function traceNew($author, $uid, $page = 0, $trace = 0) {
 			$idx = $this->tracePages($author, $page);
 			$p = array(); // traced pages
 			$d = $this->fetch(array('nocalc' => 1, 'desc' => 0, 'filter' => '`user` = ' . $uid, 'collumns' => '`page` as `0`'));
@@ -111,7 +132,7 @@
 
 		function traceHistory($uid, $idx) {
 			foreach ($idx as $page_id)
-				$this->add(array('user' => $uid, 'page' => $page_id, 'trace' => 0, 'time' => 0));
+				$this->add(array('user' => $uid, 'page' => $page_id, 'trace' => $trace, 'time' => 0));
 		}
 
 	}

@@ -45,7 +45,7 @@ class msqlDB {
 	}
 
 	public static function o() {
-		if (self::$connection === null)
+		if (!self::$connection)
 			self::$connection = new msqlDB();
 		return self::$connection;
 	}
@@ -55,6 +55,17 @@ class msqlDB {
 		if ($this->debug) echo 'connect: ' . $this->link . '<br />' . PHP_EOL;
 		mysql_query("SET NAMES 'utf8'");
 		return $this->link;
+	}
+	function reconnect() {
+		$this->close();
+		$this->connect();
+		if (!$this->open()) {
+			debug2($this, '<!-- config');
+			throw new Exception('Can\'t open MySQL connection: ' .
+			($this->link ? mysql_error($this->link) : 'unresolvable error'));
+//			$this->create($this->db);
+//			$this->open();
+		}
 	}
 
 	function create($name) {
@@ -191,8 +202,7 @@ class msqlDB {
 	function close() {
 		if ($this->debug) echo 'close: ' . $this->link . '<br />'. PHP_EOL;
 		$res = mysql_close($this->link);
-		$this->link = -1;
-		self::$connection = null;
+		$this->link = null;
 		return $res;
 	}
 }

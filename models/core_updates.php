@@ -178,7 +178,7 @@
 		function checkGroup($group_id) {
 			$ga = GroupsAggregator::getInstance();
 			$g = $ga->get($group_id, '`id`, `link`, `author`');
-			if ($g['id'] != $group_id) return false;
+			if (uri_frag($g, 'id') != $group_id) return false;
 			$author_id = intval($g['author']);
 
 			$aa = AuthorsAggregator::getInstance();
@@ -321,9 +321,7 @@
 					$size = $c->compare($page, "{$row['author']}/{$row['link']}", $time);
 
 					/* reconnect mysql DB (preventing "MySQL server has gone away") */
-					$pa->dbc->close();
-					$pa->dbc->connect();
-					$pa->dbc->open();
+					$pa->dbc->reconnect();
 					/* - */
 
 					if ($size) {
@@ -347,21 +345,6 @@
 				echo Loc::lget('nothing_to_update') . '<br />';
 
 			return 0;
-		}
-
-		function groupsToUpdate($force = 0) {
-			$dbc = msqlDB::o();
-			$t = time() - ($force ? 5 : 60 * 30); // 30 minutes
-			$s = $dbc->select('groups'
-			, '`time` < ' . $t . ' and `link` <> "" and `link` not like "/%" order by `time`'
-			, '`id` as `0`'
-			);
-			$a = array();
-			if ($s)
-				foreach($dbc->fetchrows($s) as $row)
-					$a[] = intval($row[0]);
-
-			return $a;
 		}
 
 	}

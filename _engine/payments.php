@@ -114,7 +114,7 @@
 				$payall = intval($con['data']);
 				if ($payall != 1) { // prepay less than 100%
 					require_once 'config.php';
-					$config = Config::read('INI', '_engine/config.ini');
+					$config = Config::read('INI', 'cms://config/config.ini');
 
 					$pre = (float)$config->get('prepayment');
 					switch (intval($order['state'])) {

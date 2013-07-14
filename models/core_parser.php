@@ -11,6 +11,7 @@
 		}
 
 		static function getData($link, $method, $usecache = false) {
+			if ($link == '/') return false;
 			$url  = "http://samlib.ru/$link";
 			if ($usecache) {
 				$hash = md5($url);
@@ -23,6 +24,8 @@
 				}
 			} else
 				$html = url_get_contents($url);
+
+			msqlDB::o()->reconnect();
 
 			if (($html === false) || trim($html) == '')
 				return false;

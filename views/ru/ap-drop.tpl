@@ -5,6 +5,7 @@
 						{%profile}
 						<li>&#187; <a href="/admin">Админ-функции</a></li>
 						<li>&#187; <a href="/statics">Статики</a></li>
+						<li>&#187; <a href="/visitors">Посетители</a></li>
 						<li>&#187; <a href="/feedbacks">Фидбеки</a></li>
 						<li>&#187; <a href="/user/logout">Виход</a></li>
 						<li>&nbsp;</li>

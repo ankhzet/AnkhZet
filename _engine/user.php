@@ -338,7 +338,7 @@
 			$content = file_get_contents(SUB_DOMEN . '/_engine/' . $tpl[$newpass]);
 			$data = array('title' => $subject, 'login' => $login, 'password' => $password);
 			$content = patternize($content, $data);
-			$sent = mail($login, $subject, $content, 'From: ' . $notifier . ' <noreply@' . str_replace(array('http://', 'www.'), '', $_SERVER[HTTP_HOST]) . '>');
+			$sent = mail($login, $subject, $content, 'From: ' . $notifier . ' <noreply@' . str_replace(array('http://', 'www.'), '', $_SERVER['HTTP_HOST']) . '>');
 
 			if ($sent && $newpass) {
 				$dbc = msqlDB::o();

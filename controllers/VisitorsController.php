@@ -33,9 +33,12 @@
 
 		public function makeItem(&$aggregator, &$row) {
 			$uas = &$this->uas;
-			$row['type'] = $row['type'] < 0 ? 'Robot' : $uas['browser_type'][$row['type']][0];
-			$row['ua'] = $row['type'] < 0 ? $uas['robots'][$row['ua']][1] : $uas['browser'][$row['ua']][1];
-			$row['os'] = $uas['os'][$row['os']][1];
+			$bot = $row['type'] < 0;
+			$row['type'] = $bot ? 'Robot' : $uas['browser_type'][$row['type']][0];
+			$ua = $bot ? $uas['robots'][$row['ua']][1] : $uas['browser'][$row['ua']][1];
+			$os = $uas['os'][$row['os']][1];
+			if ($ua) $row['ua'] = $ua;
+			if ($os) $row['os'] = $os;
 			return patternize($this->LIST_ITEM, $row);
 		}
 

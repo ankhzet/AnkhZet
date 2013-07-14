@@ -35,7 +35,7 @@
 
 	set_error_handler("error_handler");
 
-	if (User::ACL() < ACL::ACL_MODER) {
+	if (User::ACL() < ACL::ACL_MODER && isset($_SERVER['HTTP_USER_AGENT']) && $_SERVER['HTTP_USER_AGENT']) {
 		$t = getutime();
 		require_once 'core_uasparser.php';
 		$uas = new UASparser();

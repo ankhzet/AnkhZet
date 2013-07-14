@@ -12,8 +12,8 @@
 <?php } ?>
 	<link rel="stylesheet" href="/theme/css/style.css" type="text/css" media="screen, projection" />
 	<link rel="stylesheet" href="/theme/css/upd.css" type="text/css" media="screen, projection" />
-	<script type="text/javascript" src="/theme/js/jquery.js"></script>
-	<script type="text/javascript" src="/theme/js/upform.js"></script>
+	<script type="text/javascript" asynchronous src="/theme/js/jquery.js"></script>
+	<script type="text/javascript" asynchronous src="/theme/js/upform.js"></script>
 	{%tpl:content#utils%}
 </head>
 <body>

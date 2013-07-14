@@ -14,7 +14,7 @@
 			$u->check($id);
 	}
 
-	$g = $u->groupsToUpdate(uri_frag($r, 0));
+	$g = $h->groupsToUpdate(uri_frag($r, 0));
 	if (!!$g) {
 		echo "Groups to update: " . (count($g)) . "<br />";
 		foreach ($g as $id)

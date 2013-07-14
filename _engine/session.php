@@ -105,7 +105,10 @@
 				setcookie('ssid', $this->uid, $t, "/", $m);
 				setcookie('user', $this->linked, $t, "/", $m);
 				setcookie('locale', $this->locale, $t2, "/", $m);
-				if ($redirect) header('location: http://' . $host);
+				if ($redirect) {
+					header('location: http://' . $host);
+					die();
+				}
 				break;
 			case SAM::SAM_URI    : break;
 			}
