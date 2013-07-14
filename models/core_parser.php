@@ -11,6 +11,7 @@
 		}
 
 		static function getData($link, $method, $usecache = false) {
+			if ($link == '/') return false;
 			$url  = "http://samlib.ru/$link";
 			if ($usecache) {
 				$hash = md5($url);
@@ -23,6 +24,8 @@
 				}
 			} else
 				$html = url_get_contents($url);
+
+			msqlDB::o()->reconnect();
 
 			if (($html === false) || trim($html) == '')
 				return false;
@@ -69,7 +72,8 @@
 				$id = $g[0];
 				$block = array_shift($pieces);
 				preg_match('/<br>(.*?)<(dl|\/small)>/ism', $block, $t1);
-				$g[2] = trim(preg_replace(array('/<br( \/)?>/i', '/<[^>]+>/'), array(PHP_EOL, ''), $t1[1]));
+				$g[2] = ($t1 && isset($t1[1])) ? trim(preg_replace(array('/<br( \/)?>/i', '/<[^>]+>/'), array(PHP_EOL, ''), $t1[1])) : '';
+
 //				debug($g[2]);
 				preg_match_all('/<dl>(.*?)<\/dl>/i', $block, $t);
 //				debug($t, htmlspecialchars($block));
@@ -82,7 +86,7 @@
 								$idx
 							, strip_tags($t2[2])
 							, intval($t2[3])
-							, isset($t3) ? strip_tags($t3[1], '<br><p>') : ''
+							, ($t3 && isset($t3[1])) ? strip_tags($t3[1], '<br><p>') : ''
 							);
 						}
 //				debug($links[$id], "Group #$id");
@@ -112,7 +116,7 @@
 							$l[$t2[1]] = array(
 								strip_tags($t2[2])
 							, intval($t2[3])
-							, isset($t3) ? strip_tags($t3[1], '<br><p>') : ''
+							, ($t3 && isset($t3[1])) ? strip_tags($t3[1], '<br><p>') : ''
 							);
 						}
 			}

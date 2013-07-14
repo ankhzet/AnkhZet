@@ -33,8 +33,10 @@
 				}
 				ksort($c);
 
-				$lo = intval(array_shift(array_keys($c)));
-				$hi = intval(array_pop(array_keys($c)));
+				$k = array_keys($c);
+				$lo = intval(array_shift($k));
+				$hi = intval(array_pop($k));
+				if ($hi === false) $hi = $lo;
 
 				$p = intval($offset);
 				$i1 = $p - 1;

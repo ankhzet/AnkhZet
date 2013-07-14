@@ -62,13 +62,11 @@
 				, $countrows ? "SQL_CALC_FOUND_ROWS $collumns" : $collumns
 			);
 
-			if ($countrows)
-				if ($s) {
-					$s1 = $this->dbc->query('SELECT FOUND_ROWS()');
-					$t  = @mysql_fetch_row($s1);
-					$total  = $t[0];
-				} else;
-			else
+			if ($countrows && $s) {
+				$s1 = $this->dbc->query('SELECT FOUND_ROWS()');
+				$t  = @mysql_fetch_row($s1);
+				$total  = $t[0];
+			} else
 				$total = $s ? $this->dbc->rows($s) : 0;
 
 			$this->data = array('result' => $s, 'data' => $this->dbc->fetchrows($s), 'total' => intval($total));

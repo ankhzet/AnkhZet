@@ -1,8 +1,10 @@
 <?php
 	class URIStream {
 		var $fp;
+		var $dp;
 		var $path;
 		var $real_path;
+		public $context;
 		private static $handlers = array();
 		private static $registered = false;
 
@@ -25,6 +27,38 @@
 			$host = $url["host"];
 			$real = str_ireplace("cms://$host", self::$handlers[$host], $path);
 			return $real;
+		}
+
+		function dir_opendir($path, $options) {
+			self::real($path, $path);
+			$this->dp = @opendir($path);
+			return !!$this->dp;
+		}
+
+		function dir_closedir() {
+			return @closedir($this->dp);
+		}
+
+		function dir_readdir() {
+			return readdir($this->dp);
+		}
+
+		function dir_rewinddir() {
+			return @rewinddir($this->dp);
+		}
+
+		function mkdir ($path, $mode, $options) {
+			self::real($path, $path);
+			return @mkdir(
+			$path
+			, $mode
+			, ($options & STREAM_MKDIR_RECURSIVE) == STREAM_MKDIR_RECURSIVE
+			);
+		}
+
+		function rmdir ($path, $options) {
+			self::real($path, $path);
+			return @rmdir($path);
 		}
 
 		function stream_read($count) {
@@ -59,15 +93,25 @@
 			return flock($this->fp, $param);
 		}
 
-		function url_stat($path) {
+		function url_stat($path, $flags) {
 			self::real($path, $path);
-			return @stat($path);
+			$link = $flags & STREAM_URL_STAT_LINK;
+			if (!$link)
+				if (!(is_file($path) || is_dir($path)))
+					return false;
+				else;
+			else
+				if (!is_link($path))
+					return false;
+				else;
+
+			return (!$link)
+				? @stat($path)
+				: @lstat($path);
 		}
 
-		function stream_stat($path = null) {
-			if (!isset($path)) $path = $this->path;
-			self::real($path, $path);
-			return @stat($path);
+		function stream_stat() {
+			return @fstat($this->fp);
 		}
 
 		function stream_metadata($path, $option, $var) {
@@ -87,8 +131,9 @@
 			return false;
 		}
 	}
- 
+
 	URIStream::register('root', SUB_DOMEN);
 	URIStream::register('views', SUB_DOMEN . '/views');
 	URIStream::register('logs', SUB_DOMEN . '/logs');
 	URIStream::register('config', SUB_DOMEN . '/_engine');
+	URIStream::register('cache', SUB_DOMEN . '/cache');

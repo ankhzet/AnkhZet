@@ -15,7 +15,7 @@
 				$this->_404('Unknown channel UID');
 
 			$time = time();
-			$c = Config::read('INI', '_engine/config.ini');
+			$c = Config::read('INI', 'cms://config/config.ini');
 			$data = array();
 			$data['title'] = $c->get('site-title');
 			$data['link'] = 'http://' . $_SERVER['HTTP_HOST'] . '/';
@@ -104,7 +104,7 @@
 			$data['items'] = $i;
 //			ob_start("ob_gzhandler");
 			$rss = $rss->format($data);
-			if (!intval($_REQUEST['nogzip'])) {
+			if (!post_int('nogzip')) {
 				$rss = gzcompress($rss);
 				header('Content-Encoding: gzip');
 			}

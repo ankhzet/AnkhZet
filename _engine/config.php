@@ -13,6 +13,9 @@
 		}
 
 		public static function read($class, $source) {
+			if (strpos($source, 'cms://') === false)
+				$source = "cms://config/$source";
+
 			if (isset(self::$_configs[$source]))
 				return self::$_configs[$source];
 			else {

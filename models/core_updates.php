@@ -80,15 +80,16 @@
 				echo Loc::lget('groups_updated') . '<br />';
 				foreach ($new as $idx => $title) {
 //					debug($groups[$idx], $title);
+					$link = isset($inline[$idx]) ? $inline[$idx] : '';
 					$gid = $ga->add(array(
 						'author' => $author_id
 					, 'group' => $groups[$idx][0]
-					, 'link' => $inline[$idx]
+					, 'link' => $link
 					, 'title' => addslashes(htmlspecialchars($title, ENT_QUOTES))
 					, 'description' => addslashes(htmlspecialchars($groups[$idx][2], ENT_QUOTES))
 					));
 					$gi[$gid] = $idx;
-					$gl[$gid] = $inline[$idx];
+					$gl[$gid] = $link;
 				}
 			// ok, groups updated
 			}
@@ -172,12 +173,13 @@
 					echo Loc::lget('no_updates') . '<br />';
 			} else
 				echo Loc::lget('no_updates') . '<br />';
+			return true;
 		}
 
 		function checkGroup($group_id) {
 			$ga = GroupsAggregator::getInstance();
 			$g = $ga->get($group_id, '`id`, `link`, `author`');
-			if ($g['id'] != $group_id) return false;
+			if (uri_frag($g, 'id') != $group_id) return false;
 			$author_id = intval($g['author']);
 
 			$aa = AuthorsAggregator::getInstance();
@@ -252,6 +254,8 @@
 					echo Loc::lget('no_updates') . '<br />';
 			} else
 				echo Loc::lget('no_updates') . '<br />';
+
+			return true;
 		}
 
 		function queuePages($author, $pages) {
@@ -320,9 +324,7 @@
 					$size = $c->compare($page, "{$row['author']}/{$row['link']}", $time);
 
 					/* reconnect mysql DB (preventing "MySQL server has gone away") */
-					$pa->dbc->close();
-					$pa->dbc->connect();
-					$pa->dbc->open();
+					$pa->dbc->reconnect();
 					/* - */
 
 					if ($size) {
@@ -336,6 +338,7 @@
 					} else {
 						$q->dbc->update($q->TBL_INSERT, array('state' => 0, 'updated' => $time), '`id` = ' . $q_id);
 						echo Loc::lget('page_request_failed') . '<br />';
+						return $left - $done;
 					}
 					$done++;
 					if (($timeout > 0) && (time() - $t > $timeout))
@@ -346,21 +349,6 @@
 				echo Loc::lget('nothing_to_update') . '<br />';
 
 			return 0;
-		}
-
-		function groupsToUpdate($force = 0) {
-			$dbc = msqlDB::o();
-			$t = time() - ($force ? 5 : 60 * 30); // 30 minutes
-			$s = $dbc->select('groups'
-			, '`time` < ' . $t . ' and `link` <> "" and `link` not like "/%" order by `time`'
-			, '`id` as `0`'
-			);
-			$a = array();
-			if ($s)
-				foreach($dbc->fetchrows($s) as $row)
-					$a[] = intval($row[0]);
-
-			return $a;
 		}
 
 	}

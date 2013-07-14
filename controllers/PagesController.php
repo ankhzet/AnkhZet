@@ -133,6 +133,7 @@
 			$this->author_link = $a['link'];
 			$page = intval($row['id']);
 			$version = intval($row['utime']);
+			$file = "cms://cache/pages/{$row['id']}/last.html";
 
 			View::addKey('title', "<a href=\"/authors/id/{$row['author']}\">{$this->author_fio}</a> - <a href=\"/pages/version/{$page}\">{$row['title']}</a>");
 			html_escape($row, array('author', 'link'));
@@ -140,7 +141,7 @@
 			$row['original'] = Loc::lget('original');
 			$row['fio'] = $this->author_fio;
 			$row['autolink'] = $this->author_link;
-			$row['content'] = @file_get_contents(SUB_DOMEN . '/cache/pages/' . $row['id'] . '/last.html');
+			$row['content'] = is_file($file) ? @file_get_contents($file) : false;
 			if ($row['content'] !== false) {
 				$c = @gzuncompress/**/($row['content']);
 				if ($c !== false) $row['content'] = $c;
@@ -175,9 +176,9 @@
 			$alink = "<a href=\"/authors/id/{$data['author']}\">{$adata['fio']}</a>";
 			$plink = "<a href=\"/pages/version/{$page}\">{$data['title']}</a>";
 
-			$storage = SUB_DOMEN . '/cache/pages/' . $page;
+			$storage = 'cms://cache/pages/' . $page;
 			$p = array();
-			$d = @dir($storage);
+			$d = is_dir($storage) ? @dir($storage) : null;
 			if ($d)
 				while (($entry = $d->read()) !== false)
 					if (is_file($storage . '/' . $entry) && ($version = intval(basename($entry, '.html'))))
@@ -203,22 +204,23 @@
 			default:
 				rsort($p);
 				$l = count($p) - 1;
-				$row = array('root' => $this->_name, 'page' => $page);
-				$newest = $p[0];
-				$oldest = $p[count($p) - 1];
 
-				if ($uid) $f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`time`'));
-				$lastseen = ($uid && $f['total']) ? intval($f['data'][0]['time']) : post_int("ls_{$page}");
-				$lastseen = $lastseen ? $lastseen : $newest;
-
-				$diffopen = ($v = post_int('version')) ? $v : $lastseen;
-
-				$ldate = date('d.m.Y', $newest);
-				$full = Loc::lget('full_last_version');
-				$last = $newest ? "<span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>" : '';
 				View::addKey('title', "$alink - $plink");
-				View::addKey('moder', $last);
-				if ($l >= 0)
+				if ($l >= 0) {
+					$newest = $p[0];
+					$oldest = $p[count($p) - 1];
+
+					if ($uid) $f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`time`'));
+					$lastseen = ($uid && $f['total']) ? intval($f['data'][0]['time']) : post_int("ls_{$page}");
+					$lastseen = $lastseen ? $lastseen : $newest;
+
+					$diffopen = ($v = post_int('version')) ? $v : $lastseen;
+					$row = array('root' => $this->_name, 'page' => $page);
+
+					$ldate = date('d.m.Y', $newest);
+					$full = Loc::lget('full_last_version');
+					$last = $newest ? "<span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>" : '';
+					View::addKey('moder', $last);
 					foreach ($p as $idx => $version) {
 						$row = array_merge($data, $row, $adata);
 						$row['view'] = Loc::lget('view');
@@ -242,8 +244,10 @@
 						$row['last'] = !$idx ? 'last' : '';
 						echo patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
 					}
-				else
+				} else {
 					echo Loc::lget('pages_noversions');
+					View::addKey('moder', '');
+				}
 			}
 
 			if ($action == 'view')
@@ -254,7 +258,7 @@
 			if ($uid = $this->user->ID()) {
 				$ha = $this->getAggregator(3);
 				$s = $ha->dbc->select('history', "`user` = $uid and `page` = $page_id", '`id` as `0`');
-				if ($s && ($r = @mysql_result($s, 0)))
+				if ($s && mysql_numrows($s) && ($r = @mysql_result($s, 0)))
 					$ha->upToDate(array(intval($r)), $version);
 			} else {
 				$t = time() + 2592000;
@@ -402,8 +406,8 @@
 			$save = uri_frag($r, 0, 3);
 			$save = max(2, $save);
 			$force = post_int('force');
-			$dir = SUB_DOMEN . '/cache/pages';
-			$d = @dir($dir);
+			$dir = 'cms://cache/pages';
+			$d = is_dir($storage) ? @dir($storage) : null;
 			$p = array();
 			if ($d)
 				while (($entry = $d->read()) !== false)

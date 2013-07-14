@@ -40,37 +40,6 @@
 			} else
 				return false;
 		}
-
-		function prepareForGrammar($c, $cleanup = false) {
-			if ($cleanup) {
-				$c = strip_tags($c, '<dd><p><br><u><b><i><s>');
-				$c = preg_replace('"<p([^>]*)?>(.*?)<dd>"i', '<p\1>\2</p><dd>', $c);
-				$c = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $c);
-				$c = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $c);
-			} else
-				$c = str_replace('<br />', PHP_EOL, $c);
-
-			$c = str_replace('&nbsp;&nbsp;', ' &nbsp;', $c);
-
-			$c = preg_replace('"<([^>]+)>(\s*)</\1>"', '\2', $c);
-			$c = preg_replace('"</([^>]+)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
-			$idx = 0;
-			$p = 0;
-			while (preg_match('"<(([\w]+)([^>/]*))>"', substr($c, $p), $m, PREG_OFFSET_CAPTURE)) {
-				$p += intval($m[0][1]);
-				$sub = $m[0][0];
-				if (strpos($sub, 'class="pin"') === false) {
-					$idx++;
-					$tag = $m[2][0];
-					$attr = $m[3][0];
-					$u = "<$tag node=\"$idx\"$attr>";
-					$c = substr_replace($c, $u, $p, strlen($sub));
-					$p += strlen($u);
-				} else
-					$p += strlen($sub);
-			}
-			return str_replace(PHP_EOL, '<br />', $c);
-		}
 	}
 
 ?>

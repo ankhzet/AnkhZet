@@ -34,3 +34,17 @@
 	date_default_timezone_set($timezone);
 
 	set_error_handler("error_handler");
+
+	if (User::ACL() < ACL::ACL_MODER && isset($_SERVER['HTTP_USER_AGENT']) && $_SERVER['HTTP_USER_AGENT']) {
+		$t = getutime();
+		require_once 'core_uasparser.php';
+		$uas = new UASparser();
+		$uas->SetCacheDir(ROOT . "/cache/");
+		$ua = $uas->Parse();
+		$cast = getutime() - $t;
+		if ($ua) {
+			require_once 'core_visitors.php';
+			$va = VisitorsAggregator::getInstance();
+			$va->addVisitor($ua['typ_id'], $ua['ua_id'], $ua['os_id'], $cast);
+		}
+	}
