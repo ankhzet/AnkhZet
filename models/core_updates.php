@@ -173,6 +173,7 @@
 					echo Loc::lget('no_updates') . '<br />';
 			} else
 				echo Loc::lget('no_updates') . '<br />';
+			return true;
 		}
 
 		function checkGroup($group_id) {
@@ -253,6 +254,8 @@
 					echo Loc::lget('no_updates') . '<br />';
 			} else
 				echo Loc::lget('no_updates') . '<br />';
+
+			return true;
 		}
 
 		function queuePages($author, $pages) {
@@ -335,6 +338,7 @@
 					} else {
 						$q->dbc->update($q->TBL_INSERT, array('state' => 0, 'updated' => $time), '`id` = ' . $q_id);
 						echo Loc::lget('page_request_failed') . '<br />';
+						return $left - $done;
 					}
 					$done++;
 					if (($timeout > 0) && (time() - $t > $timeout))
