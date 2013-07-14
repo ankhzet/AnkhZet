@@ -536,3 +536,9 @@ span.multi {
 	font-weight: bold;
 	color: blue;
 }
+
+/* overflow fix */
+
+.cnt-item, .title.content-header {
+	overflow: auto;
+}

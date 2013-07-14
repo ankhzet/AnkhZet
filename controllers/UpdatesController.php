@@ -240,17 +240,23 @@
 			require_once 'core_updates.php';
 			$u = new AuthorWorker();
 
-			msqlDB::o()->debug = 1;
+//			msqlDB::o()->debug = 1;
 			$h = $this->getAggregator();
 			$a = $h->authorsToUpdate(0, uri_frag($r, 0));
 			if (!!$a)
 				foreach ($a as $id)
-					$u->check($id);
+					if (!$u->check($id)) {
+						echo Loc::lget('halting') . '<br />';
+						return;
+					}
 
 			$g = $h->groupsToUpdate(uri_frag($r, 0));
 			if (!!$g)
 				foreach ($g as $id)
-					$u->checkGroup($id);
+					if (!$u->checkGroup($id)) {
+						echo Loc::lget('halting') . '<br />';
+						return;
+					}
 
 			if (!$a && !$g)
 				echo Loc::lget('nothing_to_update') . '<br />';

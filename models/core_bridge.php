@@ -6,31 +6,35 @@
 		)
 	));
 
+	define('CURL_TIMEOUT', 15);
+	define('CURL_BOT_UA', 'AnkhZet Cache Sync Bot v0.1');
+
 	function url_get_contents($link, $params = null) {
 		$response = '';
 		$len = 0;
 		$t = 0;
 		$kbps = 0;
-		ob_start();
 		try {
 			static $curl;
 			$c = $curl ? $curl : ($curl = curl_init());
 			curl_setopt($c, CURLOPT_URL, $link);
+			curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+			curl_setopt($c, CURLOPT_USERAGENT, CURL_BOT_UA);
+			curl_setopt($c, CURLOPT_HTTPHEADER, array('X-Bot' => CURL_BOT_UA));
+			curl_setopt($c, CURLOPT_TIMEOUT, CURL_TIMEOUT);
 			/**/
 //			curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
 			curl_setopt($c, CURLOPT_PROXY, "http://localhost:8080");
 			curl_setopt($c, CURLOPT_PROXYPORT, 8080);
 			/**/
 			$t = getmicrotime();
-			$r = curl_exec($c);
+			$response = curl_exec($c);
 			$t = getmicrotime() - $t;
-			$response = ob_get_contents();
 			$len = strlen($response);
 			$kbps = fs($len / $t);
 		} catch (Exception $e) {
 		}
-		ob_end_clean();
 		echo " &nbsp;<span style=\"color: #888; font-size: 80%;\">[{$link}] - download speed: {$kbps}/s ($len bytes / $t sec)</span><br />";
-		return $r ? $response : false;
+		return $response ? $response : false;
 	}
 ?>

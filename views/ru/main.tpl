@@ -82,7 +82,6 @@
 			$r["$t . " . count($r)] = patternize($p1, $row);
 		}
 
-	$c1 = count($r);
 	ksort($r);
 	$r = join('', $r);
 
@@ -135,7 +134,7 @@
 				<div class="title content-header">Последние обновления (<?=$c3?>):</div>
 				<?=$u?>
 
-				<div class="title content-header">Очередь на проверку обновлений (<?=$c1?>):</div>
+				<div class="title content-header">Очередь на проверку обновлений:</div>
 				<?=$r?>
 
 				<div class="title content-header">Обновления произведений (<?=$c2?>):</div>
