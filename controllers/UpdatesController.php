@@ -17,8 +17,8 @@
 					<div class="title">
 						<span class="head">
 							<span class="multi"><input type=checkbox name="id[]" value="{%id}" /></span>
-							<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/version/{%pageid}">{%title}</a>
-							<span class="pull_right">[<a href="/{%root}/hide?id[]={%id}&traced={%trace}">{%untrace}</a> | <a href="/{%root}/uptodate?id[]={%id}">{%uptodate}</a>]</span>
+							<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/version/{%pageid}">{%title}</a>{%mark}
+							<span class="pull_right">[ <a href="/{%root}/uptodate?id[]={%id}">{%uptodate}</a> ]</span>
 						</span>
 						<span class="link">{%size}KB (<span style="{%diff}">{%delta}KB</span>)</span>
 						<span class="link size">{%time}</span>
@@ -108,6 +108,7 @@
 				foreach ($this->data['data'] as &$row)
 					$idx[] = $row['id'];
 
+				$pa = $this->getAggregator(2);
 				$i = 0;
 				foreach($this->data['data'] as &$row) {
 					$id = intval($row['id']);
@@ -121,6 +122,7 @@
 					$row['size'] = $s;
 					$row['diff'] = $this->diff_sign[sign($delta)];
 					$row['uptodate'] = Loc::lget('uptodate');
+					$row['mark'] = $pa->traceMark($uid, $row['trace'], $row['pageid'], $row['author']);
 					$row['untrace'] = Loc::lget($row['trace'] ? 'untrace' : 'trace');
 
 					$n[] = patternize($this->LIST_ITEM, $row);
@@ -186,19 +188,21 @@
 		public function actionTrace($r) {
 			$aid = uri_frag($r, 0);
 			$pid = uri_frag($r, 1);
+			$new_only = !isset($_REQUEST['trace']);
+			$trace = post_int('trace');
 			if ($aid || $pid)
-				$this->traceForUser($this->user->ID(), $aid, $pid);
+				$this->traceForUser($this->user->ID(), $aid, $pid, $trace, $new_only);
 			else {
 				$o = msqlDB::o();
 				$s = $o->select('users', '1', '`id`');
 				$r = $s ? $o->fetchrows($s) : array();
 				if (!!$r)
 					foreach ($r as &$row)
-						$this->traceForUser(intval($row['id']), 0, 0);
+						$this->traceForUser(intval($row['id']), 0, 0, $trace, true);
 			}
 		}
 
-		function traceForUser($uid, $aid, $pid) {
+		function traceForUser($uid, $aid, $pid, $trace, $new_only) {
 			$ha = $this->getAggregator(0);
 			$a = array();
 			if (!$aid) {
@@ -210,7 +214,7 @@
 
 			$p = array();
 			foreach ($a as $author) {
-				$added = $ha->traceNew($author, $uid, $pid, 1);
+				$added = $ha->traceNew($author, $uid, $pid, $trace, $new_only);
 
 				if (count($added)) {
 					$pa = $this->getAggregator(2);

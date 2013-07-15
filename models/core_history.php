@@ -31,20 +31,27 @@
 		}
 
 		function fetchUpdates($uid, $traces = null, $colls = '*', $filter = 1) {
-			$d = $this->fetch(array('nocalc' => 1, 'desc' => 0
-			, 'filter' => $traces ? '`id` in (' . join(',', $traces) . ')' : "`user` = $uid and `trace` = $filter"
-			, 'collumns' => '`page` as `0`'
-			));
-			if (!$d['total']) return array();
+			if ($traces) {
+				$d = $this->fetch(array('nocalc' => 1, 'desc' => 0
+				, 'filter' => '`id` in (' . join(',', $traces) . ')'
+				, 'collumns' => '`page` as `0`'
+				));
+				if (!$d['total']) return array();
 
-			$p = array();
-			foreach ($d['data'] as &$row)
-				$p[] = intval($row[0]);
+				$p = array();
+				foreach ($d['data'] as &$row)
+					$p[] = intval($row[0]);
+
+				$p = join(',', $p);
+
+				$q = "p.`id` in ($p) and p.`id` = h.`page` and h.`trace` = $filter";
+			} else
+				$q = "p.`id` = h.`page` and h.`user` = $uid and h.`trace` = $filter and p.`size` <> h.`size`";
 
 			$s = $this->dbc->select('pages p, history h'
-			, 'p.`id` in (' . join(',', $p) . ') and p.`id` = h.`page` and h.`trace` = ' . $filter . ($traces ? '' : ' and p.`size` <> h.`size`')
-			, 'h.`id` as `0`, h.`page`, p.`description`, p.`size`, p.`time`, p.`title`, h.`size` as `size_old`, h.`time` as `time_old`');
-
+			, $q
+			, 'h.`id` as `0`, h.`page`, p.`description`, p.`size`, p.`time`, p.`title`, h.`size` as `size_old`, h.`time` as `time_old`'
+			);
 			$f = $this->dbc->fetchrows($s);
 			$s = array();
 			foreach ($f as &$row)
@@ -67,18 +74,19 @@
 			);
 		}
 
-		function authorsToUpdate($uid, $force = 0) {
-			$t = time() - ($force ? 5 : 60 * 60); // 60 minutes
+		function authorsToUpdate($uid, $force = 0, $all = 0, $trace = 1) {
+			$t = time() - ($force ? ($all ? -100 : 5) : 60 * 60); // 60 minutes
+			$all = $all ? 100 : AUTHORS_UPDATE_PER_BATCH;
 			if ($uid)
 				$s = $this->dbc->select('`history` h, `pages` p, `authors` a'
-				, 	'h.`user` = ' . $uid . ' and h.`trace` = 1'
+				, 	"h.`user` = $uid and h.`trace` = $trace"
 					. ' and h.`page` = p.`id` and a.`id` = p.`author` and a.`time` < ' . $t
-					. ' group by a.`id` order by a.`time` limit ' . AUTHORS_UPDATE_PER_BATCH
+					. ' group by a.`id` order by a.`time` limit ' . $all
 				, 'a.`id` as `0`'
 				);
 			else
 				$s = $this->dbc->select('authors'
-				, '`time` < ' . $t . ' order by `time` limit ' . AUTHORS_UPDATE_PER_BATCH
+				, '`time` < ' . $t . ' order by `time` limit ' . $all
 				, '`id` as `0`'
 				);
 			$a = array();
@@ -116,23 +124,34 @@
 			return $idx;
 		}
 
-		function traceNew($author, $uid, $page = 0, $trace = 0) {
-			$idx = $this->tracePages($author, $page);
+		function traceNew($author, $uid, $page = 0, $trace = 0, $new_only = 1) {
+			$idx = $this->tracePages($author, $page); // fetch all author pages or be sure, that ID#page page exists
 			$p = array(); // traced pages
-			$d = $this->fetch(array('nocalc' => 1, 'desc' => 0, 'filter' => '`user` = ' . $uid, 'collumns' => '`page` as `0`'));
+			$t = array(); // traced flag
+			// fetch page tracing flags for current user
+			$d = $this->fetch(array('nocalc' => 1, 'desc' => 0, 'filter' => "`user` = $uid", 'collumns' => '`page` as `0`, `trace` as `1`, `id` as `2`'));
 			if ($d['total'])
-				foreach ($d['data'] as &$row)
-					$p[] = intval($row[0]);
+				foreach ($d['data'] as &$row) {
+					$page_id = intval($row[0]);
+					// if we want to trace pages, and page already is traced, add to exclude list
+					if (($trace == intval($row[1])) || $new_only)
+						$p[] = $page_id;
+					else // else remember page, that already presents in list
+						$t[$page_id] = intval($row[2]); // key-access will be faster, than array_search proubably
+				}
 
-			$diff = array_diff($idx, $p);
-			if (count($diff)) // there are pages, that not traced yet
-				$this->traceHistory($uid, $diff);
+			$diff = array_diff($idx, $p); // from all pages (or with specified page) exclude all pages, that already is traced
+			if (count($diff)) // there are pages, that not traced yet (or added to list, but has "trace = 0" flag state
+				$this->traceHistory($uid, $diff, $trace, $t);
 			return $diff;
 		}
 
-		function traceHistory($uid, $idx) {
+		function traceHistory($uid, $idx, $trace, $in_list) {
 			foreach ($idx as $page_id)
-				$this->add(array('user' => $uid, 'page' => $page_id, 'trace' => $trace, 'time' => 0));
+				if (!isset($in_list[$page_id])) // no page in trace list
+					$this->add(array('user' => $uid, 'page' => $page_id, 'trace' => $trace, 'time' => time()));
+				else // page already in list, update flag state only
+					$this->update(array('trace' => $trace, 'time' => time()), $in_list[$page_id]);
 		}
 
 	}

@@ -28,7 +28,7 @@
 		var $LIST_ITEM  = '
 					<div class="cnt-item">
 						<div class="title">
-							<span class="head"><a href="/authors/id/{%author}">{%fio}</a> - <a href="/{%root}/id/{%id}">{%title}</a>{%moder}</span>
+							<span class="head"><a href="/authors/id/{%author}">{%fio}</a> - <a href="/{%root}/id/{%id}">{%title}</a>{%mark}{%moder}</span>
 							<span class="link samlib"><a href="http://samlib.ru/{%autolink}/{%link}">{%autolink}/{%link}</a></span>
 							<span class="link size">{%size}KB</span>
 						</div>
@@ -36,7 +36,7 @@
 							{%description}
 						</div>
 						<div class="text">
-							<a href="/{%root}/version/{%id}">{%versions}</a> | <a href="/updates/trace/{%author}/{%id}">{%trace}</a>{%group}
+							<a href="/{%root}/version/{%id}">{%versions}</a>{%group}
 						</div>
 					</div>
 ';
@@ -122,6 +122,17 @@
 
 			}
 
+			$uid = $this->user->ID();
+			$page = $row['id'];
+			$trace = -1;
+			$ha = HistoryAggregator::getInstance();
+			if ($uid) {
+				$f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`trace` as `0`'));
+				if ($f['total'])
+					$trace = intval($f['data'][0][0]);
+			}
+			$row['mark'] = $aggregator->traceMark($uid, $trace, $page, $row['author']);
+
 			$row['group'] = $group ? patternize(Loc::lget('group_patt'), $this->groups[$group]) : '';
 			return patternize($this->LIST_ITEM, $row);
 		}
@@ -172,7 +183,7 @@
 				throw new Exception('Page not found!');
 
 			$aa = $this->getAggregator(1);
-			$adata = $aa->get(intval($data['author']), '`fio`');
+			$adata = $aa->get($author = intval($data['author']), '`fio`');
 			$alink = "<a href=\"/authors/id/{$data['author']}\">{$adata['fio']}</a>";
 			$plink = "<a href=\"/pages/version/{$page}\">{$data['title']}</a>";
 
@@ -186,9 +197,20 @@
 
 			$ha = $this->getAggregator(3);
 			$uid = $this->user->ID();
+			$lastseen = post_int("ls_{$page}");
+			$trace    = -1;
+			if ($uid) {
+				$f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`time`, `trace`'));
+				if ($f['total']) {
+					$lastseen = intval($f['data'][0]['time']);
+					$trace = intval($f['data'][0]['trace']);
+				}
+			}
+			$plink .= ' ' . $a->traceMark($uid, $trace, $page, $author);
+
 			switch ($action = post('action')) {
 			case 'view':
-				View::addKey('title', $alink . ' - ' . $plink);
+				View::addKey('title', "$alink - $plink");
 				View::addKey('moder', '<span style="font-size: 80%;">[update: ' . date('d.m.Y', $version) . ']</span>');
 				$version = post_int('version');
 				$cnt = @file_get_contents("$storage/$version.html");
@@ -209,9 +231,6 @@
 				if ($l >= 0) {
 					$newest = $p[0];
 					$oldest = $p[count($p) - 1];
-
-					if ($uid) $f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`time`'));
-					$lastseen = ($uid && $f['total']) ? intval($f['data'][0]['time']) : post_int("ls_{$page}");
 					$lastseen = $lastseen ? $lastseen : $newest;
 
 					$diffopen = ($v = post_int('version')) ? $v : $lastseen;

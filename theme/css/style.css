@@ -460,7 +460,7 @@ span.multi {
 	padding: 0 2px 1px 2px;
 	height: 10px;
 	line-height: 10px;
-	font-famoly: Tahoma;
+	font-family: Tahoma;
 	font-size: 8px;
 	font-weight: normal;
 	background: #666;
@@ -537,8 +537,74 @@ span.multi {
 	color: blue;
 }
 
-/* overflow fix */
+/* overflow fix * /
 
-.cnt-item, .title.content-header {
+.uri-main .cnt-item, .uri-visitors .cnt-item, .title.content-header {
 	overflow: auto;
+}
+
+/*.*/
+
+form.content-header {
+	font-weight: normal;
+}
+.content-header input[type="submit"], .content-header select {
+	width: 120px;
+}
+
+/* trace marks */
+
+.trace-mark {
+	background: url(/theme/img/trace.png) no-repeat 1px 1px;
+	display: inline-block;
+	position: relative;
+	width: 8px;
+	height: 8px;
+	margin: -3px 0 3px 3px;
+	border: 1px solid #fff;
+	border-radius: 5px;
+	box-shadow: 0 0 2px #000;
+	-moz-box-shadow: 0 0 2px #000;
+	-moz-border-radius: 5px;
+	-webkit-box-shadow: 0 0 2px #000;
+	-webkit-border-radius: 5px;
+	cursor: pointer;
+	font-weight: normal;
+	font-size: 90%;
+	font-family: Arial;
+}
+
+.trace-mark.traced {
+	background-color: #8f8;
+}
+.trace-mark.untraced {
+	background-color: #8dd;
+}
+.trace-mark.nottraced {
+	background-color: #ddd;
+}
+
+.trace-mark span {
+	margin: -1px;
+	padding: 0 3px 0 20px;
+	display: none;
+	position: absolute;
+	height: auto;
+
+	background: #eee url(/theme/img/trace.png) no-repeat 1px 1px;
+	color: #444;
+	border: 1px solid #fff;
+	border-radius: 5px;
+	box-shadow: 0 0 2px #000;
+	-moz-border-radius: 5px;
+	-moz-box-shadow: 0 0 2px #000;
+	-webkit-border-radius: 5px;
+	-webkit-box-shadow: 0 0 2px #000;
+
+	z-index: 100;
+	white-space: nowrap;
+}
+
+.trace-mark:hover span {
+	display: inline-block;
 }
