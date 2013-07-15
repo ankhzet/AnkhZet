@@ -197,12 +197,12 @@
 
 			$ha = $this->getAggregator(3);
 			$uid = $this->user->ID();
-			$lastseen = post_int("ls_{$page}");
+			$lastseen = uri_frag($_REQUEST, "ls_{$page}", -1);
 			$trace    = -1;
 			if ($uid) {
-				$f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`time`, `trace`'));
+				$f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`lastseen`, `trace`'));
 				if ($f['total']) {
-					$lastseen = intval($f['data'][0]['time']);
+					$lastseen = intval($f['data'][0]['lastseen']);
 					$trace = intval($f['data'][0]['trace']);
 				}
 			}
@@ -231,7 +231,7 @@
 				if ($l >= 0) {
 					$newest = $p[0];
 					$oldest = $p[count($p) - 1];
-					$lastseen = $lastseen ? $lastseen : $newest;
+					$lastseen = ($lastseen >= 0) ? $lastseen : $newest;
 
 					$diffopen = ($v = post_int('version')) ? $v : $lastseen;
 					$row = array('root' => $this->_name, 'page' => $page);

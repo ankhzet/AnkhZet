@@ -32,7 +32,7 @@
 		const TRACE_PATT = '
 		<div class="cnt-item">
 			<div class="title">
-				<span class="head">[<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/id/{%id}">{%title}</a>]</span>
+				<span class="head">UID#<a href="/user/{%user}">{%user:name}</a> [<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/id/{%id}">{%title}</a>]</span>
 				<span class="link size">{%size}</span>
 			</div>
 			<div class="text">
@@ -235,6 +235,8 @@
 				foreach ($p as &$row) {
 					$row['size'] = fs(intval($row['size']) * 1024);
 					$row['fio'] = $f[intval($row['author'])];
+					$row['user'] = $uid;
+					$row['user:name'] = User::get($uid)->readable();
 					echo patternize(self::TRACE_PATT, $row);
 				}
 			}

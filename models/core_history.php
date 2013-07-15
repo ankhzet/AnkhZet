@@ -61,8 +61,9 @@
 		}
 
 		function upToDate($idx, $time = 0) {
+			$g = 'greatest(h.`time`, ' . ($time ? $time : time()) . ')';
 			$this->dbc->update('history` `h`, `pages` `p'
-			, 'h.`size` = p.`size`, h.`lastseen` = p.`time`, h.`time` = greatest(h.`time`, ' . ($time ? $time : time()) . ')'
+			, "h.`size` = p.`size`, h.`lastseen` = $g, h.`time` = $g"
 			, 'h.`id` in (' . join(',', $idx) . ') and h.`page` = p.`id`'
 			, true);
 		}
