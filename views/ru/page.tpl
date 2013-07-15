@@ -4,6 +4,7 @@
 	<title>{%title#unhtml%} - {%site#unhtml%}</title>
 	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
 	<meta name="server-time" content="{%page#time%}" />
+	<meta name="google-site-verification" content="mvUHJdHQHZgnjIzVdyR7zW8n-9OTjVlM_0GdxWA-czo" />
 {%TPL:content#meta%}
 <?php
 	if ($uid = User::get()->ID()) {

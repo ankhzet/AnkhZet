@@ -149,6 +149,10 @@
 			return $this->_get(self::COL_ID);
 		}
 
+		function valid() {
+			return !!$this->_get(self::COL_ACL);
+		}
+
 		static function checkRegData($regdata) {
 			$flds = array(
 					self::FLD_NAME

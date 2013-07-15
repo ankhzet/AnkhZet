@@ -40,7 +40,7 @@
 			if ($fio != $a['fio']) {
 				echo Loc::lget('author_updated') . '<br />';
 			}
-			$g->update(array('fio' => $fio, 'time' => time()), $author_id);
+			$g->update(array('fio' => $fio, 'time' => time()), $author_id, true);
 
 //			debug2($html);
 //			debug2($groups);
@@ -194,6 +194,8 @@
 				echo Loc::lget('parse_method_unknown');
 				return false;
 			}
+
+			$ga->update(array('time' => time()), $group_id, true);
 
 			$links = &$data['links'];
 			$check = array();

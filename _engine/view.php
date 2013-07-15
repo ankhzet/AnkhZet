@@ -140,6 +140,10 @@
 			return self::$keys[$name] = $value;
 		}
 
+		static function getKey($name) {
+			return uri_frag(self::$keys, $name, null, 0);
+		}
+
 		static function process($contents2) {
 			do {
 				$contents1 = $contents2;
@@ -183,7 +187,7 @@
 				$code = self::process(file_get_contents($file));
 
 				$cpl = '';
-				$t = "\nif (!defined('DEFINE_{%name}')) {\ndefine('{DEFINE_{%name}}', 0);\n{%code}\n}\n\n";
+				$t = "\nif (!defined('DEFINE_{%name}')) {\ndefine('DEFINE_{%name}', 0);\n{%code}\n}\n\n";
 				foreach (self::$pctpl as $fcpl) {
 					$name = strtoupper(str_replace('-', '_', basename($fcpl, '.tpl')));
 					$a = array('code' => self::getTpl($fcpl), 'name' => $name);

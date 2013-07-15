@@ -134,7 +134,7 @@
 
 			$this->view->data = $n ? $n : Loc::lget("{$this->_name}_nodata");
 
-			$a = $aggregator->authorsToUpdate($this->user->ID(), 1);
+			$a = $aggregator->authorsToUpdate($this->user->ID(), 1, 1, $hidden_f);
 			if (count($a)) {
 				$aa = $this->getAggregator(1);
 				$d = $aa->get($a, '`id`, `fio`');

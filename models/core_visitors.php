@@ -19,7 +19,7 @@
 		, 'primary key (`id`)'
 		);
 
-		var $FETCH_PAGE = 10;
+		var $FETCH_PAGE = 20;
 
 		static public function getInstance($args = null) {
 			if (!isset(self::$instance))
