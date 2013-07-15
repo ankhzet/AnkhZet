@@ -1,6 +1,8 @@
 	function sidebar_menu($view) {
 		$uid = $view->ctl->user->ID();
 		$last = $feed = '';
+		$c = FrontEnd::getInstance()->get('config');
+		$logo = $c->get('main.offline') ? 'offline' : 'logo';
 		if ($uid) {
 			$dbc= msqlDB::o();
 			$s = $dbc->select('history as h, `pages` p', "`user` = $uid and `trace` = 1 and p.`id` = h.`page` and h.`size` <> p.`size`", 'count(h.`id`) as `0`');
@@ -17,7 +19,7 @@
 		if (!$uid)
 			return '
 			<ul class="menu">
-				<li><a href="/">Главная</a></li>
+				<li><a href="/"><img src="/theme/img/logo.png" alt="Главная" title="Главная" /></a></li>
 				<li><a href="/authors">Авторы</a></li>
 				<li><a href="/feedback">Фидбэк</a></li>
 				<li><a href="/about">О сайте</a></li>
@@ -26,7 +28,7 @@
 		else
 			return "
 			<ul class=\"menu\">
-				<li><a href=\"/\">Главная</a></li>
+				<li><a href=\"/\"><img src=\"/theme/img/{$logo}.png\" alt=\"Главная\" title=\"Главная\" /></a></li>
 				<li><a href=\"/authors\">Авторы</a></li>
 				<li><a href=\"/updates\">Обновления{$last}</a></li>
 				<li><a href=\"/feedback\">Фидбэк</a>{$feed}</li>
