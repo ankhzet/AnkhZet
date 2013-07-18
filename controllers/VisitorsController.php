@@ -21,7 +21,7 @@
 							<span class="head" style="display: block; float: left; overflow: hidden; width: 35%;">
 								<img style="margin: 3px 0 -3px" width=16 height=16 src="/theme/img/ua/{%ua_ico}" title="{%ua}" alt="{%ua}" />
 								<img style="margin: 3px 0 -3px" width=16 height=16 src="/theme/img/os/{%os_ico}" title="{%os}" alt="{%os}" />
-								&nbsp; <a href="{%uri}">{%uri}</a>{%moder}
+								{%user:name}&nbsp; <a href="{%uri}">{%uri}</a>{%moder}
 							</span>
 							<span class="link size">{%time}</span>
 							<span class="link size">{%date}</span>
@@ -46,11 +46,15 @@
 			$f = array('1');
 			$q = array();
 
-			if ($days = $t * post('days')) {
+			if ($ip = post('ip')) {
+				$f[] = "inet_ntoa(`ip`) like '%$ip%'";
+				$q[] = "ip=$ip";
+			}
+			if ($days = time() - $t * post('days')) {
 				$f[] = "`time` >= $days";
 				$q[] = "days=" . post('days');
 			}
-			switch ($bots = post('bots')) {
+			switch ($bots = uri_frag($_REQUEST, 'bots', 1)) {
 			case 0: break;
 			case 1:
 				$f[] = "`type` >= 0";
@@ -61,6 +65,8 @@
 				$q[] = "bots=$bots";
 				break;
 			}
+
+			$_REQUEST['bots'] = $bots;
 
 			$this->query = join(' and ', $f);
 			$this->link = '?' . join('&', $q);
@@ -113,6 +119,7 @@
 
 			$row['date'] = $row['time'];
 			$row['time'] = date('H:i:s', $row['utime']);
+			$row['user:name'] = ($u = intval($row['user'])) ? '<a href="/user/' . $u . '">' . User::get($u)->readable() . '</a>' : '&lt;guest&gt;';
 			return patternize($this->LIST_ITEM, $row);
 		}
 

@@ -23,17 +23,17 @@
 				<input type=hidden name=rid value="<?=$rid?>" />
 				<input type=hidden name=url value="<?=htmlspecialchars(post('url'))?>" />
 
-				<input id=iemail type="text" name="email" value="<?=$rdat['email']?>" /><label<?=error($this, 'email')?>>Электронная почта<span>*</span></label><br /><br />
-				<input id=ipass type=password name="pass" value="<?=$rdat['pass']?>" /><label<?=error($this, 'pass')?>>Пароль<span>*</span></label><br /><br />
-				<input id=ipass2 type=password name="pass2" value="<?=$rdat['pass2']?>" /><label<?=error($this, 'pass2')?>>Повтор пароля<span>*</span></label><br /><br />
+				<label<?=error($this, 'email')?>>Электронная почта<span>*</span></label><input id=iemail type="text" name="email" value="<?=$rdat['email']?>" /><br /><br />
+				<label<?=error($this, 'pass')?>>Пароль<span>*</span></label><input id=ipass type=password name="pass" value="<?=$rdat['pass']?>" /><br /><br />
+				<label<?=error($this, 'pass2')?>>Повтор пароля<span>*</span></label><input id=ipass2 type=password name="pass2" value="<?=$rdat['pass2']?>" /><br /><br />
 
-				<input id=iname type="text" name="name" value="<?=$rdat['name']?>" /><label<?=error($this, 'name')?>>Имя <span>*</span></label><br /><br />
+				<label<?=error($this, 'name')?>>Имя <span>*</span></label><input id=iname type="text" name="name" value="<?=$rdat['name']?>" /><br /><br />
 
-				<input id=icaptcha type=text class="captcha" name="captcha" /><label<?=error($this, 'captcha')?>>CAPTCHA<span>*</span></label>
+				<label<?=error($this, 'captcha')?>>CAPTCHA<span>*</span></label><input id=icaptcha type=text class="captcha" name="captcha" />
 				<br /><br />
-				<img class="captcha-img" src="/models/core_captcha.php?rid=<?=$rid?>" alt="" /><label>&nbsp;</label>
-				<br /><br />
+				<img class="captcha-img" src="/models/core_captcha.php?rid=<?=$rid?>" alt="" />
+				<br />
 
-				<label>&nbsp;</label><input type="submit" value="Зарегистрироваться" />
+				<input type="submit" value="Зарегистрироваться" />
 			</form>
 			<?=$e?>

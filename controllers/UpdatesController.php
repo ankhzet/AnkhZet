@@ -20,8 +20,10 @@
 							<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/version/{%pageid}">{%title}</a>{%mark}
 							<span class="pull_right">[ <a href="/{%root}/uptodate?id[]={%id}">{%uptodate}</a> ]</span>
 						</span>
-						<span class="link">{%size}KB (<span style="{%diff}">{%delta}KB</span>)</span>
+						<span class="head small">
+						<span class="link size u2">{%size}KB (<span style="{%diff}">{%delta}KB</span>)</span>
 						<span class="link size">{%time}</span>
+						</span>
 					</div>
 					<div class="text">
 						{%description}
@@ -130,8 +132,12 @@
 				$n = join($this->LIST_JOINER, $n);
 			}
 
-			$this->view->pages = '<ul class="pages">'
-			. '<li style="float: left; margin: 0 -100% 0 5px; position: relative;"><input type=checkbox class="multi-check" /> С отмеченными: <a href="javascript:void(0)" alt="/updates/uptodate" class="multi link">Прочитано</a> | <a href="javascript:void(0)" alt="/updates/hide" confirm="1" class="multi link">Не отслеживать</a></li>'
+			$this->view->pages = ''
+			. '<div style="float: left; margin: 12px 0 0 5px; position: relative;">'
+			. '<input type=checkbox class="multi-check" /> С отмеченными: '
+			. '<a href="javascript:void(0)" alt="/updates/uptodate" class="multi link">Прочитано</a> | '
+			. '<a href="javascript:void(0)" alt="/updates/hide" confirm="1" class="multi link">Не отслеживать</a></div>'
+			. '<ul class="pages">'
 			. PHP_EOL . (($last > 1) ? $aggregator->generatePageList($page, $last, $this->_name . '/', $this->link) : '<li>&nbsp;</li>') . '</ul>' . PHP_EOL;
 
 			$this->view->data = $n ? $n : Loc::lget("{$this->_name}_nodata");

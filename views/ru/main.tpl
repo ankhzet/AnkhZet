@@ -2,37 +2,47 @@
 	$p1 = '<div class="cnt-item">
 					<div class="title">
 						<span class="head"> <a href="/authors/id/{%id}">{%fio}</a></span>
-						<span class="link size" style="width: 150px; text-align: right;">{%time}</span>
-						<span class="link" style="width: 50%;">Прошло с последнего обновления: <b>{%delta}</b></span>
+						<span class="head small">
+							<span class="link time size u2">{%time}</span>
+							<span class="link past_since">Прошло с последнего обновления:&nbsp;<span class="link time">{%delta}</span></span>
+						</span>
 					</div>
 				</div>
 				';
 	$p2 = '<div class="cnt-item">
 					<div class="title">
-						<span class="head"> <a href="/pages/version/{%id}">{%title}</a></span>
-						<span class="link size" style="width: 150px; text-align: right;">{%time}</span>
-						<span class="link" style="width: 50%;">Прошло с изменения страницы: <b>{%delta}</b></span>
+						<span class="head"><a href="/pages/version/{%id}">{%title}</a></span>
+						<span class="head small">
+							<span class="link time size u2" >{%time}</span>
+							<span class="link past_since">Прошло с изменения страницы:&nbsp;<span class="link time">{%delta}</span></span>
+						</span>
 					</div>
 				</div>
 				';
 	$p3 = '<div class="cnt-item">
 					<div class="title">
 						<span class="head">
-							<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages?group={%group}">{%group_title}</a>:
-							<a href="/pages/version/{%id}">{%title}</a>
+							<a href="/authors/id/{%author}"><span class="nowrap">{%fio}</span></a> -
+							<a href="/pages?group={%group}"><span class="nowrap">{%group_title}</span></a>:
+							<a href="/pages/version/{%id}"><span class="nowrap">{%title}</span></a>
 						</span>
-						<span class="link size" style="width: 150px; text-align: right;">{%time}</span>
-						<span class="link size" style="width: 30%; color: {%color};"><b>{%delta}</b></span>
+						<span class="head small break">
+							<span class="delta" style="color:{%color}"><b>{%delta}</b></span>
+							<span class="link time">{%time}</span>
+						</span>
 					</div>
 				</div>
 				';
 	$p4 = '<div class="cnt-item">
 					<div class="title">
 						<span class="head">
-							<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages?group={%group}">{%group_title}</a>
+							<a href="/authors/id/{%author}"><span class="nowrap">{%fio}</span></a> -
+							<a href="/pages?group={%group}"><span class="nowrap">{%group_title}</span></a>
 						</span>
-						<span class="link size" style="width: 150px; text-align: right;">{%time}</span>
-						<span class="link size" style="width: 30%; color: {%color};"><b>{%delta}</b></span>
+						<span class="head small break">
+							<span class="delta" style="color:{%color}"><b>{%delta}</b></span>
+							<span class="link time">{%time}</span>
+						</span>
 					</div>
 				</div>
 				';

@@ -139,12 +139,24 @@
 
 		public function makeIDItem(&$aggregator, &$row) {
 			$g = $this->getAggregator(1);
-			$a = $g->get($row['author'], '`fio`, `link`');
+			$a = $g->get($author = $row['author'], '`fio`, `link`');
 			$this->author_fio = $a['fio'] ? $a['fio'] : '&lt;author&gt;';
 			$this->author_link = $a['link'];
 			$page = intval($row['id']);
 			$version = intval($row['utime']);
 			$file = "cms://cache/pages/{$row['id']}/last.html";
+
+			$ha = $this->getAggregator(3);
+			$uid = $this->user->ID();
+			$lastseen = uri_frag($_REQUEST, "ls_{$page}", -1);
+			$trace    = -1;
+			if ($uid) {
+				$f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`trace`'));
+				if ($f['total'])
+					$trace = intval($f['data'][0]['trace']);
+			}
+
+			View::addKey('hint', $aggregator->traceMark($uid, $trace, $page, $author));
 
 			View::addKey('title', "<a href=\"/authors/id/{$row['author']}\">{$this->author_fio}</a> - <a href=\"/pages/version/{$page}\">{$row['title']}</a>");
 			html_escape($row, array('author', 'link'));
@@ -206,7 +218,8 @@
 					$trace = intval($f['data'][0]['trace']);
 				}
 			}
-			$plink .= ' ' . $a->traceMark($uid, $trace, $page, $author);
+
+			View::addKey('hint', $a->traceMark($uid, $trace, $page, $author));
 
 			switch ($action = post('action')) {
 			case 'view':
@@ -238,7 +251,7 @@
 
 					$ldate = date('d.m.Y', $newest);
 					$full = Loc::lget('full_last_version');
-					$last = $newest ? "<span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>" : '';
+					$last = $newest ? "<br /><span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>" : '';
 					View::addKey('moder', $last);
 					foreach ($p as $idx => $version) {
 						$row = array_merge($data, $row, $adata);
@@ -341,7 +354,7 @@
 //			$t1 = preg_replace('"<([^>]+)>((<br\s*/>|\s)*)</\1>"', '\2', $t1);
 //			$t1 = preg_replace('"</([^>]+)>((<br\s*/>|\s|\&nbsp;)*)?<\1>"i', '\2', $t1);
 //			$t2 = preg_replace('"<([^>]+)>((<br\s*/>|\s)*)</\1>"', '\2', $t2);
-//			$t2 = preg_replace('"</([^>]+)>((<br\s*/>|\s|\&nbsp;)*)?<\1>"i', '\2', $t2);
+//			t2 = preg_replace('"</([^>]+)>((<br\s*/>|\s|\&nbsp;)*)?<\1>"i', '\2', $t2);
 //			@ob_end_flush();
 //			@ob_end_flush();
 			require_once 'core_diff.php';
@@ -426,7 +439,7 @@
 			$save = max(2, $save);
 			$force = post_int('force');
 			$dir = 'cms://cache/pages';
-			$d = is_dir($storage) ? @dir($storage) : null;
+			$d = is_dir($dir) ? @dir($dir) : null;
 			$p = array();
 			if ($d)
 				while (($entry = $d->read()) !== false)
@@ -480,7 +493,7 @@
 			$data = array('delete' => fs($s));
 			$req = patternize($force ? Loc::lget('deleted') : Loc::lget('do_delete'), $data);
 			echo $msg . '<br />' . $req;
-			View::renderMessage($req, View::MSG_INFO);
+			$this->view->renderMessage($req, View::MSG_INFO);
 
 			$o = msqlDB::o();
 			$o->query('drop table if exists `temp`');
