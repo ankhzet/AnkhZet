@@ -17,11 +17,13 @@
 					<div class="title">
 						<span class="head">
 							<span class="multi"><input type=checkbox name="id[]" value="{%id}" /></span>
-							<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/version/{%pageid}">{%title}</a>
-							<span class="pull_right">[<a href="/{%root}/hide?id[]={%id}&traced={%trace}">{%untrace}</a> | <a href="/{%root}/uptodate?id[]={%id}">{%uptodate}</a>]</span>
+							<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/version/{%pageid}">{%title}</a>{%mark}
+							<span class="pull_right">[ <a href="/{%root}/uptodate?id[]={%id}">{%uptodate}</a> ]</span>
 						</span>
-						<span class="link">{%size}KB (<span style="{%diff}">{%delta}KB</span>)</span>
+						<span class="head small">
+						<span class="link size u2">{%size}KB (<span style="{%diff}">{%delta}KB</span>)</span>
 						<span class="link size">{%time}</span>
+						</span>
 					</div>
 					<div class="text">
 						{%description}
@@ -32,7 +34,7 @@
 		const TRACE_PATT = '
 		<div class="cnt-item">
 			<div class="title">
-				<span class="head">[<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/id/{%id}">{%title}</a>]</span>
+				<span class="head">UID#<a href="/user/{%user}">{%user:name}</a> [<a href="/authors/id/{%author}">{%fio}</a> - <a href="/pages/id/{%id}">{%title}</a>]</span>
 				<span class="link size">{%size}</span>
 			</div>
 			<div class="text">
@@ -108,6 +110,7 @@
 				foreach ($this->data['data'] as &$row)
 					$idx[] = $row['id'];
 
+				$pa = $this->getAggregator(2);
 				$i = 0;
 				foreach($this->data['data'] as &$row) {
 					$id = intval($row['id']);
@@ -121,6 +124,7 @@
 					$row['size'] = $s;
 					$row['diff'] = $this->diff_sign[sign($delta)];
 					$row['uptodate'] = Loc::lget('uptodate');
+					$row['mark'] = $pa->traceMark($uid, $row['trace'], $row['pageid'], $row['author']);
 					$row['untrace'] = Loc::lget($row['trace'] ? 'untrace' : 'trace');
 
 					$n[] = patternize($this->LIST_ITEM, $row);
@@ -128,8 +132,12 @@
 				$n = join($this->LIST_JOINER, $n);
 			}
 
-			$this->view->pages = '<ul class="pages">'
-			. '<li style="float: left; margin: 0 -100% 0 5px; position: relative;"><input type=checkbox class="multi-check" /> С отмеченными: <a href="javascript:void(0)" alt="/updates/uptodate" class="multi link">Прочитано</a> | <a href="javascript:void(0)" alt="/updates/hide" confirm="1" class="multi link">Не отслеживать</a></li>'
+			$this->view->pages = ''
+			. '<div style="float: left; margin: 12px 0 0 5px; position: relative;">'
+			. '<input type=checkbox class="multi-check" /> С отмеченными: '
+			. '<a href="javascript:void(0)" alt="/updates/uptodate" class="multi link">Прочитано</a> | '
+			. '<a href="javascript:void(0)" alt="/updates/hide" confirm="1" class="multi link">Не отслеживать</a></div>'
+			. '<ul class="pages">'
 			. PHP_EOL . (($last > 1) ? $aggregator->generatePageList($page, $last, $this->_name . '/', $this->link) : '<li>&nbsp;</li>') . '</ul>' . PHP_EOL;
 
 			$this->view->data = $n ? $n : Loc::lget("{$this->_name}_nodata");
@@ -186,19 +194,21 @@
 		public function actionTrace($r) {
 			$aid = uri_frag($r, 0);
 			$pid = uri_frag($r, 1);
+			$new_only = !isset($_REQUEST['trace']);
+			$trace = post_int('trace');
 			if ($aid || $pid)
-				$this->traceForUser($this->user->ID(), $aid, $pid);
+				$this->traceForUser($this->user->ID(), $aid, $pid, $trace, $new_only);
 			else {
 				$o = msqlDB::o();
 				$s = $o->select('users', '1', '`id`');
 				$r = $s ? $o->fetchrows($s) : array();
 				if (!!$r)
 					foreach ($r as &$row)
-						$this->traceForUser(intval($row['id']), 0, 0);
+						$this->traceForUser(intval($row['id']), 0, 0, $trace, true);
 			}
 		}
 
-		function traceForUser($uid, $aid, $pid) {
+		function traceForUser($uid, $aid, $pid, $trace, $new_only) {
 			$ha = $this->getAggregator(0);
 			$a = array();
 			if (!$aid) {
@@ -210,7 +220,7 @@
 
 			$p = array();
 			foreach ($a as $author) {
-				$added = $ha->traceNew($author, $uid, $pid, 1);
+				$added = $ha->traceNew($author, $uid, $pid, $trace, $new_only);
 
 				if (count($added)) {
 					$pa = $this->getAggregator(2);
@@ -231,6 +241,8 @@
 				foreach ($p as &$row) {
 					$row['size'] = fs(intval($row['size']) * 1024);
 					$row['fio'] = $f[intval($row['author'])];
+					$row['user'] = $uid;
+					$row['user:name'] = User::get($uid)->readable();
 					echo patternize(self::TRACE_PATT, $row);
 				}
 			}

@@ -8,7 +8,7 @@
 ?>
 			<form class="register" action="/user/restore">
 				<input type=hidden name=action value="restore" />
-				<span>Введите адрес електронной почты, что была указана при регистриции</span><br /><br />
+				<label>Введите адрес електронной почты, что была указана при регистриции</label>
 				<input type="text" name="email" value="<?echo $_REQUEST[email]?>" /><br /><br />
 				<?=$e?>
 				<input type="submit" value="Восстановить" />

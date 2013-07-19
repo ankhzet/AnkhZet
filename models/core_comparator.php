@@ -10,7 +10,13 @@
 
 			assume_dir_exists($path);
 			$html1 = @file_get_contents($last);
-			if ($html1) $html1 = @gzuncompress($html1);
+			if ($html1) {
+				$_html1 = @gzuncompress($html1);
+				if ($_html1 !== false)
+					$html1 = $_html1;
+				else
+					file_put_contents($last, $html1);
+			}
 
 			$html2 = url_get_contents("http://samlib.ru/{$link}");
 			$c = null;

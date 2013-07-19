@@ -32,6 +32,7 @@
 			return $this->add(array(
 				'type' => $type
 			, 'ip' => ip2long($_SERVER['REMOTE_ADDR'])
+			, 'user' => User::get()->ID()
 			, 'ua' => $ua
 			, 'os' => $os
 			, 'cast' => $cast

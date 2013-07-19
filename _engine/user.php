@@ -342,7 +342,12 @@
 			$content = file_get_contents(SUB_DOMEN . '/_engine/' . $tpl[$newpass]);
 			$data = array('title' => $subject, 'login' => $login, 'password' => $password);
 			$content = patternize($content, $data);
-			$sent = mail($login, $subject, $content, 'From: ' . $notifier . ' <noreply@' . str_replace(array('http://', 'www.'), '', $_SERVER['HTTP_HOST']) . '>');
+			$host = str_replace(array('http://', 'https://', 'www.'), '', $_SERVER['HTTP_HOST']);
+			$headers  = "";
+			$headers  = "MIME-Version: 1.0\r\n";
+			$headers .= "Content-type: text/plain; charset=UTF-8\r\n";
+			$headers .= "From: {$notifier} <noreply@$host>";
+			$sent = mail($login, $subject, $content, $headers);
 
 			if ($sent && $newpass) {
 				$dbc = msqlDB::o();
