@@ -228,7 +228,11 @@
 				$version = post_int('version');
 				$cnt = @file_get_contents("$storage/$version.html");
 				$cnt1 = @gzuncompress/**/($cnt);
-				if ($cnt1 !== false) $cnt = $cnt1;
+				if ($cnt1 !== false)
+					$cnt = $cnt1;
+				else
+					@file_put_contents("$storage/$version.html", gzcompress($cnt));
+
 				$cnt1 = preg_replace('">([_\.]+)<"', '&gt;\1&lt;', $cnt1);
 				$cnt = $this->prepareForGrammar($cnt, true);
 				View::addKey('preview', mb_convert_encoding($cnt, 'UTF-8', 'CP1251'));
@@ -332,8 +336,10 @@
 
 			$t1 = @file_get_contents("$storage/{$old}.html");
 			$t2 = @file_get_contents("$storage/{$cur}.html");
-			$_t1 = @gzuncompress/**/($t1); if ($_t1 !== false) $t1 = $_t1;
-			$_t2 = @gzuncompress/**/($t2); if ($_t2 !== false) $t2 = $_t2;
+			$_t1 = @gzuncompress/**/($t1);
+			if ($_t1 !== false) $t1 = $_t1; else @file_put_contents("$storage/{$old}.html", gzcompress($t1));
+			$_t2 = @gzuncompress/**/($t2);
+			if ($_t2 !== false) $t2 = $_t2; else @file_put_contents("$storage/{$cur}.html", gzcompress($t2));
 
 			/*
 			 >_< >.<
