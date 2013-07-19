@@ -14,11 +14,11 @@
 		}
 
 		function loadTemplates() {
-			$path = dirname(__FILE__);
+			$path = 'cms://root/views';
 			return array(
-				@file_get_contents($path . '/rss_template.tpl')
-			, @file_get_contents($path . '/rss_item_template.tpl')
-			, @file_get_contents($path . '/rss_item_cdata.tpl')
+				@file_get_contents("$path/rss_template.tpl")
+			, @file_get_contents("$path/rss_item_template.tpl")
+			, @file_get_contents("$path/rss_item_cdata.tpl")
 			);
 		}
 

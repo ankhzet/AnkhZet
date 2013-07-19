@@ -4,6 +4,7 @@
 	require_once 'core_authors.php';
 	require_once 'core_queue.php';
 	require_once 'core_page.php';
+	require_once 'core_history.php';
 
 	require_once 'AggregatorController.php';
 
@@ -65,7 +66,14 @@
 			case 1: return GroupsAggregator::getInstance();
 			case 2: return QueueAggregator::getInstance();
 			case 3: return PagesAggregator::getInstance();
+			case 4: return HistoryAggregator::getInstance();
 			}
+		}
+
+		function prepareFetch($filters) {
+			$filters['order'] = 'link';
+			$filters['desc'] = false;
+			return $filters;
 		}
 
 		public function makeItem(&$aggregator, &$row) {
@@ -74,6 +82,31 @@
 			$row['pages'] = Loc::lget('pages');
 			$row['detail'] = Loc::lget('detail');
 			return patternize($this->LIST_ITEM, $row);
+		}
+
+		public function actionPage($r) {
+			$filter = post('by_name');
+			if ($filter && ($filter = preg_replace('/[^\p{L}]/iu', '', $filter))) {
+				$filter = mb_substr($filter, 0, 1);
+				$this->query = "`fio` like '$filter%'";
+				$this->link = '?by_name=' . $filter;
+			}
+
+			$c = msqlDB::o();
+			$s = $c->select('authors', ' group by `0`', 'ucase(substr(`fio`, 1, 1)) as `0`, count(`id`) as `1`');
+			$a = array();
+			$i = 0;
+			if ($s)
+				while (($row = @mysql_fetch_row($s)) !== false) {
+					$c = $row[0];
+					$o = $row[1];
+					$color = ($c == $filter) ? ' selected' : '';
+//					$c = strtoupper($c);
+					$a[] = "<a href=\"/authors?by_name=$c\" class=\"filter$color\">$c</a> <small style=\"font-weight: normal; color: #888;\">($o)</small>";
+				}
+			$this->view->fio_filter = join(', ', $a);
+
+			parent::actionPage($r);
 		}
 
 		public function makeIDItem(&$aggregator, &$row) {
@@ -86,19 +119,41 @@
 			$g = $ga->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => '`author` = ' . $row['id'], 'collumns' => '`id`, `title`, `link`, `description`'));
 			$a = array();
 			$pa = $this->getAggregator(3);
+			$ha = $this->getAggregator(4);
+			$uid = $this->user->ID();
 			if ($g['total'])
-				foreach ($g['data'] as $rowg) {
+				foreach ($g['data'] as &$rowg) {
 					$row['g:id'] = ($group_id = intval($rowg['id']));
-					$row['g:link'] = preg_match('/^[\/\\\]/', $rowg['link']) ? $rowg['link'] : "/{$row['link']}/{$rowg['link']}";
+					$row['g:link'] = ($rowg['link'] && (strpos($rowg['link'], 'type') == false)) ? "/{$row['link']}/{$rowg['link']}" : "";
 					$row['g:title'] = $rowg['title'];
 					$row['g:desc'] = $rowg['description'];
-					$d = $pa->fetch(array('pagesize' => PAGES_PER_GROUP, 'desc' => 1, 'filter' => "`group` = $group_id", 'collumns' => '`id`, `title`'));
+					$d = $pa->fetch(array('pagesize' => PAGES_PER_GROUP, 'desc' => 1
+					, 'filter' => "`group` = $group_id"
+					, 'collumns' => '`id`, `title`'
+					));
 					$t = $d['total'];
 					$u = array();
 					if ($t) {
-						foreach ($d['data'] as $rowp) {
-							$u[] = patternize('&rarr; <a href="/pages/version/{%id}">{%title}</a>', $rowp);
+						if ($uid) {
+							$r = array();
+							foreach ($d['data'] as $rowp)
+								$r[] = intval($rowp['id']);
+
+							$r = join(',', $r);
+							$o = $ha->fetch(array('nocalc' => 1, 'desc' => 0, 'filter' => "`user` = $uid and `page` in ($r)", 'collumns' => '`page`, `trace`'));
+							$r = array();
+							if ($o['total'])
+								foreach ($o['data'] as &$rowp)
+									$r[intval($rowp['page'])] = intval($rowp['trace']);
 						}
+
+						foreach ($d['data'] as $rowp) {
+							$id = $rowp['id'];
+							$trace = $uid ? (isset($r[$id]) ? $r[$id] : -1) : -1;
+							$rowp['mark'] = $pa->traceMark($uid, $trace, $id, $row['id']);
+							$u[] = patternize('&rarr; <a href="/pages/version/{%id}">{%title}</a>{%mark}', $rowp);
+						}
+
 						if ($t > PAGES_PER_GROUP) {
 							$t = array('left' => $t - PAGES_PER_GROUP, 'link' => "/pages?group=$group_id");
 							$u[] = patternize(Loc::lget('group_more'), $t);

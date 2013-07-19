@@ -4,6 +4,7 @@
 	<title>{%title#unhtml%} - {%site#unhtml%}</title>
 	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
 	<meta name="server-time" content="{%page#time%}" />
+	<meta name="google-site-verification" content="mvUHJdHQHZgnjIzVdyR7zW8n-9OTjVlM_0GdxWA-czo" />
 {%TPL:content#meta%}
 <?php
 	if ($uid = User::get()->ID()) {
@@ -32,7 +33,7 @@
 <?php
 	$r = explode('-', {%page#var%});
 	$p2 = array('add' => 1, 'edit' => 1, 'delete' => 1);
-	$static = ($r[0] == 'feedback') || ($r[0] == 'main' && isset($r[1])) || (isset($r[1]) && isset($p2[$r[1]]));
+	$static = ($r[0] == 'feedback') || ($r[0] == 'user') || ($r[0] == 'main' && isset($r[1])) || (isset($r[1]) && isset($p2[$r[1]]));
 	if ($static) {
 		View::addKey('stat-p1', '<div style="text-align: center;"><div style="display: inline-block; width: 80%; text-align: left;">');
 		View::addKey('stat-p2', '</div></div>');

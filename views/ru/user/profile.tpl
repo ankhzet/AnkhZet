@@ -10,9 +10,9 @@
 	}
 ?>
 					<br/>
-					<input type=text name="name" value="<?echo $this->editdata['name']?>"><label>Имя</label><br /><br />
-					<input type=text disabled value="<?echo htmlspecialchars(User::get()->_get(User::COL_LOGIN))?>" /><label>Email</label><br /><br />
-					<input type=text name="pass" value="<?echo $this->editdata['pass']?>"><label>Новый пароль</label><br /><br />
-					<input type=text name="pass2" value="<?echo $this->editdata['pass2']?>"><label>Повтор пароля</label><br /><br />
-					<input type="submit" value="Сохранить изменения" /><label>&nbsp;</label>
+					<label>Имя<span>*</span></label><input type=text name="name" value="<?echo $this->editdata['name']?>"><br /><br />
+					<label>Email</label><input type=text disabled value="<?echo htmlspecialchars(User::get()->_get(User::COL_LOGIN))?>" /><br /><br />
+					<label>Новый пароль</label><input type=text name="pass" value="<?echo $this->editdata['pass']?>"><br /><br />
+					<label>Повтор пароля</label><input type=text name="pass2" value="<?echo $this->editdata['pass2']?>"><br /><br />
+					<input type="submit" value="Сохранить изменения" />
 				</form>

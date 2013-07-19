@@ -104,6 +104,7 @@
 			self::$keys['admin'] = $config->get('site-admin');
 			self::$keys['host'] = 'http://' . $_SERVER['HTTP_HOST'];
 			self::$keys['root'] = 'http://' . make_domen($_SERVER['HTTP_HOST'], '');
+			self::$keys['hint'] = '';
 			self::$instance = $this;
 		}
 
@@ -138,6 +139,10 @@
 
 		static function addKey($name, $value) {
 			return self::$keys[$name] = $value;
+		}
+
+		static function getKey($name) {
+			return uri_frag(self::$keys, $name, null, 0);
 		}
 
 		static function process($contents2) {
@@ -183,7 +188,7 @@
 				$code = self::process(file_get_contents($file));
 
 				$cpl = '';
-				$t = "\nif (!defined('DEFINE_{%name}')) {\ndefine('{DEFINE_{%name}}', 0);\n{%code}\n}\n\n";
+				$t = "\nif (!defined('DEFINE_{%name}')) {\ndefine('DEFINE_{%name}', 0);\n{%code}\n}\n\n";
 				foreach (self::$pctpl as $fcpl) {
 					$name = strtoupper(str_replace('-', '_', basename($fcpl, '.tpl')));
 					$a = array('code' => self::getTpl($fcpl), 'name' => $name);

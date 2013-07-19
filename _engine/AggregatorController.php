@@ -14,6 +14,7 @@
 		var $LIST_ITEM  = '<li>ID: <a href="/{%root}/id/{%id}">{%id}</a><br />{%time}<br />{%moder}</li>';
 		var $ADD_MODER  = 1;
 		var $ALWAYS_ADD = 0;
+		var $link = '';
 
 		var $EDIT_STRINGS = array('title', 'content');
 		var $EDIT_FLOATS  = array();
@@ -248,7 +249,7 @@
 					if ($ret = post('return'))
 						locate_to("/$ret");
 					else {
-						$page = uri_frag($_REQUEST, 'page', 1);
+						$page = uri_frag($_REQUEST, 'page', 1, 1);
 						locate_to("/{$this->_name}/page/$page");
 					}
 				} else

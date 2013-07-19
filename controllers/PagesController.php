@@ -28,7 +28,7 @@
 		var $LIST_ITEM  = '
 					<div class="cnt-item">
 						<div class="title">
-							<span class="head"><a href="/authors/id/{%author}">{%fio}</a> - <a href="/{%root}/id/{%id}">{%title}</a>{%moder}</span>
+							<span class="head"><a href="/authors/id/{%author}">{%fio}</a> - <a href="/{%root}/id/{%id}">{%title}</a>{%mark}{%moder}</span>
 							<span class="link samlib"><a href="http://samlib.ru/{%autolink}/{%link}">{%autolink}/{%link}</a></span>
 							<span class="link size">{%size}KB</span>
 						</div>
@@ -36,7 +36,7 @@
 							{%description}
 						</div>
 						<div class="text">
-							<a href="/{%root}/version/{%id}">{%versions}</a> | <a href="/updates/trace/{%author}/{%id}">{%trace}</a>{%group}
+							<a href="/{%root}/version/{%id}">{%versions}</a>{%group}
 						</div>
 					</div>
 ';
@@ -122,18 +122,41 @@
 
 			}
 
+			$uid = $this->user->ID();
+			$page = $row['id'];
+			$trace = -1;
+			$ha = HistoryAggregator::getInstance();
+			if ($uid) {
+				$f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`trace` as `0`'));
+				if ($f['total'])
+					$trace = intval($f['data'][0][0]);
+			}
+			$row['mark'] = $aggregator->traceMark($uid, $trace, $page, $row['author']);
+
 			$row['group'] = $group ? patternize(Loc::lget('group_patt'), $this->groups[$group]) : '';
 			return patternize($this->LIST_ITEM, $row);
 		}
 
 		public function makeIDItem(&$aggregator, &$row) {
 			$g = $this->getAggregator(1);
-			$a = $g->get($row['author'], '`fio`, `link`');
+			$a = $g->get($author = $row['author'], '`fio`, `link`');
 			$this->author_fio = $a['fio'] ? $a['fio'] : '&lt;author&gt;';
 			$this->author_link = $a['link'];
 			$page = intval($row['id']);
 			$version = intval($row['utime']);
 			$file = "cms://cache/pages/{$row['id']}/last.html";
+
+			$ha = $this->getAggregator(3);
+			$uid = $this->user->ID();
+			$lastseen = uri_frag($_REQUEST, "ls_{$page}", -1);
+			$trace    = -1;
+			if ($uid) {
+				$f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`trace`'));
+				if ($f['total'])
+					$trace = intval($f['data'][0]['trace']);
+			}
+
+			View::addKey('hint', $aggregator->traceMark($uid, $trace, $page, $author));
 
 			View::addKey('title', "<a href=\"/authors/id/{$row['author']}\">{$this->author_fio}</a> - <a href=\"/pages/version/{$page}\">{$row['title']}</a>");
 			html_escape($row, array('author', 'link'));
@@ -172,7 +195,7 @@
 				throw new Exception('Page not found!');
 
 			$aa = $this->getAggregator(1);
-			$adata = $aa->get(intval($data['author']), '`fio`');
+			$adata = $aa->get($author = intval($data['author']), '`fio`');
 			$alink = "<a href=\"/authors/id/{$data['author']}\">{$adata['fio']}</a>";
 			$plink = "<a href=\"/pages/version/{$page}\">{$data['title']}</a>";
 
@@ -186,14 +209,30 @@
 
 			$ha = $this->getAggregator(3);
 			$uid = $this->user->ID();
+			$lastseen = uri_frag($_REQUEST, "ls_{$page}", -1);
+			$trace    = -1;
+			if ($uid) {
+				$f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`lastseen`, `trace`'));
+				if ($f['total']) {
+					$lastseen = intval($f['data'][0]['lastseen']);
+					$trace = intval($f['data'][0]['trace']);
+				}
+			}
+
+			View::addKey('hint', $a->traceMark($uid, $trace, $page, $author));
+
 			switch ($action = post('action')) {
 			case 'view':
-				View::addKey('title', $alink . ' - ' . $plink);
+				View::addKey('title', "$alink - $plink");
 				View::addKey('moder', '<span style="font-size: 80%;">[update: ' . date('d.m.Y', $version) . ']</span>');
 				$version = post_int('version');
 				$cnt = @file_get_contents("$storage/$version.html");
 				$cnt1 = @gzuncompress/**/($cnt);
-				if ($cnt1 !== false) $cnt = $cnt1;
+				if ($cnt1 !== false)
+					$cnt = $cnt1;
+				else
+					@file_put_contents("$storage/$version.html", gzcompress($cnt));
+
 				$cnt1 = preg_replace('">([_\.]+)<"', '&gt;\1&lt;', $cnt1);
 				$cnt = $this->prepareForGrammar($cnt, true);
 				View::addKey('preview', mb_convert_encoding($cnt, 'UTF-8', 'CP1251'));
@@ -209,17 +248,14 @@
 				if ($l >= 0) {
 					$newest = $p[0];
 					$oldest = $p[count($p) - 1];
-
-					if ($uid) $f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`time`'));
-					$lastseen = ($uid && $f['total']) ? intval($f['data'][0]['time']) : post_int("ls_{$page}");
-					$lastseen = $lastseen ? $lastseen : $newest;
+					$lastseen = ($lastseen >= 0) ? $lastseen : $newest;
 
 					$diffopen = ($v = post_int('version')) ? $v : $lastseen;
 					$row = array('root' => $this->_name, 'page' => $page);
 
 					$ldate = date('d.m.Y', $newest);
 					$full = Loc::lget('full_last_version');
-					$last = $newest ? "<span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>" : '';
+					$last = $newest ? "<br /><span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>" : '';
 					View::addKey('moder', $last);
 					foreach ($p as $idx => $version) {
 						$row = array_merge($data, $row, $adata);
@@ -300,8 +336,10 @@
 
 			$t1 = @file_get_contents("$storage/{$old}.html");
 			$t2 = @file_get_contents("$storage/{$cur}.html");
-			$_t1 = @gzuncompress/**/($t1); if ($_t1 !== false) $t1 = $_t1;
-			$_t2 = @gzuncompress/**/($t2); if ($_t2 !== false) $t2 = $_t2;
+			$_t1 = @gzuncompress/**/($t1);
+			if ($_t1 !== false) $t1 = $_t1; else @file_put_contents("$storage/{$old}.html", gzcompress($t1));
+			$_t2 = @gzuncompress/**/($t2);
+			if ($_t2 !== false) $t2 = $_t2; else @file_put_contents("$storage/{$cur}.html", gzcompress($t2));
 
 			/*
 			 >_< >.<
@@ -322,7 +360,7 @@
 //			$t1 = preg_replace('"<([^>]+)>((<br\s*/>|\s)*)</\1>"', '\2', $t1);
 //			$t1 = preg_replace('"</([^>]+)>((<br\s*/>|\s|\&nbsp;)*)?<\1>"i', '\2', $t1);
 //			$t2 = preg_replace('"<([^>]+)>((<br\s*/>|\s)*)</\1>"', '\2', $t2);
-//			$t2 = preg_replace('"</([^>]+)>((<br\s*/>|\s|\&nbsp;)*)?<\1>"i', '\2', $t2);
+//			t2 = preg_replace('"</([^>]+)>((<br\s*/>|\s|\&nbsp;)*)?<\1>"i', '\2', $t2);
 //			@ob_end_flush();
 //			@ob_end_flush();
 			require_once 'core_diff.php';
@@ -407,7 +445,7 @@
 			$save = max(2, $save);
 			$force = post_int('force');
 			$dir = 'cms://cache/pages';
-			$d = is_dir($storage) ? @dir($storage) : null;
+			$d = is_dir($dir) ? @dir($dir) : null;
 			$p = array();
 			if ($d)
 				while (($entry = $d->read()) !== false)
@@ -461,7 +499,7 @@
 			$data = array('delete' => fs($s));
 			$req = patternize($force ? Loc::lget('deleted') : Loc::lget('do_delete'), $data);
 			echo $msg . '<br />' . $req;
-			View::renderMessage($req, View::MSG_INFO);
+			$this->view->renderMessage($req, View::MSG_INFO);
 
 			$o = msqlDB::o();
 			$o->query('drop table if exists `temp`');

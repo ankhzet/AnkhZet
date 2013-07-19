@@ -19,7 +19,7 @@
 		, 'primary key (`id`)'
 		);
 
-		var $FETCH_PAGE = 10;
+		var $FETCH_PAGE = 20;
 
 		static public function getInstance($args = null) {
 			if (!isset(self::$instance))
@@ -32,6 +32,7 @@
 			return $this->add(array(
 				'type' => $type
 			, 'ip' => ip2long($_SERVER['REMOTE_ADDR'])
+			, 'user' => User::get()->ID()
 			, 'ua' => $ua
 			, 'os' => $os
 			, 'cast' => $cast

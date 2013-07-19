@@ -29,6 +29,17 @@
 			return self::$instance;
 		}
 
+		function traceMark($uid, $trace, $page, $author) {
+			$trace  = $uid ? $trace : -1;
+			$trace_f = intval(!($trace > 0));
+			$traced = array( 1 => 'traced', 0 => 'untraced', -1 => 'nottraced');
+			$caption = $uid ? Loc::lget(($trace > 0) ? 'untrace' : 'trace') : Loc::lget('login');
+			$trace  = Loc::lget($color  = $traced[$trace]);
+			$action = (!$uid)
+			? "<br />[ <a href=\"/user/login?url=/authors/id/$author\">$caption</a> ]"
+			: "<br />[ <a href=\"/updates/trace/$author/$page?trace=$trace_f\">$caption</a> ]";
+			return "<div class=\"trace-mark $color\"><span>$trace$action</span></div>";
+		}
 	}
 
 	class GrammarAggregator extends Aggregator {

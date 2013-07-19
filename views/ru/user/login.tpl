@@ -4,8 +4,10 @@
 ?>
 
 				<form class="register" action="/user/login<?=$url?>" method="POST">
-					<br /><input type="text" name="login" value="<?=addslashes(post('login'))?>" /><label>Електронная почта</label><br /><br />
-					<input type="password" name="pass" value="<?=addslashes(post('pass'))?>" /><label>Пароль</label><br /><br />
-					<input type="submit" value="Вхoд" /><label><a href="/user/restore">Забыли пароль?</a></label>
+					<label>Електронная почта</label><input type="text" name="login" value="<?=addslashes(post('login'))?>" /><br /><br />
+					<label>Пароль</label><input type="password" name="pass" value="<?=addslashes(post('pass'))?>" /><br /><br />
+					<input type="submit" value="Вхoд" /><br /><br />
+
+					<label><a href="/user/restore">Забыли пароль?</a></label>
 				</form>
 				<?=$e?>

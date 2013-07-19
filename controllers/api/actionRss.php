@@ -10,8 +10,7 @@
 				$this->_404('Channel UID not specified');
 
 			$u = User::get($uid);
-			$uid = $u->ID();
-			if (!$uid)
+			if (!$u->valid())
 				$this->_404('Unknown channel UID');
 
 			$time = time();
@@ -25,6 +24,7 @@
 
 
 			$h = HistoryAggregator::getInstance();
+			$h->dbc->debug = post('debug');
 			$f = $h->fetchUpdates($uid);
 			$i = array();
 			if (count($f)) {
@@ -39,7 +39,7 @@
 
 				$p = PagesAggregator::getInstance();
 				$pd = $p->fetch(array('nocalc' => 1, 'desc' => 0
-				, 'filter' => '`id` in (' . join(',', array_keys($pages)) . ')'
+				, 'filter' => '`id` in (' . join(',', $h_ids) . ')'
 				, 'collumns' => '`id`, `link`, `author`, `group`'));
 
 				$pa = array();
@@ -49,12 +49,12 @@
 
 				$a = AuthorsAggregator::getInstance();
 				$ad = $a->fetch(array('nocalc' => 1, 'desc' => 0
-				, 'filter' => '`id` in (' . join(',', fetch_field($pa, 'author')) . ')'
+				, 'filter' => '`id` in (' . join(',', array_unique(fetch_field($pa, 'author'))) . ')'
 				, 'collumns' => '`id`, `fio`, `link`'));
 
 				$g = GroupsAggregator::getInstance();
 				$gd = $g->fetch(array('nocalc' => 1, 'desc' => 0
-				, 'filter' => '`id` in (' . join(',', fetch_field($pa, 'group')) . ')'
+				, 'filter' => '`id` in (' . join(',', array_unique(fetch_field($pa, 'group'))) . ')'
 				, 'collumns' => '`id`, `title`'));
 
 				$at = array();
@@ -74,8 +74,8 @@
 					$delta = intval($row['size']) - intval($row['size_old']);
 					$i[$page_id] = array(
 						'title' => $row['title']
-					, 'author' => $at[$author]['fio']
-					, 'group' => $gt[$group]
+					, 'author' => $author ? $at[$author]['fio'] : '&lt;неизвестный автор&gt;'
+					, 'group' => $group ? $gt[$group] : '&lt;неизвестная группа&gt;'
 					, 'link' => "{$data['link']}pages/version/{$page_id}?version={$row['time_old']}"
 					, 'samlib' => "$alink/$slink"
 					, 'pubDate' => date('r', $row['time'])
@@ -102,18 +102,41 @@
 			}
 
 			$data['items'] = $i;
-//			ob_start("ob_gzhandler");
-			$rss = $rss->format($data);
-			if (!post_int('nogzip')) {
-				$rss = gzcompress($rss);
-				header('Content-Encoding: gzip');
+			$gzip = !post_int('nogzip');
+			$debug = post('debug');
+			if ($gzip) {
+				ob_start("ob_gzhandler");
+//				$rss = gzcompress($rss);
+//				header('Content-Encoding: gzip');
 			}
-			header('Content-Type: application/rss+xml; charset=UTF-8');
+
+			switch (post('type')) {
+			case 'json':
+				require_once 'json.php';
+				$rss = JSON_Result(JSON_Ok, $data, false);
+				$content_type = "json";
+				$file = "rss.json";
+				break;
+			default:
+				$rss = $rss->format($data);
+				$content_type = "rss+xml";
+				$file = "rss.xml";
+			}
+
+			if (!$debug)
+			header("Content-Type: application/$content_type; charset=UTF-8");
+			if (!$gzip)
 			header('Content-Length: ' . strlen($rss));
-			header('Content-Disposition: inline; filename=rss.xml');
+			if (!$debug)
+			header("Content-Disposition: inline; filename=$file");
 //			$rss = ob_get_contents();
-//			ob_end_flush();
-			die($rss);
+
+			echo $rss;
+
+			if ($gzip)
+				ob_end_flush();
+
+			die();
 			return true;
 		}
 		function _404($text) {

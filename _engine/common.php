@@ -397,7 +397,8 @@
 		$date = date('d-m-Y');
 		$time = date('H:i:s');
 		$file = str_replace(array(SUB_DOMEN, '\\'), array('', '/'), $file);
-		$line = "\n[{$time}] {$severity} at {$file}:{$line}:\n\t\t\t\t\t\t\t{$msg}\n";
+		$uri  = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '&gt;no uri&lt;';
+		$line = "\n[{$time}] {$severity} at {$file}({$line}): {$uri}\n\t\t\t\t\t\t\t{$msg}\n";
 		$log_file = "cms://logs/error-log-{$date}.php";
 
 		if (!is_file($log_file) || !filesize($log_file)) $line = "<?php \n\theader(\"Content-Type: text/html\");?><pre>\n{$line}";
