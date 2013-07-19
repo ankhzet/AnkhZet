@@ -1,4 +1,7 @@
 <?php
+	$c_ads = "no";
+	$c_ads_code = null;
+
 	if (0)
 		error_reporting(0);
 	else

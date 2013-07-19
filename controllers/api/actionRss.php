@@ -102,21 +102,41 @@
 			}
 
 			$data['items'] = $i;
-//			ob_start("ob_gzhandler");
-			$rss = $rss->format($data);
-			if (!post_int('nogzip')) {
-				$rss = gzcompress($rss);
-				header('Content-Encoding: gzip');
+			$gzip = !post_int('nogzip');
+			$debug = post('debug');
+			if ($gzip) {
+				ob_start("ob_gzhandler");
+//				$rss = gzcompress($rss);
+//				header('Content-Encoding: gzip');
 			}
 
-			if (!post('debug'))
-			header('Content-Type: application/rss+xml; charset=UTF-8');
+			switch (post('type')) {
+			case 'json':
+				require_once 'json.php';
+				$rss = JSON_Result(JSON_Ok, $data, false);
+				$content_type = "json";
+				$file = "rss.json";
+				break;
+			default:
+				$rss = $rss->format($data);
+				$content_type = "rss+xml";
+				$file = "rss.xml";
+			}
+
+			if (!$debug)
+			header("Content-Type: application/$content_type; charset=UTF-8");
+			if (!$gzip)
 			header('Content-Length: ' . strlen($rss));
-			if (!post('debug'))
-			header('Content-Disposition: inline; filename=rss.xml');
+			if (!$debug)
+			header("Content-Disposition: inline; filename=$file");
 //			$rss = ob_get_contents();
-//			ob_end_flush();
-			die($rss);
+
+			echo $rss;
+
+			if ($gzip)
+				ob_end_flush();
+
+			die();
 			return true;
 		}
 		function _404($text) {

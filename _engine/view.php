@@ -104,6 +104,7 @@
 			self::$keys['admin'] = $config->get('site-admin');
 			self::$keys['host'] = 'http://' . $_SERVER['HTTP_HOST'];
 			self::$keys['root'] = 'http://' . make_domen($_SERVER['HTTP_HOST'], '');
+			self::$keys['hint'] = '';
 			self::$instance = $this;
 		}
 

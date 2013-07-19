@@ -10,7 +10,7 @@
 
 	$f = array('1');
 
-	if ($days = $t * post('days'))
+	if ($days = time() - $t * post('days'))
 		$f[] = "`time` >= $days";
 
 	switch ($bots = post('bots')) {
@@ -51,7 +51,9 @@
 
 	$tt = ($hit - $lot) ? $hit - $lot : 1;
 
-	$o = $tt / 10;
+	$parts = 24;
+
+	$o = $tt / $parts;
 	if ($o < 1) $o = 1;
 	$y = array();
 
@@ -82,17 +84,21 @@
 //	debug2($u);
 //	debug2(array($lo, $hi));
 
+	$img_denom = 4;
 	$font = 8;
-	$d = ($font * 2) * $m;
-	$h = uri_frag($_REQUEST, 'h', intval($d * 2 + 20 + 20));
-	if ($h < 400) $h = 300;
+	$d = ($font * 8) * $m;
+	$h = uri_frag($_REQUEST, 'h', intval($d + 20 + 20));
+	if ($h < 200) $h = 200;
+	$h *= $img_denom;
+	$font = 8 * $img_denom;
+	$d = ($font * 8) * $m;
 
 	$legend = 0;
-	$w = (4 / 3) * $h + $legend;
-	$cw = intval($w - 60) - $legend;
-	$ch = intval($h - 30 - 20);
-	$cx = 20;
-	$cy = intval((($h - 20) - $ch) / 2);
+	$w = (20 / 10) * $h + $legend;
+	$cw = intval($w - 60 * $img_denom) - $legend;
+	$ch = intval($h - 30 * $img_denom - 20 * $img_denom);
+	$cx = 20 * $img_denom;
+	$cy = intval((($h - 20 * $img_denom) - $ch) / 2);
 	$ty = $cy + $ch;
 
 	$img   = ImageCreateTrueColor($w, $h);
@@ -104,59 +110,74 @@
 	$dot3 = ImageColorAllocate($img, 0, 0, 0);
 	$white =ImageColorAllocate($img, 255, 255, 255);
 	$back  = $white;
-	$line = array(
-		ImageColorAllocate($img, 0, 0, 0)
-	, ImageColorAllocate($img, 200, 200, 200)
-	);
-	$red  = array(
-		ImageColorAllocate($img, 255, 80, 80)
-	, ImageColorAllocate($img, 255, 150, 150)
+	$c = array(
+		ImageColorAllocate($img, 50, 50, 50)
+	, ImageColorAllocate($img, 190, 190, 190)
 	);
 //	imagecolortransparent($img, $back);
+	imagesetthickness($img, 1 * $img_denom);
 	ImageFill($img, 0, 0, $back);
-	ImageRectangle($img, 0, 0, $w - 1, $h - 1, $black);
+	ImageRectangle($img, 0, 0, $w - $img_denom + 1, $h - $img_denom + 1, $black);
 //	imageline($img, $cx, $ty, $cx + $cw, $ty - $ch, $gray);
 
 
+//	imageantialias($img, true);
 	$ff = ROOT . "/_engine/comic.ttf";
 	$px = 0;
 	$py = -1;
 	foreach ($y as $slice => $visitors) {
-		$time = $tt * $slice / 10;
+		$time = $tt * $slice / $parts;
+		$tap = intval($ch * $visitors / $m);
+		if ($py < 0) $py = $tap;
+		$hit = intval($cw * (float)$time / $tt);
+//		debug2(array($hit, $tap));
+//		imageline($img, $cx, $ty - $tap, $cx + $cw, $ty - $tap, $lite);
+		imagesetthickness($img, 2 * $img_denom);
+		imageline($img, $cx + $px - $img_denom, $ty - $py - $img_denom, $cx + $hit + $img_denom, $ty - $tap + $img_denom, $c[1]);
+		imageline($img, $cx + $px + $img_denom, $ty - $py + $img_denom, $cx + $hit - $img_denom, $ty - $tap - $img_denom, $c[1]);
+		imagesetthickness($img, 1.5 * $img_denom);
+		imageline($img, $cx + $px    , $ty - $py    , $cx + $hit    , $ty - $tap    , $c[0]);
+		$py = $tap;
+		$px = $hit;
+	}
+	$px = 0;
+	$py = -1;
+	foreach ($y as $slice => $visitors) {
+		$time = $tt * $slice / $parts;
 		$tap = intval($ch * $visitors / $m);
 		if ($py < 0) $py = $tap;
 		$hit = intval($cw * (float)$time / $tt);
 //		debug2(array($hit, $tap));
 		$label = $tap - $font / 2;
-		$c = $line;
-//		imageline($img, $cx, $ty - $tap, $cx + $cw, $ty - $tap, $lite);
-		imagesetthickness($img, 2);
-		imageline($img, $cx + $px - 1, $ty - $py - 1, $cx + $hit + 1, $ty - $tap + 1, $c[1]);
-		imageline($img, $cx + $px + 1, $ty - $py + 1, $cx + $hit - 1, $ty - $tap - 1, $c[1]);
-		imagesetthickness($img, 1);
-		imageline($img, $cx + $px    , $ty - $py    , $cx + $hit    , $ty - $tap    , $c[0]);
-		imagettftext ($img, $font, 0, $cx + $cw + 5, $ty - $label, $black, $ff, $visitors);
+		imagettftext ($img, $font, 0, $cx + $cw + 5 * $img_denom, $ty - $label, $black, $ff, $visitors);
 		$text = date('H:i:s', $time + $lot);
-		imagettftext ($img, $font, -90, $cx + $hit, $ty - $label + $font * 2, $black, $ff, $text);
+		$_hit = $hit - $font / 2;
+		imagettftext ($img, $font, -90, $cx + $_hit + $img_denom, $ty - $label + $font * 2, $white, $ff, $text);
+		imagettftext ($img, $font, -90, $cx + $_hit - $img_denom, $ty - $label + $font * 2, $white, $ff, $text);
+		imagettftext ($img, $font, -90, $cx + $_hit, $ty - $label + $font * 2 + $img_denom, $white, $ff, $text);
+		imagettftext ($img, $font, -90, $cx + $_hit, $ty - $label + $font * 2 - $img_denom, $white, $ff, $text);
+		imagettftext ($img, $font, -90, $cx + $_hit, $ty - $label + $font * 2, $black, $ff, $text);
 		$py = $tap;
 		$px = $hit;
 	}
 	$px = 0;
 	$py = 0;
 	foreach ($y as $slice => $visitors) {
-		$time = $t * $slice / 10;
+		$time = $t * $slice / $parts;
 		$tap = intval($ch * $visitors / $m);
 		if ($py < 0) $py = $tap;
 		$hit = intval($cw * (float)$time / $t);
-		imagefilledellipse($img, $cx + $hit, $ty - $tap, 7, 7, $dot1);
-		imagefilledellipse($img, $cx + $hit, $ty - $tap, 5, 5, $dot2);
+		imagefilledellipse($img, $cx + $hit, $ty - $tap, 7 * $img_denom, 7 * $img_denom, $dot1);
+		imagefilledellipse($img, $cx + $hit, $ty - $tap, 5 * $img_denom, 5 * $img_denom, $dot2);
 		$py = $tap;
 		$px = $hit;
 	}
 	$p = "DEVITER CMS © ankhzet@gmail.com";
-	imagettftext ($img, 8, 0, $w - strlen($p) * 8, $h - 8, $gray, $ff, $p);
+	imagettftext ($img, 8 * $img_denom, 0, $w - strlen($p) * 8 * $img_denom, $h - 16, 8 * $img_denom, $ff, $p);
 
 	header('Content-Type: image/png');
-	imagetruecolortopalette($img, true, 16);
-	imagepng($img);
+	$img2 = ImageCreateTrueColor ($w / $img_denom, $h / $img_denom);
+	imagecopyresampled ($img2, $img, 0, 0, 0, 0, $w / $img_denom, $h / $img_denom, $w, $h);
+	imagetruecolortopalette($img2, true, 256);
+	imagepng($img2);
 ?>
