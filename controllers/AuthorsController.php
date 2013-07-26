@@ -8,7 +8,7 @@
 
 	require_once 'AggregatorController.php';
 
-	define('PAGES_PER_GROUP', 3);
+	define('PAGES_PER_GROUP', 4);
 
 	class AuthorsController extends AggregatorController {
 		protected $_name  = 'authors';
@@ -49,7 +49,7 @@
 				<div class="cnt-item">
 					<div class="title">
 						<span class="head">
-							<a href="/pages?group={%g:id}">{%g:title}</a>
+							{%g:inline}<a href="/pages?group={%g:id}">{%g:title}</a>
 						</span>
 						<span class="link samlib"><a href="http://samlib.ru{%g:link}">{%g:link}</a></span>
 					</div>
@@ -116,7 +116,7 @@
 			$row['checkupdates'] = Loc::lget('checkupdates');
 
 			$ga = $this->getAggregator(1);
-			$g = $ga->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => '`author` = ' . $row['id'], 'collumns' => '`id`, `title`, `link`, `description`'));
+			$g = $ga->fetch(array('nocalc' => true, 'order' => 'replace(`title`, "@", ""), `time`', 'desc' => 1, 'filter' => '`author` = ' . $row['id'], 'collumns' => '`id`, `title`, `link`, `description`'));
 			$a = array();
 			$pa = $this->getAggregator(3);
 			$ha = $this->getAggregator(4);
@@ -125,13 +125,18 @@
 				foreach ($g['data'] as &$rowg) {
 					$row['g:id'] = ($group_id = intval($rowg['id']));
 					$row['g:link'] = ($rowg['link'] && (strpos($rowg['link'], 'type') == false)) ? "/{$row['link']}/{$rowg['link']}" : "";
-					$row['g:title'] = $rowg['title'];
+					$row['g:inline'] = (strpos($rowg['title'], '@') !== false) ? '<span class="inline-mark">@</span>' : '';
+					$row['g:title'] = str_replace(array('@ ', '@'), '', $rowg['title']);
 					$row['g:desc'] = $rowg['description'];
 					$d = $pa->fetch(array('pagesize' => PAGES_PER_GROUP, 'desc' => 1
 					, 'filter' => "`group` = $group_id"
 					, 'collumns' => '`id`, `title`'
 					));
 					$t = $d['total'];
+					if ($t > 4) {
+						unset($d['data'][3]);
+						$t++;
+					}
 					$u = array();
 					if ($t) {
 						if ($uid) {
