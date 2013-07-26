@@ -103,7 +103,7 @@
 
 			$data['items'] = $i;
 			$gzip = !post_int('nogzip');
-			$debug = post('debug');
+			$debug = post_int('debug');
 			if ($gzip) {
 				ob_start("ob_gzhandler");
 //				$rss = gzcompress($rss);

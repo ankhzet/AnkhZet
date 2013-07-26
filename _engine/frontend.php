@@ -109,7 +109,7 @@
 		}
 
 		public static function getRequestURI() {
-			return $_SERVER['REQUEST_URI'];
+			return isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : null;
 		}
 
 		public function getRequest() {
