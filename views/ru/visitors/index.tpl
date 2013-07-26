@@ -21,7 +21,9 @@
 	<input type=submit />
 	</div>
 	<img style="float: right" src="/models/core_userstat.php<?=$this->ctl->link?>" />
+
 </form>
+
 <style>
 .cnt-item {
 	overflow: hidden;

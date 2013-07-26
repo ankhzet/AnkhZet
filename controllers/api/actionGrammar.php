@@ -5,7 +5,7 @@
 		function execute($params) {
 			$ga = GrammarAggregator::getInstance();
 			$uid = User::get()->ID();
-			if (intval($params['delete'])) {
+			if (uri_frag($params, 'delete')) {
 				if (User::ACL() >= ACL::ACL_MODER) {
 					$id = intval($params['id']);
 					if ($id && $ga->delete($id))

@@ -30,13 +30,13 @@
 						<div class="title">
 							<span class="head"><a href="/authors/id/{%author}">{%fio}</a> - <a href="/{%root}/id/{%id}">{%title}</a>{%mark}{%moder}</span>
 							<span class="link samlib"><a href="http://samlib.ru/{%autolink}/{%link}">{%autolink}/{%link}</a></span>
-							<span class="link size">{%size}KB</span>
+
 						</div>
 						<div class="text">
 							{%description}
 						</div>
 						<div class="text">
-							<a href="/{%root}/version/{%id}">{%versions}</a>{%group}
+							<a href="/{%root}/version/{%id}">{%versions}</a> | <span class="size">{%size}KB</span>{%group}
 						</div>
 					</div>
 ';
@@ -74,11 +74,16 @@
 		public function action() {
 			$author = post_int('author');
 			$group = post_int('group');
+			$this->group_title = '';
+			$this->author = '';
 			if (!$author && $group) {
 				$ga = $this->getAggregator(2);
 				$g = $ga->get($group, '`author`, `title`');
-				$this->group_title = $g['title'];
-				$author = intval($g['author']);
+				if ($g) {
+					$g['title'] = str_replace(array('@ ', '@'), '', $g['title']);
+					$this->group_title = $g['title'];
+					$author = intval($g['author']);
+				}
 			}
 
 			if ($author) {
@@ -118,8 +123,8 @@
 			if ($group && !isset($this->groups[$group])) {
 				$ga = $this->getAggregator(2);
 				$g = $ga->get($group, '`id`, `title`');
+				$g['title'] = str_replace(array('@ ', '@'), '', $g['title']);
 				$this->groups[$group] = $g;
-
 			}
 
 			$uid = $this->user->ID();
@@ -156,6 +161,9 @@
 					$trace = intval($f['data'][0]['trace']);
 			}
 
+			View::addKey('meta-keywords', "{$a['fio']}, {$row['title']}");
+			View::addKey('meta-description', "{$a['fio']} - {$row['title']}. {$row['description']}");
+
 			View::addKey('hint', $aggregator->traceMark($uid, $trace, $page, $author));
 
 			View::addKey('title', "<a href=\"/authors/id/{$row['author']}\">{$this->author_fio}</a> - <a href=\"/pages/version/{$page}\">{$row['title']}</a>");
@@ -189,7 +197,7 @@
 				throw new Exception('Page ID not specified!');
 
 			$a = $this->getAggregator(0);
-			$data = $a->get($page, '`id`, `title`, `author`');
+			$data = $a->get($page, '`id`, `title`, `author`, `description`');
 
 			if (!$data['id'])
 				throw new Exception('Page not found!');
@@ -198,6 +206,9 @@
 			$adata = $aa->get($author = intval($data['author']), '`fio`');
 			$alink = "<a href=\"/authors/id/{$data['author']}\">{$adata['fio']}</a>";
 			$plink = "<a href=\"/pages/version/{$page}\">{$data['title']}</a>";
+
+			View::addKey('meta-keywords', "{$adata['fio']}, {$data['title']}");
+			View::addKey('meta-description', Loc::lget('last_updates') . ": {$adata['fio']} - {$data['title']}. {$data['description']}");
 
 			$storage = 'cms://cache/pages/' . $page;
 			$p = array();

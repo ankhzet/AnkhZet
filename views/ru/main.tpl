@@ -1,81 +1,89 @@
 <?php
 	$p1 = '<div class="cnt-item">
-					<div class="title">
-						<span class="head"> <a href="/authors/id/{%id}">{%fio}</a></span>
+					<div class="title update">
+						<span class="head"><a href="/authors/id/{%id}">{%fio}</a></span>
 						<span class="head small">
 							<span class="link time size u2">{%time}</span>
-							<span class="link past_since">Прошло с последнего обновления:&nbsp;<span class="link time">{%delta}</span></span>
+							<span class="link past_since">Прошло с последнего обновления:&nbsp;<span class="link time" style="min-width: 60px;width: 70px;">{%delta}</span></span>
 						</span>
 					</div>
 				</div>
 				';
 	$p2 = '<div class="cnt-item">
-					<div class="title">
+					<div class="title update">
 						<span class="head"><a href="/pages/version/{%id}">{%title}</a></span>
 						<span class="head small">
 							<span class="link time size u2" >{%time}</span>
-							<span class="link past_since">Прошло с изменения страницы:&nbsp;<span class="link time">{%delta}</span></span>
+							<span class="link past_since">Прошло с изменения страницы:&nbsp;<span class="link time" style="min-width: 60px;width: 70px;">{%delta}</span></span>
 						</span>
 					</div>
 				</div>
 				';
-	$p3 = '<div class="cnt-item">
-					<div class="title">
+	$p3 = '
+					<div class="title update dotted">
 						<span class="head">
-							<a href="/authors/id/{%author}"><span class="nowrap">{%fio}</span></a> -
-							<a href="/pages?group={%group}"><span class="nowrap">{%group_title}</span></a>:
-							<a href="/pages/version/{%id}"><span class="nowrap">{%title}</span></a>
+							{%inline}<a href="/pages?group={%group}" class="nowrap">{%group_title}</a>{%title}
 						</span>
 						<span class="head small break">
 							<span class="delta" style="color:{%color}"><b>{%delta}</b></span>
 							<span class="link time">{%time}</span>
 						</span>
 					</div>
-				</div>
 				';
-	$p4 = '<div class="cnt-item">
-					<div class="title">
-						<span class="head">
-							<a href="/authors/id/{%author}"><span class="nowrap">{%fio}</span></a> -
-							<a href="/pages?group={%group}"><span class="nowrap">{%group_title}</span></a>
-						</span>
-						<span class="head small break">
-							<span class="delta" style="color:{%color}"><b>{%delta}</b></span>
-							<span class="link time">{%time}</span>
-						</span>
-					</div>
-				</div>
-				';
+	$p4 = '<div class="title">
+						<span class="head"><a href="/authors/id/{%author}" class="nowrap">{%fio}</a></span>
+					</div>';
+	$p5 = ':
+							<a href="/pages/version/{%id}" class="nowrap">{%title}</a>';
 	$t = time();
 	require_once 'core_updates.php';
 	$a = UpdatesAggregator::getInstance();
 	$d = $a->getUpdates(1);
 	$u = array();
+	$t = array();
+	$c3 = 0;
 	if ($d['total'])
 		foreach ($d['data'] as &$row) {
 			$val = $row['value'];
 //			if (!$val) continue;
 			$row['time'] = date('d.m.Y H:i:s', intval($row['time']));
+			$row['inline'] = (strpos($row['group_title'], '@') !== false) ? '<span class="inline-mark">@</span>' : '';
+			$row['group_title'] = str_replace(array('@ ', '@'), '', $row['group_title']);
+			$row['title'] = patternize($p5, $row);
 			switch ($row['kind']) {
 			case UPKIND_GROUP:
 				$row['delta'] = patternize('перенесено из <a href="/pages?group={%old_id}">{%old_title}</a>', $row);
 				$row['color'] = 'blue';
-				$u[] = patternize($p3, $row);
+				break;
+			case UPKIND_DELETED_GROUP:
+				$row['title'] = '';
+				$row['delta'] = 'группа удалена';
+				$row['color'] = 'red';
 				break;
 			case UPKIND_INLINE:
+				$row['title'] = '';
 				$row['delta'] = $val ? 'вложенная группа' : 'не вложенная группа';
 				$row['color'] = 'blue';
-				$u[] = patternize($p4, $row);
 				break;
 			case UPKIND_SIZE:
 				$row['delta'] = (($pos = $val > 0) ? '+' : '-') . fs(abs($val * 1024));
 				$row['color'] = $pos ? 'green' : 'red';
 			default:
-				$u[] = patternize($p3, $row);
 			}
+			$t[patternize($p4, $row)][] = patternize($p3, $row);
+			$c3++;
 		}
 
-	$c3 = count($u) . '/' . $d['total'];
+	$u = array();
+	foreach ($t as $author => $updates) {
+		$o = join('', $updates);
+		$u[] = "<div class=\"cnt-item\">
+					$author{$o}
+				</div>
+				";
+	}
+
+	$c3 = $c3 . '/' . $d['total'];
 	$u = join('', $u);
 
 	require_once 'core_authors.php';
@@ -135,7 +143,9 @@
 		$t = ($t - $m) / 60;
 		$h = $t % 24;
 		$d = ($t - $h) / 24;
-		return "{$d}д. {$h}ч. {$m}м.";
+		$h+= $d * 24;
+		if ($m < 10) $m = "0" . $m;
+		return "{$h}ч. {$m}м.";
 	}
 
 	if ($this->ctl->userModer)

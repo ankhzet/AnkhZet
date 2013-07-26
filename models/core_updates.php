@@ -13,6 +13,12 @@
 	define('UPKIND_GROUP', 1);
 	define('UPKIND_DELETE', 2);
 	define('UPKIND_INLINE', 3);
+	define('UPKIND_DELETED_GROUP', 4);
+
+	function echo_log($text, $postfix = '') {
+		echo Loc::lget($text) . $postfix . '<br />' . PHP_EOL;
+		return false;
+	}
 
 	class AuthorWorker {
 		public function check($author_id) {
@@ -22,13 +28,11 @@
 			$link = $link[1] . '/';
 			$t = getutime();
 			$data = SAMLIBParser::getData($link, 'author');
-			if ($data === false) {
-				echo Loc::lget('samlib_down');
-				return false;
-			} elseif ($data === null) {
-				echo Loc::lget('parse_method_unknown');
-				return false;
-			}
+			if ($data === false)
+				return echo_log('samlib_down');
+			elseif ($data === null)
+				return echo_log('parse_method_unknown');;
+
 
 			$s = intval((getutime() - $t) * 1000) / 1000;
 			echo "<span style=\"font-size: 80%; color: grey;\">Parser cast for $s sec</span><br />";
@@ -37,15 +41,15 @@
 			$inline = $data[1];
 			$links = $data[2];
 			$fio = $data[3];
-			if ($fio != $a['fio']) {
-				echo Loc::lget('author_updated') . '<br />';
-			}
+			if ($fio != $a['fio'])
+				echo_log('author_updated');
+
 			$g->update(array('fio' => $fio, 'time' => time()), $author_id, true);
 
 //			debug2($html);
-//			debug2($groups);
+//			debug($groups);
 //			debug2($inline);
-//			debug2($links);
+//			debug($links);
 //			die();
 
 			// check updates
@@ -55,30 +59,47 @@
 			$gl = array();
 			$gt = array();
 			if ($d['total'])
-				foreach ($d['data'] as $row) {
+				foreach ($d['data'] as &$row) {
 					$g_id = intval($row['id']);
-					$gt = array_merge($gt, explode('@', $row['title']));
-					$gii[$g_id] = array(0 => $row['group'], 1 => $row['title']);
+					$gt = array_merge($gt, explode('|@|', $row['title']));
+					$gii[$g_id] = array(0 => $row['group'], 1 => $row['title'], 2 => $row);
 					$gl[$g_id] = $row['link'];
 				}
 //			debug($gt);
 
 			$g = array();
 			$gi = array();
+			$g_changes = array();
 //				debug($gii);
+			// for each groups
 			foreach ($groups as $idx => &$_) {
 //				debug($_);
-				$g[$idx] = $_[1];
+				$g[$idx] = ((isset($inline[$idx]) && $inline[$idx]) ? '@' : '') . $_[1];
+				// for each group in db
 				foreach ($gii as $gid => $d)
-					if (($_[1] == $d[1]) && ($d[0] == $_[0]))
+					// if titles is the same (previously group num also was compared)
+					if (($g[$idx] == $d[1])) {
+						// save new group index
 						$gi[$gid] = $idx;
+						if ($d[0] != $_[0]) // group number changed!
+							$g_changes[$gid] = array('group' => $_[0]); // new group number
+
+						break;
+					}
 			}
 
 
-			$new = array_diff($g, $gt);
-			if (count($new)) {
-				echo Loc::lget('groups_updated') . '<br />';
-				foreach ($new as $idx => $title) {
+//			debug($g);
+//			debug($gi);
+			// $g - groups parsed, $gt - groups titles in db
+			$new = array_diff($g, $gt); // added groups (new - old)
+			$old = array_diff($gt, $g); // deleted groups (old - new)
+
+//			debug (array($old, $new), 'deleted + added');
+
+			if (count($new)) { // if groups on page differs from db
+				echo_log('groups_updated');
+				foreach ($new as $idx => $title) { // add new group
 //					debug($groups[$idx], $title);
 					$link = isset($inline[$idx]) ? $inline[$idx] : '';
 					$gid = $ga->add(array(
@@ -88,24 +109,92 @@
 					, 'title' => addslashes(htmlspecialchars($title, ENT_QUOTES))
 					, 'description' => addslashes(htmlspecialchars($groups[$idx][2], ENT_QUOTES))
 					));
-					$gi[$gid] = $idx;
-					$gl[$gid] = $link;
+					$gi[$gid] = $idx; // save local index on page for group
+					$gl[$gid] = $link; // save group link
 				}
 			// ok, groups updated
 			}
 
 			$g = array();
 			foreach ($gi as $g_id => $idx) {
-				$dbhas = isset($gl[$g_id]) && $gl[$g_id];
-				$pghas = isset($inline[$idx]) && $inline[$idx];
-				if ($dbhas ^ $pghas) // !1 && 2 || 1 && !2
+				$dbhas = isset($gl[$g_id]) && $gl[$g_id]; // group in db has link
+				$pghas = isset($inline[$idx]) && $inline[$idx]; // group on page has link
+				if ($dbhas ^ $pghas) // !1 && 2 || 1 && !2 - link changed
 					$g[$g_id] = $inline[$idx];
 			}
 
 			$ua = UpdatesAggregator::getInstance();
 			foreach ($g as $g_id => $link) {
-				$ga->update(array('link' => $link), $g_id);
+				$chenge = array('link' => $link);
+				$g_changes[$g_id] = isset($g_changes[$g_id]) ? array_merge($g_changes[$g_id], $change) : $change;
 				$ua->changed($g_id, UPKIND_INLINE, $link && (strpos($link, '/') === false));
+			}
+
+			foreach ($g_changes as $g_id => $values)
+				$ga->update($values, $g_id);
+
+			if (!!$old) { // there are deleted groups
+				echo_log('groups_to_delete');
+				$diff = array_diff(array_keys($gii), array_keys($gi));
+//				debug(array($old, $diff), 'groups to delete');
+				$pa = PagesAggregator::getInstance();
+				$d = $pa->fetch(array(
+					'filter' => '`author` = ' . $author_id . ' and (`group` in (' . join(',', $diff) . '))'
+				, 'nocalc' => 1, 'desc' => 0
+				, 'collumns' => '`id`, `group`, `title`, `link`'
+				));
+				if ($d['total']) {
+					$t = array();
+					$candidates_to_move = array();
+
+					foreach ($d['data'] as &$row)
+						$t[intval($row['group'])][] = array(intval($row['id']), $row['link']);
+
+					foreach ($t as $group => $pages_data) {
+						foreach ($pages_data as $page_data) {
+							$found = false;
+							$data_link = null;
+							foreach ($links as $ids => &$block) {
+								foreach ($block as $link => &$data)
+									if ($link == $page_data[1]) {
+										$found = $data[0];
+										$data_link = &$data;
+										break;
+									}
+								if ($found !== false) break;
+							}
+
+							$new_group_id = ($found !== false) ? array_search($found, $gi) : false;
+//							debug(array($found, $new_group_id));
+							if ($new_group_id !== false) {
+								$page_data[2] = $new_group_id;
+								$page_data[3] = $data_link;
+								$candidates_to_move[$group][] = $page_data;
+							} else
+								echo_log('dont_know_where_to_go', ' (' . $page_data[1] . ')');
+						}
+					}
+
+					if (!!$candidates_to_move) {
+//						debug($candidates_to_move, 'pages to move');
+						foreach ($candidates_to_move as $old_group => $pages)
+							foreach ($pages as $page_data) {
+								$page_id = $page_data[0];
+								$pa->update(array('group' => $page_data[2]), $page_id);
+								$ua->changed($page_id, UPKIND_GROUP, $old_group);
+								$data = array('link' => $page_data[1]);
+								echo patternize(Loc::lget('page_changed_group'), $data) . '(ID#' . $page_data[2] . ')<br />';
+							}
+					} else
+						echo_log('no_pages_to_move');
+				} else
+					echo_log('pages_not_moved');
+
+				foreach ($diff as $g_id) {
+					$ua->changed($g_id, UPKIND_DELETED_GROUP, $author_id);
+					$ga->delete($g_id);
+					echo patternize(Loc::lget('group_deleted'), $gii[$g_id][2]) . '<br />';
+				}
 			}
 
 
@@ -136,21 +225,26 @@
 							$diff[$page_id] = $link; // check it
 
 						$old_group = intval($row['group']);
-						$new_group_i = isset($gi[$old_group]) ? $gi[$old_group] : null;
-						if ($new_group_i != $data[0]) {
-							echo patternize(Loc::lget('page_changed_group'), $row) . '<br />';
+						$old_group_i = isset($gi[$old_group]) ? $gi[$old_group] : null;
+						if ($old_group_i != $data[0]) {
 							$new_group = array_search($data[0], $gi);
-//							debug(array($new_group_i, $data[0], $new_group, $gi[$new_group]));
-							$pa->update(array('group' => $new_group), $page_id);
-							$ua->changed($page_id, UPKIND_GROUP, $old_group);
+							if ($new_group) {
+								$pa->update(array('group' => $new_group), $page_id);
+								$ua->changed($page_id, UPKIND_GROUP, $old_group);
+								echo patternize(Loc::lget('page_changed_group'), $row) . '(ID#' . $new_group . ')<br />';
+							} else {
+//								debug(array('old_i' => $old_group_i, 'new_i' => $data[0], 'old_id' => $old_group));
+								echo 'Cant move page! Target group not found %)<br />';
+							}
 						}
 					}
 				}
+
 				if (count($diff))
-					echo Loc::lget('pages_updated') . '<br />';
+					echo_log('pages_updated');
 
 				if (count($check)) {
-					echo Loc::lget('pages_new') . '<br />';
+					echo_log('pages_new');
 					foreach ($check as $link => &$data) { // new pages
 						$idx = $data[0];
 						$gid = array_search($idx, $gi);
@@ -167,12 +261,15 @@
 				}
 
 				if (count($diff)) {
-					echo Loc::lget('pages_queue') . '<br />';
+					echo_log('pages_queue');
 					$this->queuePages($author_id, $diff);
 				} else
-					echo Loc::lget('no_updates') . '<br />';
+					echo_log('no_updates');
 			} else
-				echo Loc::lget('no_updates') . '<br />';
+				echo_log('no_updates');
+
+//			debug(array('g' => $g, 'gi' => $gi, 'gii' => $gii, 'gt' => $gt));
+
 			return true;
 		}
 
@@ -187,13 +284,11 @@
 			preg_match('/^[\/]*(.*?)[\/]*$/', $a['link'], $link);
 			$link = $link[1] . '/' . $g['link'];
 			$data = SAMLIBParser::getData($link, 'group');
-			if ($data === false) {
-				echo Loc::lget('samlib_down');
-				return false;
-			} elseif ($data === null) {
-				echo Loc::lget('parse_method_unknown');
-				return false;
-			}
+			if ($data === false)
+				return echo_log('samlib_down');
+			elseif ($data === null)
+				return echo_log('parse_method_unknown');
+
 
 			$ga->update(array('time' => time()), $group_id, true);
 
@@ -232,10 +327,10 @@
 				}
 
 				if (count($diff))
-					echo Loc::lget('pages_updated') . '<br />';
+					echo_log('pages_updated');
 
 				if (count($check)) {
-					echo Loc::lget('pages_new') . '<br />';
+					echo_log('pages_new');
 					foreach ($check as $link => &$data) { // new pages
 						$pid = $pa->add(array(
 							'author' => $author_id
@@ -250,12 +345,12 @@
 				}
 
 				if (count($diff)) {
-					echo Loc::lget('pages_queue') . '<br />';
+					echo_log('pages_queue');
 					$this->queuePages($author_id, $diff);
 				} else
-					echo Loc::lget('no_updates') . '<br />';
+					echo_log('no_updates');
 			} else
-				echo Loc::lget('no_updates') . '<br />';
+				echo_log('no_updates');
 
 			return true;
 		}
@@ -271,7 +366,7 @@
 			$idx = array_keys($pages);
 			if (count($update)) {
 				$diff = array_intersect($idx, $update);
-				echo Loc::lget('already_queued') . ":<br />";
+				echo_log('already_queued', ':');
 				foreach ($diff as $page) {
 					$link = $pages[$page];
 					echo "<a href=\"http://samlib.ru/$alink/$link\">$link</a><br />";
@@ -280,7 +375,7 @@
 
 				$idx = array_diff($idx, $update);
 			}
-			echo Loc::lget('queued_pages') . ":<br />";
+			echo_log('queued_pages', ':');
 			foreach ($idx as $page) {
 				$link = $pages[$page];
 				echo "<a href=\"http://samlib.ru/$alink/$link\">$link</a><br />";
@@ -339,7 +434,7 @@
 						$q->dbc->delete($q->TBL_DELETE, '`page` = ' . $page);
 					} else {
 						$q->dbc->update($q->TBL_INSERT, array('state' => 0, 'updated' => $time), '`id` = ' . $q_id);
-						echo Loc::lget('page_request_failed') . '<br />';
+						echo_log('page_request_failed');
 						return $left - $done;
 					}
 					$done++;
@@ -348,7 +443,7 @@
 				}
 				return 0;
 			} else
-				echo Loc::lget('nothing_to_update') . '<br />';
+				echo_log('nothing_to_update');
 
 			return 0;
 		}
@@ -394,6 +489,8 @@
 					case UPKIND_INLINE: // group updates
 						$g[intval($row['page'])] = 1;
 						break;
+					case UPKIND_DELETED_GROUP:
+						$a[intval($row['value'])] = 1;
 					case UPKIND_GROUP:
 						$g[intval($row['value'])] = 1;
 					default:
@@ -433,6 +530,16 @@
 						, 'fio' => $a[$aid]
 						);
 						break;
+					case UPKIND_DELETED_GROUP:
+						$gid = intval($row['page']);
+						$aid = intval($row['value']);
+						$r[] = array('id' => $gid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
+						, 'group' => $gid
+						, 'group_title' => "{@GROUP#$gid}"
+						, 'author' => $aid
+						, 'fio' => $a[$aid]
+						);
+						break;
 					case UPKIND_GROUP:
 						$pid = intval($row['page']);
 						$gid = $p[$pid]['group'];
@@ -443,7 +550,7 @@
 						, 'group' => $gid
 						, 'group_title' => $g[$gid]['title']
 						, 'old_id' => $goid
-						, 'old_title' => ($t = uri_frag($g, $goid, 0, 0)) ? $t['title'] : '&lt;!&gt;'
+						, 'old_title' => ($t = uri_frag($g, $goid, 0, 0)) ? $t['title'] : "{@GROUP#$goid}"
 						, 'author' => $aid
 						, 'fio' => $a[$aid]
 						);

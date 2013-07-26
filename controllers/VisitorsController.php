@@ -83,7 +83,7 @@
 			$e = join(', ', $e);
 			$e = "<br /><span style=\"font-weight: normal; font-size: 80%; color: #888\">$e<br />$c page requests total</span>";
 
-			View::addKey('title', View::getKey('title') . $e);
+			View::addKey('hint', $e);
 			parent::actionPage($r);
 		}
 

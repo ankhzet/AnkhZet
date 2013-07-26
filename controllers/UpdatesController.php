@@ -195,7 +195,7 @@
 			$aid = uri_frag($r, 0);
 			$pid = uri_frag($r, 1);
 			$new_only = !isset($_REQUEST['trace']);
-			$trace = post_int('trace');
+			$trace = $new_only ? 1 : post_int('trace');
 			if ($aid || $pid)
 				$this->traceForUser($this->user->ID(), $aid, $pid, $trace, $new_only);
 			else {

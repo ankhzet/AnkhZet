@@ -128,7 +128,7 @@ function generateImage($source_file, $cache_file, $resolution) {
 	$extension = strtolower(pathinfo($source_file, PATHINFO_EXTENSION));
 
 	// Check the image dimensions
-	$dimensions   = GetImageSize($source_file);
+	$dimensions   = @GetImageSize($source_file);
 	$width        = $dimensions[0];
 	$height       = $dimensions[1];
 

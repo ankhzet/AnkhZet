@@ -1,9 +1,10 @@
 <?php
 	header("HTTP/1.0 404 Not Found");
-	$r = $this->request->getList();
-	if ($r[0] == '404') array_shift($r);
+	$r = explode('/', $_SERVER['REQUEST_URI']);
 
-	$file = '/' . htmlspecialchars(join('/', $r));
+	if ($r[1] == '404') unset($r[1]);
+
+	$file = htmlspecialchars(join('/', $r));
 	$admin = FrontEnd::getInstance()->get('config')->get('site-admin');
 ?>
 <div style="font-size:12px; font-family:Verdana, Geneva, sans-serif; padding: 2%; overflow: hidden;width: 96%;">
