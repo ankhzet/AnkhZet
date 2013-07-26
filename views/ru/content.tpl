@@ -1,12 +1,22 @@
-	function content_meta() {
+	function content_meta($view) {
+		$keywords = $view->getKey('meta-keywords');
+		$description = $view->getKey('meta-description');
+
 		$o = msqlDB::o();
 		$s = $o->select('meta', '', '`name` as `0`, `content` as `1`');
 		$r = $o->fetchrows($s);
-		$meta = array();
 
 		if (count($r)) {
+			$meta = array();
 			foreach ($r as $m)
-				$meta[] = '	<meta name="' . $m[0] . '" content="' . $m[1] . '" />';
+				$meta[$m[0]] = $m[1];
+
+			if ($keywords) $meta['keywords'] = (isset($meta['keywords']) ? $meta['keywords'] . ', ' : '') . $keywords;
+			if ($description) $meta['description'] = $description;
+
+			foreach ($meta as $key => $value)
+				$meta[$key] = '	<meta name="' . $key . '" content="' . $value . '" />';
+
 			return join(PHP_EOL, $meta) . PHP_EOL;
 		}
 		return null;
