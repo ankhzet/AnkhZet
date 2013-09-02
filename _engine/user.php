@@ -114,8 +114,8 @@
 			return self::$data;
 		}
 
-		static function ACL() {
-			$acl = self::get()->_get(self::COL_ACL);
+		static function ACL($id = 0) {
+			$acl = self::get($id)->_get(self::COL_ACL);
 			return isset($acl) ? $acl : ACL::ACL_GUEST;
 		}
 

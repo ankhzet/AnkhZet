@@ -8,6 +8,6 @@
 					<label>Пароль</label><input type="password" name="pass" value="<?=addslashes(post('pass'))?>" /><br /><br />
 					<input type="submit" value="Вхoд" /><br /><br />
 
-					<label><a href="/user/restore">Забыли пароль?</a></label>
+					<label><a href="/user/restore">Забыли пароль?</a> // <a href="/user/registration">Регистрация</a></label>
 				</form>
 				<?=$e?>

@@ -131,7 +131,7 @@ function setupProfilerReload(chart, run) {
 	if (!chart) return;
 	clearInterval(chart.reloader);
 	if (run)
-		chart.reloader = setInterval(function(){chart.src="/models/core_timeleech.php?" + Math.random()}, 1000);
+		chart.reloader = setInterval(function(){chart.src="/models/core_timeleech.php?" + Math.random()}, 5000);
 }
 
 function fitAdminPanel() {

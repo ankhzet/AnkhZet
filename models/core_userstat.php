@@ -6,11 +6,19 @@
 	require_once 'core_visitors.php';
 
 	$t = 60 * 60 * 24;
+	$time = time();
+	$l = ($days = post('days')) ? $t * post('days') : $time;
+
+	$f = array('1');
+
+	if ($ip = post('ip'))
+		$f[] = "inet_ntoa(`ip`) like '%$ip%'";
+
 	$dbc = msqlDB::o();
 
 	$f = array('1');
 
-	if ($days = time() - $t * post('days'))
+	if ($days = $time - $l)
 		$f[] = "`time` >= $days";
 
 	switch ($bots = post('bots')) {
@@ -40,8 +48,8 @@
 
 	ksort($u);
 	$k = array_keys($u);
-	$lot = $k[0];
-	$hit = count($k) ? $k[count($k) - 1] : $lo;
+	$lot = count($k) ? $k[0] : 0;
+	$hit = count($k) ? $k[count($k) - 1] : $lot;
 /*	$m = 0;
 	foreach ($k as $time) {
 		$c = 0;
@@ -112,7 +120,8 @@
 //	debug2(array($lo, $hi));
 
 
-	$img_denom = 5;
+	$img_denom = 6;
+	$heat_denom = 3;
 	$font = 8;
 	$d = ($font + 1) * ($parts + 1);
 	$w = uri_frag($_REQUEST, 'w', 600);//intval($d + 60));
@@ -130,8 +139,8 @@
 	$cy = intval((($h - 20 * $img_denom) - $ch - $legend) / 2);
 	$ty = $cy + $ch;
 
-	$img   = ImageCreateTrueColor($w, $h);
-	imagealphablending($img, true);
+	$img   = ImageCreate($w, $h);
+//	imagealphablending($img, true);
 	$black = ImageColorAllocate($img, 0, 0, 0);
 	$gray = ImageColorAllocate($img, 128, 128, 128);
 	$lite = ImageColorAllocate($img, 200, 200, 200);
@@ -141,12 +150,12 @@
 	$white =ImageColorAllocate($img, 255, 255, 255);
 	$back  = $white;
 	$line = array(
-		ImageColorAllocateAlpha($img, 50, 50, 50, 0.4)
-	, ImageColorAllocateAlpha($img, 200, 200, 200, 0.1)
+		ImageColorAllocate($img, 10, 10, 10)
+	, ImageColorAllocate($img, 200, 200, 200)
 	);
 	$red = array(
-		ImageColorAllocateAlpha($img, 50, 50, 150, 0.4)
-	, ImageColorAllocateAlpha($img, 190, 190, 250, 0.1)
+		ImageColorAllocate($img, 50, 50, 150)
+	, ImageColorAllocate($img, 190, 190, 250)
 	);
 //	imagecolortransparent($img, $back);
 	imagesetthickness($img, 1 * $img_denom);
@@ -158,9 +167,9 @@
 //	imageantialias($img, true);
 	$ff = ROOT . "/_engine/comic.ttf";
 
-	global $cx, $cw, $dot1, $dot2, $img, $img_denom, $tt;
+	global $cx, $cw, $dot1, $dot2, $img, $img_denom, $heat_denom, $tt;
 	function graph(&$pts, &$pairs, $parts, $line, $ty, $ch, $m, $draw = true) {
-		global $cx, $cw, $dot1, $dot2, $img, $img_denom, $tt;
+		global $cx, $cw, $dot1, $dot2, $img, $img_denom, $heat_denom, $tt;
 		$px = 0;
 		$py = -1;
 		foreach ($pts as $slice => $visitors) {
@@ -197,11 +206,13 @@
 
 		$px = $cx;
 		$py = -1;
-		imagesetthickness($img, 2 * $img_denom);
+		imagesetthickness($img, $heat_denom * $img_denom);
+		$half_denom = $img_denom / $heat_denom;
 		foreach ($p as $x => $y) {
 			if ($py < 0) $py = $y;
-			imageline($img, $px - $img_denom, $py - $img_denom, $x + $img_denom, $y + $img_denom, $line[1]);
-			imageline($img, $px + $img_denom, $py + $img_denom, $x - $img_denom, $y - $img_denom, $line[1]);
+//			imageline($img, $px, $py, $x, $y, $line[1]);
+			imageline($img, $px - $half_denom, $py - $half_denom, $x + $half_denom, $y + $half_denom, $line[1]);
+			imageline($img, $px + $half_denom, $py + $half_denom, $x - $half_denom, $y - $half_denom, $line[1]);
 			$px = $x;
 			$py = $y;
 		}
@@ -276,6 +287,6 @@
 	header('Content-Type: image/png');
 	$img2 = ImageCreateTrueColor ($w / $img_denom, $h / $img_denom);
 	imagecopyresampled ($img2, $img, 0, 0, 0, 0, $w / $img_denom, $h / $img_denom, $w, $h);
-	imagetruecolortopalette($img2, true, 256);
+	imagetruecolortopalette($img2, true, 128);
 	imagepng($img2);
 ?>

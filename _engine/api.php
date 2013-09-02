@@ -32,11 +32,12 @@
 
 		static function getACLs() {
 			return array(
-				'rating' => 0
+				'access' => 0
+			, 'grammar' => 0
+			, 'rating' => 0
 			, 'products' => 0
 			, 'rss' => 0
 			, 'sitemap' => 0
-			, 'grammar' => 0
 			, 'nop'
 			);
 		}

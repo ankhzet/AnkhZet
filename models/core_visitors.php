@@ -37,7 +37,8 @@
 			, 'os' => $os
 			, 'cast' => $cast
 			, 'uri' => $_SERVER['REQUEST_URI']
-			, 'ua_string' => $_SERVER['HTTP_USER_AGENT']
+			, 'ua_string' => isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : ''
+			, 'referrer' => (isset($_SERVER['HTTP_REFERER']) && ($_SERVER['HTTP_REFERER'] != '')) ? $_SERVER['HTTP_REFERER'] : null
 			));
 		}
 

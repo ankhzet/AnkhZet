@@ -3,6 +3,7 @@
 <head>
 	<title>{%title#unhtml%} - {%site#unhtml%}</title>
 	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<link rel="shortcut icon" href="/favicon.ico" />
 	<meta name="server-time" content="{%page#time%}" />
 	<meta name="google-site-verification" content="mvUHJdHQHZgnjIzVdyR7zW8n-9OTjVlM_0GdxWA-czo" />
 {%TPL:content#meta%}

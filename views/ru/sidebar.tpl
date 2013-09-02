@@ -17,21 +17,23 @@
 		}
 
 		if (!$uid)
-			return '
-			<ul class="menu">
-				<li><a href="/"><img src="/theme/img/logo.png" alt="Главная" title="Главная" /></a></li>
-				<li><a href="/authors">Авторы</a></li>
-				<li><a href="/feedback">Фидбэк</a></li>
-				<li><a href="/about">О сайте</a></li>
+			return "
+			<ul class=\"menu\">
+				<li><a href=\"/\"><img src=\"/theme/img/{$logo}.png\" alt=\"Главная\" title=\"Главная\" /></a></li>
+				<li><a href=\"/authors\">Авторы</a></li>
+				<li><a noindex nofollow href=\"/feedback\">Обратная связь</a></li>
+				<li><a href=\"/blog\">Блог</a></li>
+				<li><a href=\"/about\">О сайте</a></li>
 			</ul>
-';
+";
 		else
 			return "
 			<ul class=\"menu\">
 				<li><a href=\"/\"><img src=\"/theme/img/{$logo}.png\" alt=\"Главная\" title=\"Главная\" /></a></li>
 				<li><a href=\"/authors\">Авторы</a></li>
 				<li><a href=\"/updates\">Обновления{$last}</a></li>
-				<li><a href=\"/feedback\">Фидбэк</a>{$feed}</li>
+				<li><a href=\"/feedback\">Обратная связь</a>{$feed}</li>
+				<li><a href=\"/blog\">Блог</a></li>
 				<li><a href=\"/about\">О сайте</a></li>
 			</ul>
 ";
