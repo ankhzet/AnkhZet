@@ -136,7 +136,7 @@
 			. '<div style="float: left; margin: 12px 0 0 5px; position: relative;">'
 			. '<input type=checkbox class="multi-check" /> С отмеченными: '
 			. '<a href="javascript:void(0)" alt="/updates/uptodate" class="multi link">Прочитано</a> | '
-			. '<a href="javascript:void(0)" alt="/updates/hide" confirm="1" class="multi link">Не отслеживать</a></div>'
+			. '<a href="javascript:void(0)" alt="/updates/hide?traced=' . $hidden_f . '" confirm="1" class="multi link">Не отслеживать</a></div>'
 			. '<ul class="pages">'
 			. PHP_EOL . (($last > 1) ? $aggregator->generatePageList($page, $last, $this->_name . '/', $this->link) : '<li>&nbsp;</li>') . '</ul>' . PHP_EOL;
 
