@@ -73,15 +73,6 @@
 			$hidden = uri_frag($_REQUEST, 'hidden', 0);
 			$hidden_f = intval(!$hidden);
 			$author_f = $author ? " and p.`author` = $author" : '';
-			$loc = array(
-				'checkupdates' => Loc::lget('checkupdates')
-			, 'check' => Loc::lget($hidden ? 'checktraced' : 'checkhidden')
-			, 'rss' => Loc::lget('RSS')
-			, 'uid' => $uid
-			, 'hidden' => $hidden_f
-			);
-
-			View::addKey('moder', patternize(self::UPDATES_RSS . ' ' . self::UPDATES_CHECK . ' ' . self::UPDATES_HIDDEN, $loc));
 			$this->query = '`user` = ' . $this->user->ID();
 			$aggregator = $this->getAggregator();
 			$this->page = $page = uri_frag($r, 0, 1);
@@ -91,11 +82,30 @@
 			$this->link = (!$l) ? '' : '?' . join('&', $l);
 			$params = array('page' => $page - 1, 'pagesize' => $aggregator->FETCH_PAGE, 'desc' => true);
 			$params['collumns'] = 'h.*, p.`author`, a.`fio`, p.`title`, p.`description`, p.`size` as `new_size`, p.`time` as `updated`, (p.`size` <> h.`size`) as `upd`';
-			$params['filter'] = "`user` = $uid and `trace` = $hidden_f $author_f";
 			$params['order'] = '`upd` desc, `time`';
+			$params['filter'] = "`user` = $uid and `trace` = $hidden_f $author_f";
 
 			$aggregator->TBL_FETCH = '`history` h left join `pages` p on p.`id` = h.`page` left join `authors` a on a.`id` = p.`author`';
 			$this->data = $aggregator->fetch($this->prepareFetch($params));
+
+			// counting not traced pages if "Traced" are shown and vice versa
+			$params = array('pagesize' => 1, 'desc' => 0);
+			$params['collumns'] = 'count(h.id) as c';
+			$params['filter'] = "`user` = $uid and `trace` = $hidden $author_f";
+			$aggregator->TBL_FETCH = '`history` h left join `pages` p on p.`id` = h.`page`';
+			$others = $aggregator->fetch($params);
+			$others = intval($others['data'][0]['c']);
+
+			$loc = array(
+				'checkupdates' => Loc::lget('checkupdates')
+			, 'check' => Loc::lget($hidden ? 'checktraced' : 'checkhidden') . ($others ? " <sup>$others</sup>" : '')
+			, 'rss' => Loc::lget('RSS')
+			, 'uid' => $uid
+			, 'hidden' => $hidden_f
+			);
+
+			View::addKey('moder', patternize(self::UPDATES_RSS . ' ' . self::UPDATES_CHECK . ' ' . self::UPDATES_HIDDEN, $loc));
+
 
 			$last  = intval(ceil($this->data['total'] / $aggregator->FETCH_PAGE));
 			$last  = $last < 1 ? 1 : $last;
@@ -195,8 +205,8 @@
 			$aid = uri_frag($r, 0);
 			$pid = uri_frag($r, 1);
 			$new_only = !isset($_REQUEST['trace']);
-			$trace = $new_only ? 1 : post_int('trace');
-			if ($aid || $pid)
+			$trace = $new_only ? 0 : post_int('trace');
+			if ($aid || $pid || !$this->userModer)
 				$this->traceForUser($this->user->ID(), $aid, $pid, $trace, $new_only);
 			else {
 				$o = msqlDB::o();
