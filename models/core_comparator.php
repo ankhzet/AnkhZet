@@ -9,7 +9,7 @@
 			$store = "{$path}/{$time}.html";
 
 			assume_dir_exists($path);
-			$html1 = @file_get_contents($last);
+			$html1 = is_file($last) ? @file_get_contents($last) : false;
 			if ($html1) {
 				$_html1 = @gzuncompress($html1);
 				if ($_html1 !== false)
@@ -46,6 +46,7 @@
 			} else
 				return false;
 		}
+
 	}
 
 ?>
