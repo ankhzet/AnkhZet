@@ -18,6 +18,7 @@
 			$data = array();
 			$data['title'] = $c->get('site-title');
 			$data['link'] = 'http://' . $_SERVER['HTTP_HOST'] . '/';
+			$data['self'] = "{$data['link']}rss.xml?channel=$uid";
 			$data['description'] = $data['title'];
 			$data['generator'] = $c->get('rss-feeder');
 			$data['lastbuilddate'] = date('r', $time);
@@ -72,11 +73,12 @@
 					$link = $pa[$page_id]['link'];
 					$slink = str_replace('.shtml', '', $link);
 					$delta = intval($row['size']) - intval($row['size_old']);
+					$old_version_date = date('d-m-Y/H-i-s', $row['time_old']);
 					$i[$page_id] = array(
 						'title' => $row['title']
 					, 'author' => $author ? $at[$author]['fio'] : '&lt;неизвестный автор&gt;'
 					, 'group' => $group ? $gt[$group] : '&lt;неизвестная группа&gt;'
-					, 'link' => "{$data['link']}pages/version/{$page_id}?version={$row['time_old']}"
+					, 'link' => "{$data['link']}pages/version/{$page_id}/$old_version_date"
 					, 'samlib' => "$alink/$slink"
 					, 'pubDate' => date('r', $row['time'])
 					, 'guid' => md5($page_id . $row['time_old'] . $delta)
@@ -105,9 +107,9 @@
 			$gzip = !post_int('nogzip');
 			$debug = post_int('debug');
 			if ($gzip) {
-				ob_start("ob_gzhandler");
+//				ob_start("ob_gzhandler");
 //				$rss = gzcompress($rss);
-//				header('Content-Encoding: gzip');
+				header('Content-Encoding: gzip');
 			}
 
 			switch (post('type')) {
@@ -131,10 +133,12 @@
 			header("Content-Disposition: inline; filename=$file");
 //			$rss = ob_get_contents();
 
+			if ($gzip)
+			$rss = gzencode($rss);
 			echo $rss;
 
-			if ($gzip)
-				ob_end_flush();
+//			if ($gzip)
+//				ob_end_flush();
 
 			die();
 			return true;
