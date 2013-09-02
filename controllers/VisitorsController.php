@@ -25,7 +25,11 @@
 							</span>
 							<span class="link size">{%time}</span>
 							<span class="link size">{%date}</span>
-							<span class="link" style="width: 50%; font-size: 50%; color: #888; overflow: hidden;">{%ua_string}</span>
+							<span class="link" style="clear: none;width: 50%; font-size: 50%; color: #888; overflow: hidden;">
+							<a href="{%referrer}" style="color: #36a; display: block;">{%referrer_title}</a>
+							{%ua_string}
+							</span>
+
 						</div>
 
 					</div>
@@ -41,6 +45,8 @@
 			$this->uas = $uas->_loadData();
 
 			$t = 60 * 60 * 24;
+			$time = time();
+			$l = ($days = post('days')) ? $t * post('days') : $time;
 			$va = $this->getAggregator();
 
 			$f = array('1');
@@ -50,7 +56,7 @@
 				$f[] = "inet_ntoa(`ip`) like '%$ip%'";
 				$q[] = "ip=$ip";
 			}
-			if ($days = time() - $t * post('days')) {
+			if ($days = $time - $l) {
 				$f[] = "`time` >= $days";
 				$q[] = "days=" . post('days');
 			}
@@ -74,16 +80,33 @@
 //			$va->dbc->debug = 1;
 			$s = $va->dbc->select($va->TBL_FETCH, join(' and ', $f) . ' group by `ip` order by `count`', 'count(`ip`) as `count`, `ip`');
 			$e = array();
+			$cnts = array();
 			$c = 0;
 			foreach ($va->dbc->fetchrows($s) as $row) {
+				$cnts[$rip = $row['ip']] = (isset($cnts[$rip]) ? $cnts[$rip] : 0) + intval($row['count']);
 				$c += intval($row['count']);
-				$row['ip'] = long2ip(intval($row['ip']));
+//				$row['ip'] = long2ip(intval($row['ip']));
 				$e[] = patternize('{%ip}: {%count} requests', $row);
 			}
-			$e = join(', ', $e);
-			$e = "<br /><span style=\"font-weight: normal; font-size: 80%; color: #888\">$e<br />$c page requests total</span>";
 
-			View::addKey('hint', $e);
+			asort($cnts);
+
+			$e = array();
+			foreach ($cnts as $ip => $count)
+				$e[$count][] = $ip;
+
+			$l = array();
+			foreach ($e as $count => $ips) {
+				$u = array();
+				foreach ($ips as $ip) $u[] = long2ip($ip);
+				$ic = count($ips);
+				$u = join(', ', $u);
+				$l[] = "<tr><td style='width: 100px;'>$count</td><td>$ic</td></tr>";
+			}
+			$e = join("\n", $l);
+			$e = "<br /><span style=\"font-weight: normal; font-size: 80%; color: #888\"><table><tr><td><b>Requests</b></td><td><b>IP's</b></td></tr>$e</table><br />$c page requests total</span>";
+
+			View::addKey('ctr', $e);
 			parent::actionPage($r);
 		}
 
@@ -120,6 +143,7 @@
 			$row['date'] = $row['time'];
 			$row['time'] = date('H:i:s', $row['utime']);
 			$row['user:name'] = ($u = intval($row['user'])) ? '<a href="/user/' . $u . '">' . User::get($u)->readable() . '</a>' : '&lt;guest&gt;';
+			$row['referrer_title'] = chunk_split(htmlspecialchars(urldecode($row['referrer'])), 90, '<br />');
 			return patternize($this->LIST_ITEM, $row);
 		}
 
