@@ -33,7 +33,8 @@
 				$a[] = $idx;
 		}
 
-	$f = $a[0];
+	$kk = array_keys($a);
+	$f = count($kk) ? $a[$kk[0]] : 0;
 	$l = $f;
 	$p = $f;
 	$d = array();
@@ -84,7 +85,7 @@
 	arsort($x);
 //	debug2($x);
 
-	define(MAX_RED, 5);
+	define('MAX_RED', 5);
 	$k = array_slice(array_keys($x), 0, MAX_RED);
 	$u = array_slice($x, 0, MAX_RED);
 	$x = array();
@@ -92,17 +93,28 @@
 		$x[$idx] = $u[$i];
 //	debug2($x);
 
+	$antialias = 3;
+
 	$font = 8;
-	$d = ($font * 2) * $c;//$t / $m;
-	$h = intval($_REQUEST['h']);
+	$d = ($font + 3) * $c;//$t / $m;
+	$h = post_int('h');
 	$h = $h ? $h : intval($d + 20 + 20);
 
 	$legend = 200;
-	$w = (4 / 3) * $h + $legend;
+	$w = (4.0 / 3.0) * $h + $legend;
 	$cw = intval($w - 60) - $legend;
-	$ch = intval($h - 30 - 20);
+	$ch = intval($h - 50);
 	$cx = 40;
 	$cy = intval((($h - 20) - $ch) / 2);
+	$font *= $antialias;
+	$w *= $antialias;
+	$h *= $antialias;
+	$cx *= $antialias;
+	$cy *= $antialias;
+	$cw *= $antialias;
+	$ch *= $antialias;
+	$d *= $antialias;
+	$legend *= $antialias;
 	$px = 0;
 	$py = 0;
 	$ty = $cy + $ch;
@@ -126,24 +138,24 @@
 	);
 //	imagecolortransparent($img, $back);
 	ImageFill($img, 0, 0, $back);
-	ImageRectangle($img, 0, 0, $w - 1, $h - 1, $black);
+	ImageRectangle($img, 0, 0, $w - $antialias, $h - $antialias, $black);
 	imageline($img, $cx, $ty, $cx + $cw, $ty - $ch, $gray);
 
 
-
+	$half = $antialias * 1.5;
 	foreach ($leech as $idx => $record) {
 		$tap = intval(intval($record['progress']) * $ch / 100);
 		$hit = intval($cw * (((float)$record['time']) / $t));
 		$label = $tap - $font / 2;//$py - ($py - $hit) / 2;
-		$c = $x[$idx] ? $red : $line;
-		imageline($img, $cx, $ty - $tap, $cx + $cw, $ty - $tap, $lite);
-		imagesetthickness($img, 2);
-		imageline($img, $cx + $px - 1, $ty - $py - 1, $cx + $hit + 1, $ty - $tap + 1, $c[1]);
-		imageline($img, $cx + $px + 1, $ty - $py + 1, $cx + $hit - 1, $ty - $tap - 1, $c[1]);
+		$c = isset($x[$idx]) ? $red : $line;
+		imageline($img, $cx + $antialias * 15, $ty - $tap, $cx + $cw, $ty - $tap, $lite);
+		imagesetthickness($img, 2 * $antialias);
+		imageline($img, $cx + $px - $half, $ty - $py - $half, $cx + $hit + $half, $ty - $tap + $half, $c[1]);
+		imageline($img, $cx + $px + $half, $ty - $py + $half, $cx + $hit - $half, $ty - $tap - $half, $c[1]);
 		imageline($img, $cx + $px, $ty - $py, $cx + $hit, $ty - $tap, $c[0]);
-		imagettftext ($img, $font, 0, $cx + $cw + 5, $ty - $label, $black, ROOT. "/_engine/comic.ttf", $record['uid']);
-		imagettftext ($img, $font, 0, 3, $ty - $label, $black, ROOT. "/_engine/comic.ttf", intval(1000 * (float)$record['time']) / 1000 );
-		imagesetthickness($img, 1);
+		imagettftext ($img, $font, 0, $cx + $cw + 5 * $antialias, $ty - $label, $black, ROOT. "/_engine/comic.ttf", $record['uid']);
+		imagettftext ($img, $font, 0, 3 * $antialias, $ty - $label, $black, ROOT. "/_engine/comic.ttf", intval(1000 * (float)$record['time']) / 1000 );
+		imagesetthickness($img, 1 * $antialias);
 		$py = $tap;
 		$px = $hit;
 	}
@@ -152,8 +164,8 @@
 	foreach ($leech as $idx => $record) {
 		$tap = intval(intval($record['progress']) * $ch / 100);
 		$hit = intval($cw * (((float)$record['time']) / $t));
-		imagefilledellipse($img, $cx + $hit, $ty - $tap, 7, 7, $dot1);
-		imagefilledellipse($img, $cx + $hit, $ty - $tap, 5, 5, $dot2);
+		imagefilledellipse($img, $cx + $hit, $ty - $tap, 7 * $antialias, 7 * $antialias, $dot1);
+		imagefilledellipse($img, $cx + $hit, $ty - $tap, 5 * $antialias, 5 * $antialias, $dot2);
 		$py = $tap;
 		$px = $hit;
 	}
@@ -162,7 +174,7 @@
 	foreach ($leech as $idx => $record) {
 		$tap = intval(intval($record['progress']) * $ch / 100);
 		$hit = intval($cw * (((float)$record['time']) / $t));
-		if ($x[$idx]) {
+		if (isset($x[$idx])) {
 			$v = (float)$record['delta'];
 			$p = intval(100 * ($v / $t)) . '%';
 			$s = imagettfbbox($font, 0, ROOT. "/_engine/comic.ttf", $p);
@@ -173,10 +185,10 @@
 			$y2 = $ty - $tap;
 			$x1 = $x1 + ((($x2 - $x1) - $tw) / 2);
 			$y1 = $y1 + ((($y2 - $y1) - $font) / 2);
-			imagettftext ($img, $font, 0, $x1-1, $y1, $lite, ROOT. "/_engine/comic.ttf", $p);
-			imagettftext ($img, $font, 0, $x1+1, $y1, $lite, ROOT. "/_engine/comic.ttf", $p);
-			imagettftext ($img, $font, 0, $x1, $y1+1, $lite, ROOT. "/_engine/comic.ttf", $p);
-			imagettftext ($img, $font, 0, $x1, $y1-1, $lite, ROOT. "/_engine/comic.ttf", $p);
+			imagettftext ($img, $font, 0, $x1-$antialias, $y1, $lite, ROOT. "/_engine/comic.ttf", $p);
+			imagettftext ($img, $font, 0, $x1+$antialias, $y1, $lite, ROOT. "/_engine/comic.ttf", $p);
+			imagettftext ($img, $font, 0, $x1, $y1+$antialias, $lite, ROOT. "/_engine/comic.ttf", $p);
+			imagettftext ($img, $font, 0, $x1, $y1-$antialias, $lite, ROOT. "/_engine/comic.ttf", $p);
 			imagettftext ($img, $font, 0, $x1, $y1, $black, ROOT. "/_engine/comic.ttf", $p);
 		}
 		$py = $tap;
@@ -192,11 +204,13 @@
 	$p = "$v sec ($c longest intervals) covered $p% of execution time";
 	imagettftext ($img, $font, 0, $cx, $cy + $ch + $font * 2, $black, ROOT. "/_engine/comic.ttf", $p);
 	$p = "URI: " . $data['data']['uri'];
-	imagettftext ($img, 8, 0, $cx, $h - 8, $black, ROOT. "/_engine/comic.ttf", $p);
+	imagettftext ($img, $font, 0, $cx, $h - 8 * $antialias, $black, ROOT. "/_engine/comic.ttf", $p);
 	$p = "DEVITER CMS © ankhzet@gmail.com";
-	imagettftext ($img, 8, 0, $w - strlen($p) * 6, $h - 8, $gray, ROOT. "/_engine/comic.ttf", $p);
+	imagettftext ($img, $font, 0, $w - strlen($p) * 6 * $antialias, $h - 8 * $antialias, $gray, ROOT. "/_engine/comic.ttf", $p);
 
 	header('Content-Type: image/png');
-	imagetruecolortopalette($img, true, 16);
-	imagepng($img);
+	$img2 = ImageCreateTrueColor ($w / $antialias, $h / $antialias);
+	imagecopyresampled ($img2, $img, 0, 0, 0, 0, $w / $antialias, $h / $antialias, $w, $h);
+	imagetruecolortopalette($img2, false, 80);
+	imagepng($img2);
 ?>
