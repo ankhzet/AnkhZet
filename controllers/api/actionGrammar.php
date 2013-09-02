@@ -38,6 +38,7 @@
 				JSON_Result(JSON_Fail, "insertion failed");
 			return true;
 		}
+
 		function _404($text) {
 			header('HTTP/1.0 404 Not Found');
 			die($text);
