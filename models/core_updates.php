@@ -14,6 +14,8 @@
 	define('UPKIND_DELETE', 2);
 	define('UPKIND_INLINE', 3);
 	define('UPKIND_DELETED_GROUP', 4);
+	define('UPKIND_ADDED', 5);
+	define('UPKIND_DELETED', 6);
 
 	function echo_log($text, $postfix = '') {
 		echo Loc::lget($text) . $postfix . '<br />' . PHP_EOL;
@@ -425,9 +427,11 @@
 					/* - */
 
 					if ($size) {
-						if (intval($row['size']) <> ($size = intval($size[2]))) {
+						if (($old_size = intval($row['size'])) <> ($size = intval($size[2]))) {
 							$pa->update(array('size' => $size, 'time' => $time), $page);
-							$ua->changed($page, UPKIND_SIZE, $size - intval($row['size']));
+
+							$utype = ($old_size <= 0) ? UPKIND_ADDED : (($size <= 0) ? UPKIND_DELETED : UPKIND_SIZE);
+							$ua->changed($page, $utype, $size - intval($row['size']));
 							echo " &nbsp;save to [/cache/pages/$page/$time.html]...<br />";
 							echo ' &nbsp;updated (' . $size . 'KB).<br />';
 						}
@@ -464,7 +468,7 @@
 		, 'primary key (`id`)'
 		);
 
-		var $FETCH_PAGE = 10;
+		var $FETCH_PAGE = 20;
 
 		static public function getInstance($args = null) {
 			if (!isset(self::$instance))
@@ -473,11 +477,11 @@
 			return self::$instance;
 		}
 
-		function getUpdates($limit) {
+		function getUpdates($page, $limit = 20) {
 			$d = $this->fetch(array(
 				'desc' => true
-			, 'page' => $limit - 1
-			, 'pagesize' => $this->FETCH_PAGE
+			, 'page' => $page - 1
+			, 'pagesize' => $limit
 			));
 			$r = array();
 			if ($d['total']) {
