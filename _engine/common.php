@@ -25,6 +25,29 @@
 		return $utf8 ? mb_convert_encoding($str, 'UTF-8', 'CP1251') : $str;
 	}
 
+	function strtolower_ru($text) {
+		$alphalo = array('ё','й','ц','у','к','е','н','г', 'ш','щ','з','х','ъ','ф','ы','в', 'а','п','р','о','л','д','ж','э', 'я','ч','с','м','и','т','ь','б','ю', 'і', 'є', 'ї');
+		$alphahi = array('Ё','Й','Ц','У','К','Е','Н','Г', 'Ш','Щ','З','Х','Ъ','Ф','Ы','В', 'А','П','Р','О','Л','Д','Ж','Э', 'Я','Ч','С','М','И','Т','Ь','Б','Ю', 'І', 'Є', 'Ї');
+		return str_replace($alphahi,$alphalo,$text);
+	}
+
+	function strtotrans($text) {
+		$alphatra = array('e','j','c','u','k','e','n','g', 'sh','sch','z','h','','f','y','v', 'a','p','r','o','l','d','zh','e', 'ya','ch','s','m','i','t','','b','yu', 'i', 'ye', 'yi');
+		$alphacyr = array('ё','й','ц','у','к','е','н','г', 'ш','щ','з','х','ъ','ф','ы','в', 'а','п','р','о','л','д','ж','э', 'я','ч','с','м','и','т','ь','б','ю', 'і', 'є', 'ї');
+		return str_replace($alphacyr,$alphatra,$text);
+	}
+
+	function translit($cyrylic) {
+		$r = '';
+		foreach (preg_split('//u', $cyrylic, -1, PREG_SPLIT_NO_EMPTY) as $idx => $char) {
+			$uchar = strtolower_ru($char);
+			$r .= ($uchar == $char) ? strtotrans($char) : ucfirst(strtotrans($uchar));
+		}
+
+		return $r;
+	}
+
+
 	function sign($f) {
 		return ($f == 0) ? 0 : $f / abs($f);
 	}
