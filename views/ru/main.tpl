@@ -34,105 +34,177 @@
 						<span class="head"><a href="/authors/id/{%author}" class="nowrap">{%fio}</a></span>
 					</div>';
 	$p5 = ':
-							<a href="/pages/version/{%id}" class="nowrap">{%title}</a>';
-	$t = time();
+							<a href="/pages/version/{%id}" class="nowrap">{%title}</a>{%hint}';
+
+	$updatelist = post('action') == 'updatelist';
+	$pagesize = $updatelist ? 100 : 20;
+	$page = post('page');
+	$page = $page ? explode('/', $page) : array(0, 1);
+	$page = $page[1];
+
+	require_once 'core_page.php';
+	$p = PagesAggregator::getInstance();
 	require_once 'core_updates.php';
 	$a = UpdatesAggregator::getInstance();
-	$d = $a->getUpdates(1);
+	require_once 'core_history.php';
+	$h = HistoryAggregator::getInstance();
+
+	$d = $a->getUpdates($page, $pagesize);
 	$u = array();
-	$t = array();
 	$c3 = 0;
-	if ($d['total'])
+	$nn = count($d['data']);
+
+	$day = 60 * 60 * 24;
+	$config = Config::read('INI', 'cms://config/config.ini');
+	$offset = $config->get('main.time-offset');
+	$offset = explode('=', $offset);
+	$offset = $offset[0] * 60 * 60;
+	$now = time() + $offset;
+
+	$now = ($now - $now % $day) / $day;
+	$timeslice = array();
+	$pages = array();
+	if ($d['total']) {
+		$sizes = array();
 		foreach ($d['data'] as &$row) {
-			$val = $row['value'];
-//			if (!$val) continue;
-			$row['time'] = date('d.m.Y H:i:s', intval($row['time']));
-			$row['inline'] = (strpos($row['group_title'], '@') !== false) ? '<span class="inline-mark">@</span>' : '';
-			$row['group_title'] = str_replace(array('@ ', '@'), '', $row['group_title']);
-			$row['title'] = patternize($p5, $row);
-			switch ($row['kind']) {
-			case UPKIND_GROUP:
-				$row['delta'] = patternize('перенесено из <a href="/pages?group={%old_id}">{%old_title}</a>', $row);
-				$row['color'] = 'blue';
-				break;
-			case UPKIND_DELETED_GROUP:
-				$row['title'] = '';
-				$row['delta'] = 'группа удалена';
-				$row['color'] = 'red';
-				break;
-			case UPKIND_INLINE:
-				$row['title'] = '';
-				$row['delta'] = $val ? 'вложенная группа' : 'не вложенная группа';
-				$row['color'] = 'blue';
-				break;
-			case UPKIND_SIZE:
-				$row['delta'] = (($pos = $val > 0) ? '+' : '-') . fs(abs($val * 1024));
-				$row['color'] = $pos ? 'green' : 'red';
-			default:
-			}
-			$t[patternize($p4, $row)][] = patternize($p3, $row);
-			$c3++;
+			$pages[] = intval($row['id']);
+			$time = intval($row['time']) + $offset;
+			$time = ($time - $time % $day) / $day;
+			if ($now - $time > 30) $time = $now - 31;
+			$timeslice[$time][] = &$row;
+			if ($row['kind'] == UPKIND_SIZE)
+				$sizes[intval($row['id'])] = 0;
 		}
 
-	$u = array();
-	foreach ($t as $author => $updates) {
-		$o = join('', $updates);
-		$u[] = "<div class=\"cnt-item\">
-					$author{$o}
-				</div>
-				";
+		$q = $p->get(array_keys($sizes), 'id, size');
+		foreach ($q as $size)
+			$sizes[intval($size['id'])] = intval($size['size']);
+
+		$uid = User::get()->ID();
+		$traces = array();
+		if ($uid) {
+			$f = $h->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` in (" . join(",", $pages) . ")", 'collumns' => '`page`, `trace`'));
+			if ($f['total'])
+				foreach ($f['data'] as &$row)
+					$traces[intval($row['page'])] = intval($row['trace']);
+		}
+
+
+//		debug($sizes);
+//		debug($timeslice);
+
+		foreach ($timeslice as $time => $day) {
+			$t = array();
+			foreach ($day as &$row) {
+				$c3++;
+				$val = $row['value'];
+//				if (!$val) continue;
+				$row['time'] = date('d.m.Y H:i:s', intval($row['time']));
+				$row['inline'] = (strpos($row['group_title'], '@') !== false) ? '<span class="inline-mark">@</span>' : '';
+				$row['group_title'] = str_replace(array('@ ', '@'), '', $row['group_title']);
+				$row['title'] = patternize($p5, $row);
+				$pageid = intval($row['id']);
+				$trace = ($uid && isset($traces[$pageid])) ? $traces[$pageid] : -1;
+				$hint = $pageid ? $p->traceMark($uid, $trace, $pageid, $row['author']) : '';
+				$hint = '<span style="position: absolute; margin-left: 10px;">' . $hint . '</span>';
+				$row['hint'] = $hint;
+				switch ($row['kind']) {
+				case UPKIND_GROUP:
+					$row['delta'] = patternize('перенесено из <a href="/pages?group={%old_id}">{%old_title}</a>', $row);
+					$row['color'] = 'blue';
+					break;
+				case UPKIND_DELETED_GROUP:
+					$row['title'] = '';
+					$row['delta'] = 'группа удалена';
+					$row['color'] = 'red';
+					break;
+				case UPKIND_INLINE:
+					$row['title'] = '';
+					$row['delta'] = $val ? 'вложенная группа' : 'не вложенная группа';
+					$row['color'] = 'blue';
+					break;
+				case UPKIND_SIZE:
+					$change = $sizes[$row['id']] - $val;
+					if (!$change) {
+						$row['delta'] = Loc::lget(($added = $val > 0) ? 'added' : 'deleted');
+						$row['color'] = $added ? 'green' : 'maroon';
+					} else {
+						$row['delta'] = (($pos = $val > 0) ? '+' : '-') . fs(abs($val * 1024));
+						$row['color'] = $pos ? 'green' : 'red';
+					}
+				default:
+				}
+				$t[patternize($p4, $row)][] = patternize($p3, $row);
+			}
+			$e = array();
+			foreach ($t as $author => $updates) {
+				$updates[$i = count($updates) - 1] = str_replace(' dotted', '', $updates[$i]);
+				$o = join('', $updates);
+				$e[] = "<div class=\"cnt-item\">
+							$author{$o}
+						</div>
+						";
+			}
+			$u[] = '<small><b>&nbsp; ' . daysAgo($now - $time) . '</b></small>' . join('', $e);
+		}
 	}
 
-	$c3 = $c3 . '/' . $d['total'];
+	$_total = $d['total'];
+	$_from = ($page - 1) * $pagesize + 1;
+	$_to = min($_total, $_from + $pagesize - 1);
+
+	$c3 = $updatelist ? "$_from-$_to" : $c3;
+	$c3 = $c3 . '/<a href="?action=updatelist">' . $d['total'] . '</a>';
 	$u = join('', $u);
 
-	require_once 'core_authors.php';
-	require_once 'core_history.php';
-	$a = AuthorsAggregator::getInstance();
-	$h = HistoryAggregator::getInstance();
-	$idx = $h->authorsToUpdate(0, 1);
-	$d = $a->get($idx, '`id`, `fio`, `time`');
-	$r = array();
-	if (!!$d)
-		foreach ($d as &$row) {
-			$row['delta'] = tmDelta($row['time']);
-			$row['time'] = date('d.m.Y H:i:s', $t = intval($row['time']));
-			$r["$t . " . count($r)] = patternize($p1, $row);
+	if ($updatelist)
+		$u .= '<ul class="pages">' . $a->generatePageList($page, ceil($d['total'] / $pagesize), '?page=', '&action=updatelist') . '</ul>';
+	else {
+		require_once 'core_authors.php';
+		$a = AuthorsAggregator::getInstance();
+		$idx = $h->authorsToUpdate(0, 1);
+		$d = $a->get($idx, '`id`, `fio`, `time`');
+		$r = array();
+		if (!!$d)
+			foreach ($d as &$row) {
+				$row['delta'] = tmDelta($row['time']);
+				$row['time'] = date('d.m.Y H:i:s', $t = intval($row['time']));
+				$r["$t . " . count($r)] = patternize($p1, $row);
+			}
+
+		ksort($r);
+		$r = join('', $r);
+
+		require_once 'core_queue.php';
+		$q = QueueAggregator::getInstance();
+		$d = $q->fetch(array('desc' => 0
+		, 'filter' => '(`state` = 0) or (`state` <> 0 and `updated` < ' . ($t - QUEUE_FAILTIME) . ') limit 50'
+		, 'collumns' => '`id` as `0`, `page` as `1`'
+		));
+		$e = array();
+		if ($d['total']) {
+			$idx = array();
+			foreach ($d['data'] as &$row)
+				$idx[] = intval($row[1]);
+
+			$y = $p->get($idx, '`id`, `title`, `link`, `time`');
+			foreach ($y as $idx => &$row) {
+				$row['delta'] = tmDelta($row['time']);
+				$row['time'] = date('d.m.Y H:i:s', intval($row['time']));
+				$e[] = patternize($p2, $row);
+			}
 		}
 
-	ksort($r);
-	$r = join('', $r);
+		$_c2 = count($e);
+		$c2 = $_c2 . '/' . $d['total'];
+		$e = join('', $e);
 
-	require_once 'core_queue.php';
-	require_once 'core_page.php';
-	$q = QueueAggregator::getInstance();
-	$p = PagesAggregator::getInstance();
-	$d = $q->fetch(array('desc' => 0
-	, 'filter' => '(`state` = 0) or (`state` <> 0 and `updated` < ' . ($t - QUEUE_FAILTIME) . ') limit 50'
-	, 'collumns' => '`id` as `0`, `page` as `1`'
-	));
-	$e = array();
-	if ($d['total']) {
-		$idx = array();
-		foreach ($d['data'] as &$row)
-			$idx[] = intval($row[1]);
-
-		$y = $p->get($idx, '`id`, `title`, `link`, `time`');
-		foreach ($y as $idx => &$row) {
-			$row['delta'] = tmDelta($row['time']);
-			$row['time'] = date('d.m.Y H:i:s', intval($row['time']));
-			$e[] = patternize($p2, $row);
+		if ($a_id = post_int('a')) {
+			require_once 'core_updates.php';
+			$w = new AuthorWorker();
+			msqlDB::o()->debug = 1;
+			$w->check($a_id);
 		}
-	}
-
-	$c2 = count($e) . '/' . $d['total'];
-	$e = join('', $e);
-
-	if ($a_id = post_int('a')) {
-		require_once 'core_updates.php';
-		$w = new AuthorWorker();
-		msqlDB::o()->debug = 1;
-		$w->check($a_id);
 	}
 
 	function tmDelta($t) {
@@ -148,14 +220,34 @@
 		return "{$h}ч. {$m}м.";
 	}
 
+	function daysAgo($delta) {
+		switch (true) {
+		case $delta ==  0: return 'сегодня';
+		case $delta ==  1: return 'вчера';
+		case $delta <= 30: return $delta . ' ' . aaxx($delta, 'д', array('ень', 'ня', 'ней')) . ' назад';
+		case $delta >  30: return 'больше месяца назад';
+		}
+	}
+
 	if ($this->ctl->userModer)
 		View::addKey('moder', '<span class="pull_right">[ <a href="/updates/authors">проверка авторов</a> | <a href="/updates/pages/10">обработка очереди</a> | <a href="/pages/cleanup">чистка</a> ]</span>')
 ?>
 				<div class="title content-header">Последние обновления (<?=$c3?>):</div>
 				<?=$u?>
 
+
+<?php
+	if (!$updatelist) {
+?>
 				<div class="title content-header">Очередь на проверку обновлений:</div>
 				<?=$r?>
+<?php
+		if ($_c2) {
+?>
 
 				<div class="title content-header">Обновления произведений (<?=$c2?>):</div>
 				<?=$e?>
+<?php
+		}
+	}
+?>
