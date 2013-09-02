@@ -46,7 +46,11 @@
 				<span class="head">{%timestamp}</span>
 				<span class="link size">{%size}</span>
 			</div>
-			<div class="text">[ <a href="/{%root}/version/{%page}?action=view&version={%version}">{%view}</a><span class="v-diff {%last}">&nbsp;| {%diff}: {%prev}</span> ]</div>
+			<div class="text">[
+				<a href="/{%root}/version/{%page}/view/{%version}">{%view}</a>
+			| <a href="/{%root}/download/{%page}/{%version}" noindex nofollow>{%download}</a>
+				<span class="v-diff {%last}">&nbsp;| {%diff}: {%prev}</span>
+			]</div>
 		</div>
 		';
 		const VERSION_PATT2 = '
@@ -56,7 +60,8 @@
 				<span class="link size">{%size}</span>
 			</div>
 			<div class="text">[
-				<a href="/{%root}/version/{%page}?action=view&version={%version}">{%view}</a>
+				<a href="/{%root}/version/{%page}/view/{%version}">{%view}</a>
+			| <a noindex nofollow href="/{%root}/download/{%page}/{%version}">{%download}</a>
 			]</div>
 		</div>
 		';
@@ -191,19 +196,45 @@
 			return '';//patternize($this->ID_PATTERN, $row);
 		}
 
+		function decodeVersion($r, $offset = 2, $diff = false) {
+			if ($version = post_int('version'))
+				return $version;
+
+			$date = uri_frag($r, $offset, 0, false);
+			if (strpos($date, ',') === false) {
+				$date = explode('-', $date);
+				$time = explode('-', uri_frag($r, $offset + 1, 0, false));
+				$t1 = mktime($time[0], $time[1], $time[2], $date[1], $date[0], $date[2]);
+				if ($diff) {
+					$offset += 2;
+					$date = explode('-', uri_frag($r, $offset + 0, 0, false));
+					$time = explode('-', uri_frag($r, $offset + 1, 0, false));
+					$t2 = mktime($time[0], $time[1], $time[2], $date[1], $date[0], $date[2]);
+					$t = array($t1, $t2);
+				} else
+					$t = $t1;
+
+
+			} else
+				$t = explode(',', $date);
+
+//			debug(array($t, $r, $date, $time));
+			return $t;
+		}
+
 		function actionVersion($r) {
 			$page = uri_frag($r, 0);
 			if (!$page)
 				throw new Exception('Page ID not specified!');
 
 			$a = $this->getAggregator(0);
-			$data = $a->get($page, '`id`, `title`, `author`, `description`');
+			$data = $a->get($page, '`id`, `title`, `author`, `description`, `link`');
 
 			if (!$data['id'])
 				throw new Exception('Page not found!');
 
 			$aa = $this->getAggregator(1);
-			$adata = $aa->get($author = intval($data['author']), '`fio`');
+			$adata = $aa->get($author = intval($data['author']), '`fio`, `link`');
 			$alink = "<a href=\"/authors/id/{$data['author']}\">{$adata['fio']}</a>";
 			$plink = "<a href=\"/pages/version/{$page}\">{$data['title']}</a>";
 
@@ -231,21 +262,29 @@
 			}
 
 			View::addKey('hint', $a->traceMark($uid, $trace, $page, $author));
+			$action = post('action');
+			if (!$action)
+				$action = uri_frag($r, 1, null, false);
 
-			switch ($action = post('action')) {
+			View::addKey('title', "$alink - $plink");
+
+			$cur_version = '';
+			switch ($action) {
 			case 'view':
-				View::addKey('title', "$alink - $plink");
-				View::addKey('moder', '<span style="font-size: 80%;">[update: ' . date('d.m.Y', $version) . ']</span>');
-				$version = post_int('version');
+				$version = $this->decodeVersion($r, 2);
+				$cur_version = '&nbsp; <span style="font-size: 80%;">[' . Loc::lget('date') . ': ' . date('d.m.Y', $version) . ']</span>';
 				$cnt = @file_get_contents("$storage/$version.html");
-				$cnt1 = @gzuncompress/**/($cnt);
-				if ($cnt1 !== false)
-					$cnt = $cnt1;
-				else
-					@file_put_contents("$storage/$version.html", gzcompress($cnt));
+				if ($cnt !== false) {
+					$cnt1 = @gzuncompress/**/($cnt);
+					if ($cnt1 !== false)
+						$cnt = $cnt1;
+					else
+						@file_put_contents("$storage/$version.html", gzcompress($cnt));
+					$cnt1 = preg_replace('">([_\.]+)<"', '&gt;\1&lt;', $cnt1);
+					$cnt = $this->prepareForGrammar($cnt, true);
+				} else
+					throw new Exception('Version not found!');
 
-				$cnt1 = preg_replace('">([_\.]+)<"', '&gt;\1&lt;', $cnt1);
-				$cnt = $this->prepareForGrammar($cnt, true);
 				View::addKey('preview', mb_convert_encoding($cnt, 'UTF-8', 'CP1251'));
 				View::addKey('grammar', $this->fetchGrammarSuggestions($page));
 				View::addKey('h_old', '');
@@ -255,7 +294,6 @@
 				rsort($p);
 				$l = count($p) - 1;
 
-				View::addKey('title', "$alink - $plink");
 				if ($l >= 0) {
 					$newest = $p[0];
 					$oldest = $p[count($p) - 1];
@@ -272,15 +310,16 @@
 						$row = array_merge($data, $row, $adata);
 						$row['view'] = Loc::lget('view');
 						$row['diff'] = Loc::lget('diff');
-						$row['version'] = $version;
+						$row['download'] = Loc::lget('download');
+						$row['version'] = date('d-m-Y/H-i-s', $version);
 						$row['prew'] = ($idx < $l) ? intval($p[$idx + 1]) : 0;
-						$row['timestamp'] = date('d.m.Y h:i:s', $version);
+						$row['timestamp'] = date('d.m.Y H:i:s', $version);
 						$row['size'] = fs(filesize("$storage/$version.html"));
-						$t = '<a href="/{%root}/diff/{%page}/{%version},{%prev}" {%oldest}>{%time}</a>';
+						$t = '<a href="/{%root}/diff/{%page}/{%version}/{%prev}" {%oldest}>{%time}</a>';
 						$u = array();
 						foreach ($p as $v2)
 							if ($v2 < $version) {
-								$row['prev'] = $v2;
+								$row['prev'] = date('d-m-Y/H-i-s', $v2);
 								$row['time'] = date('d.m.Y', $v2);
 								$fresh = ($v2 >= $diffopen) ? 'fresh' : 'new';
 								$row['oldest'] = ($v2 >= $lastseen) ? " class=\"diff-to-{$fresh}\"" : '';
@@ -296,9 +335,145 @@
 					View::addKey('moder', '');
 				}
 			}
+			$this->makeDetailHint($a->traceMark($uid, $trace, $page, $author) . $cur_version, $data['description'], $adata['link'], $data['link']);
 
 			if ($action == 'view')
 				$this->updateTrace($page, post_int('version'));
+		}
+
+		function actionDownload($r) {
+			$page = uri_frag($r, 0);
+			if (!$page)
+				throw new Exception('Page ID not specified!');
+
+			$version = ($v = $this->decodeVersion($r, 1)) !== false ? $v : uri_frag($r, 1);
+			if (!$version)
+				throw new Exception('Unknown version!');
+
+			$a = $this->getAggregator(0);
+			$data = $a->get($page, '`id`, `title`, `author`, `description`, `link`, `time`');
+
+			if (!$data['id'])
+				throw new Exception('Page not found!');
+
+			$aa = $this->getAggregator(1);
+			$adata = $aa->get($author = intval($data['author']), '`fio`, `link`');
+
+			$storage = 'cms://cache/pages/' . $page;
+
+			if (!is_file("$storage/$version.html"))
+				throw new Exception('Cache not found!');
+
+			$file = post('filename');
+
+			$dld = $file != null;
+			if ($dld) {
+				$offset = ($v !== false) ? 1 : 0;
+				$ftx = uri_frag($r, $offset + 2, 0, 0);
+				$ftx = intval(strtolower($ftx) == 'txt');
+				$enc = uri_frag($r, $offset + 3, 0, 0);
+				$enc = intval(strtolower($enc) == 'utf-8');
+				$arc = uri_frag($r, $offset + 4, 0, 0);
+				$arc = intval(strtolower($arc) == 'zip');
+			}
+
+//			$enc = post_int('enc');
+//			$ftx = post_int('fmt');
+//			$dld = post('action') == 'download';
+
+			$fio = $adata['fio'];
+			$title = $data['title'];
+			if (!$dld) {
+				$alink = "<a href=\"/authors/id/{$data['author']}\">{$adata['fio']}</a>";
+				$plink = "<a href=\"/pages/version/{$page}\">{$data['title']}</a>";
+
+				View::addKey('meta-keywords', "{$adata['fio']}, {$data['title']}");
+				View::addKey('meta-description', Loc::lget('last_updates') . ": {$adata['fio']} - {$data['title']}. {$data['description']}");
+				$ha = $this->getAggregator(3);
+				$uid = $this->user->ID();
+				$trace    = -1;
+				if ($uid) {
+					$f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`trace`'));
+					if ($f['total'])
+						$trace = intval($f['data'][0]['trace']);
+				}
+
+				View::addKey('title', "$alink - $plink");
+				View::addKey('version', date('d.m.Y H:i:s', $version));
+				$this->makeDetailHint($a->traceMark($uid, $trace, $page, $author), $data['description'], $adata['link'], $data['link']);
+			}
+
+			$cnt = @file_get_contents("$storage/$version.html");
+			$cnt1 = @gzuncompress/**/($cnt);
+			if ($cnt1 !== false) $cnt = $cnt1; else @file_put_contents("$storage/$version.html", gzcompress($cnt));
+			$cnt1 = preg_replace('">([_\.]+)<"', '&gt;\1&lt;', $cnt1);
+
+			$cnt1 = trim(str_replace(array("\r", "\n"), '', $cnt1));
+			$cnt1 = strip_tags($cnt1, '<strong><small><h1><h2><h3><h4><h5><h6><h7><h8><font><dd><p><div><span><a><ul><ol><li><img><table><tr><td><thead><tbody><br><u><b><i><s>');
+			$cnt1 = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $cnt1);
+			$cnt1 = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $cnt1);
+			$cnt = str_replace(PHP_EOL, '<br />', $cnt1);
+
+			require_once 'download.php';
+			$filename = $this->genFilename($fio, $title);
+			$html_title =  mb_convert_encoding("$fio - $title", 'CP1251', 'UTF-8');
+
+			if ($dld) {
+				switch (true) {
+				case ($ftx): $_f = PDW::FMT_TXT; break;
+				case (!$ftx): $_f = PDW::FMT_HTML; break;
+				}
+
+				switch (true) {
+				case (!!$enc): $_e = PDW::ENC_UTF8; break;
+				case (!$enc): $_e = PDW::ENC_WIN1251; break;
+				}
+
+				switch (true) {
+				case (!!$arc): $_a = PDW::FILE_ARCH; break;
+				case (!$arc): $_a = PDW::FILE_PLAIN; break;
+				}
+
+				$this->updateTrace($page, post_int('version'));
+				$pdw = new PDW();
+				$pdw->giveFile($html_title, $filename, $cnt, $_a | $_f | $_e, $version, true);
+			}
+
+			$version = date('d-m-Y/H-i-s', $version);
+			View::addKey('options', PDW::enumFormats("/pages/download/$page/$version", $filename, $html_title, $cnt));
+			$this->view->renderTPL('pages/download');
+		}
+
+		function makeDetailHint($hint, $desc, $alink, $link) {
+				$original = Loc::lget('original');
+				$comments = Loc::lget('comments');
+				$link1 = "$alink/$link";
+				$link2 = str_replace('.shtml', '', $link1);
+				$hint = "
+				$hint<br />
+				<div style=\"font-weight: normal; color: #aaa;\">$desc</div>
+			</div>
+			<div class=\"cnt-item\" style=\"overflow: hidden;\">
+				<div>
+				<div class=\"title\" style=\"font-weight: normal;\">
+					$original: <div class=\"link samlib\" style=\"float: none;\">
+						<a href=\"http://samlib.ru/$link1\">/$link1</a>
+					</div>
+					$comments: <div class=\"link samlib\" style=\"float: none;\">
+						<a href=\"http://samlib.ru/comment/$link2\">/comment/$link2</a>
+					</div>
+				</div>
+				</div>
+				";
+
+				View::addKey('hint', $hint);
+		}
+
+		function genFilename($fio, $title) {
+			$filename = preg_replace('/[^\p{L}\d-]/iu', '_', $fio) . '_-_' . preg_replace('/[^\p{L}\d-]/iu', '_', $title);
+			$filename = preg_replace('/[_]{2,}/', '_', $filename);
+			$filename = translit($filename);
+			return str_replace('_.', '.', $filename);
 		}
 
 		function updateTrace($page_id, $version) {
@@ -325,9 +500,15 @@
 			if ($data['id'] != $page)
 				throw new Exception('Resource not found o__O');
 
-			$u = explode(',', uri_frag($r, 1, '', 0));
+			$u = $this->decodeVersion($r, 1, true);
 			$cur = intval($u[0]);
 			$old = intval($u[1]);
+
+//			debug(array($cu, $old));
+
+//			$u = explode(',', uri_frag($r, 1, '', 0));
+//			$cur = intval($u[0]);
+//			$old = intval($u[1]);
 
 			if (!($cur * $old))
 				throw new Exception('Old or current version not found');
@@ -343,7 +524,9 @@
 			$plink = "<a href=\"/pages/version/{$page}\">{$data['title']}</a>";
 			$old_d = date('d.m.Y', $old);
 			$cur_d = date('d.m.Y', $cur);
-			View::addKey('title', $alink . ' - ' . $plink . " <span style=\"font-size: 80%;\">[$old_d <a href=\"" . ($show_old ? $cur . ',' . $old : '?showold=true') . "\">" . $d[$show_old] . "</a> $cur_d]</span>");
+			$diff_ver = date('d-m-Y/H-i-s', $cur) . '/' . date('d-m-Y/H-i-s', $old);
+//			$diff_ver = $cur . ',' . $old;
+			View::addKey('title', $alink . ' - ' . $plink . " <span style=\"font-size: 80%;\">[$old_d <a href=\"/pages/diff/$page/$diff_ver" . ($show_old ? '' : '?showold=true') . "\">" . $d[$show_old] . "</a> $cur_d]</span>");
 
 			$t1 = @file_get_contents("$storage/{$old}.html");
 			$t2 = @file_get_contents("$storage/{$cur}.html");
@@ -398,18 +581,21 @@
 
 		function prepareForGrammar($c, $cleanup = false) {
 			if ($cleanup) {
-				$c = strip_tags($c, '<dd><p><br><u><b><i><s>');
+				$c = strip_tags($c, '<dd><p><div><span><a><ul><ol><li><img><table><tr><td><thead><tbody><br><u><b><i><s>');
 				$c = preg_replace('"<p([^>]*)?>(.*?)<dd>"i', '<p\1>\2</p><dd>', $c);
+				$c = preg_replace('"(</?(td|tr|table)[^>]*>)'.PHP_EOL.'"', '\1', $c);
+				$c = preg_replace('"'.PHP_EOL.'(</?(td|tr|table)[^>]*>)"', '\1', $c);
 				$c = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $c);
 				$c = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $c);
+				$c = preg_replace('"<(i|s|u)>(\s*)</\1>"', '\2', $c);
+				$c = preg_replace('"</(i|s|u)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
+
 			} else
 				$c = str_replace('<br />', PHP_EOL, $c);
 
-			$c = preg_replace('"<([^>]+)>(\s*)</\1>"', '\2', $c);
-			$c = preg_replace('"</([^>]+)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
 			$idx = 0;
 			$p = 0;
-			while (preg_match('"<(([\w]+)([^>/]*))>"', substr($c, $p), $m, PREG_OFFSET_CAPTURE)) {
+			while (preg_match('"<(([\w\d]+)([^>]*))>"', substr($c, $p), $m, PREG_OFFSET_CAPTURE)) {
 				$p += intval($m[0][1]);
 				$sub = $m[0][0];
 				if (strpos($sub, 'class="pin"') === false) {
@@ -421,6 +607,13 @@
 					$p += strlen($u);
 				} else
 					$p += strlen($sub);
+			}
+			$p = 0;
+			while (preg_match('|<img [^>]*(src=(["\']?))/[^\2>]+\2[^>]*(>)|i', substr($c, $p), $m, PREG_OFFSET_CAPTURE)) {
+				$p += intval($m[1][1]);
+				$u = $m[1][0] . 'http://samlib.ru';
+				$c = substr_replace($c, $u, $p, strlen($m[1][0]));
+				$p += strlen($u) + intval($m[3][1]) - intval($m[1][1]) - 5;
 			}
 			return str_replace(PHP_EOL, '<br />', $c);
 		}
