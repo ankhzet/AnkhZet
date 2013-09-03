@@ -196,6 +196,42 @@
 			return '';//patternize($this->ID_PATTERN, $row);
 		}
 
+		function makeDetailHint($hint, $desc, $alink, $link) {
+			$original = Loc::lget('original');
+			$comments = Loc::lget('comments');
+			$link1 = "$alink/$link";
+			$link2 = str_replace('.shtml', '', $link1);
+
+			$adiff = $this->isDiffMode();
+			$ndiff = intval(!$adiff);
+			$diffs = Loc::lget(($ndiff ? 'show' : 'hide') . '_diffs');
+			$diffst = Loc::lget(($ndiff ? 'diffs' : 'calendar') . '_mode');
+			$adiffs = Loc::lget('diff_' . ($adiff ? 'always' : 'newer'));
+
+			$hint = "
+			$hint<br />
+				<div style=\"font-weight: normal; color: #aaa;\">$desc</div>
+			</div>
+			<div class=\"cnt-item\" style=\"overflow: hidden;\">
+				<div>
+					<div class=\"title\" style=\"font-weight: normal;\">
+						$original: <div class=\"link samlib\" style=\"float: none;\">
+							<a href=\"http://samlib.ru/$link1\">/$link1</a>
+						</div>
+						$comments: <div class=\"link samlib\" style=\"float: none;\">
+							<a href=\"http://samlib.ru/comment/$link2\">/comment/$link2</a>
+						</div>
+						$diffs: <div class=\"link\" style=\"float: none;\">
+							<a nofollow noindex href=\"?diff_mode=$ndiff\">$diffst</a><br >
+							<a nofollow noindex href=\"?diff_always=$adiff\">$adiffs</a>
+						</div>
+					</div>
+				</div>
+				";
+
+				View::addKey('hint', $hint);
+		}
+
 		function decodeVersion($r, $offset = 2, $diff = false) {
 			if ($version = post_int('version'))
 				return $version;
@@ -220,6 +256,22 @@
 
 //			debug(array($t, $r, $date, $time));
 			return $t;
+		}
+
+		function isDiffMode() {
+			if (isset($_REQUEST['diff_always'])) {
+				$diff_mode = intval($_REQUEST['diff_always']);
+				$t = time() + ($diff_mode ? 1 : -1) * 2592000;
+				$host = $_SERVER['HTTP_HOST'];
+				preg_match('/(.*\.|^)([^\.]+\.[^\.]+)$/i', $host, $m);
+				setcookie('diff_mode', $diff_mode, $t, "/", '.' . $m[2]);
+				$_REQUEST['diff_mode'] = $diff_mode;
+			} else {
+				$dm_cook = isset($_COOKIE['diff_mode']);
+				$dm_post = isset($_GET['diff_mode']);
+				$diff_mode = $dm_post ? intval($_GET['diff_mode']) : ($dm_cook ? intval($_COOKIE['diff_mode']) : 0);
+			}
+			return $diff_mode;
 		}
 
 		function actionVersion($r) {
@@ -298,38 +350,41 @@
 					$newest = $p[0];
 					$oldest = $p[count($p) - 1];
 					$lastseen = ($lastseen >= 0) ? $lastseen : $newest;
-
 					$diffopen = ($v = post_int('version')) ? $v : $lastseen;
-					$row = array('root' => $this->_name, 'page' => $page);
 
-					$ldate = date('d.m.Y', $newest);
-					$full = Loc::lget('full_last_version');
-					$last = $newest ? "<br /><span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>" : '';
-					View::addKey('moder', $last);
-					foreach ($p as $idx => $version) {
-						$row = array_merge($data, $row, $adata);
-						$row['view'] = Loc::lget('view');
-						$row['diff'] = Loc::lget('diff');
-						$row['download'] = Loc::lget('download');
-						$row['version'] = date('d-m-Y/H-i-s', $version);
-						$row['prew'] = ($idx < $l) ? intval($p[$idx + 1]) : 0;
-						$row['timestamp'] = date('d.m.Y H:i:s', $version);
-						$row['size'] = fs(filesize("$storage/$version.html"));
-						$t = '<a href="/{%root}/diff/{%page}/{%version}/{%prev}" {%oldest}>{%time}</a>';
-						$u = array();
-						foreach ($p as $v2)
-							if ($v2 < $version) {
-								$row['prev'] = date('d-m-Y/H-i-s', $v2);
-								$row['time'] = date('d.m.Y', $v2);
-								$fresh = ($v2 >= $diffopen) ? 'fresh' : 'new';
-								$row['oldest'] = ($v2 >= $lastseen) ? " class=\"diff-to-{$fresh}\"" : '';
-								$u[] = patternize($t, $row);
-							}
+					if ($this->isDiffMode()) {
+						$row = array('root' => $this->_name, 'page' => $page);
 
-						$row['prev'] = count($u) ? '&rarr; <div class="versions"><div>' . join('', $u) . '</div></div>' : '';
-						$row['last'] = !$idx ? 'last' : '';
-						echo patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
-					}
+						$ldate = date('d.m.Y', $newest);
+						$full = Loc::lget('full_last_version');
+						$last = $newest ? "<br /><span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>" : '';
+						View::addKey('moder', $last);
+						foreach ($p as $idx => $version) {
+							$row = array_merge($data, $row, $adata);
+							$row['view'] = Loc::lget('view');
+							$row['diff'] = Loc::lget('diff');
+							$row['download'] = Loc::lget('download');
+							$row['version'] = date('d-m-Y/H-i-s', $version);
+							$row['prew'] = ($idx < $l) ? intval($p[$idx + 1]) : 0;
+							$row['timestamp'] = date('d.m.Y H:i:s', $version);
+							$row['size'] = fs(filesize("$storage/$version.html"));
+							$t = '<a href="/{%root}/diff/{%page}/{%version}/{%prev}" {%oldest}>{%time}</a>';
+							$u = array();
+							foreach ($p as $v2)
+								if ($v2 < $version) {
+									$row['prev'] = date('d-m-Y/H-i-s', $v2);
+									$row['time'] = date('d.m.Y', $v2);
+									$fresh = ($v2 >= $diffopen) ? 'fresh' : 'new';
+									$row['oldest'] = ($v2 >= $lastseen) ? " class=\"diff-to-{$fresh}\"" : '';
+									$u[] = patternize($t, $row);
+								}
+
+							$row['prev'] = count($u) ? '&rarr; <div class="versions"><div>' . join('', $u) . '</div></div>' : '';
+							$row['last'] = !$idx ? 'last' : '';
+							echo patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
+						}
+					} else
+						echo $this->buildCalendar($page, $p, $lastseen, $storage);
 				} else {
 					echo Loc::lget('pages_noversions');
 					View::addKey('moder', '');
@@ -339,6 +394,119 @@
 
 			if ($action == 'view')
 				$this->updateTrace($page, post_int('version'));
+		}
+
+		function buildCalendar($page, $versions, $lastseen, $storage) {
+			$_tday = 60 * 60 * 24; // 1 day in seconds
+
+			$result = '';
+			$updates = explode(',', Loc::lget('updates'));
+			$update_base = array_shift($updates);
+			setlocale(LC_TIME, 'ru_RU.UTF-8');
+			$read = Loc::lget('view');
+			$row['diff'] = Loc::lget('diff');
+			$download = Loc::lget('download');
+			$ccc = count($versions);
+			while ($versions && ($ccc-- > 0)) {
+				rsort($versions);
+
+				$date = getdate($versions ? $versions[0] : time());
+				$month = intval($date['mon']);
+				$day = intval($date['mday']);
+				$year = intval($date['year']);
+				$days = intval(date('d', mktime(0, 0, 0, $month + 1, 0, $year)));
+				$prev = intval(date('d', mktime(0, 0, 0, $month, 0, $year)));
+
+				$start = mktime(0, 0, 0, $month, 1, $year);
+
+				$first= mktime(0, 0, 0, $month, 1, $year);
+				$date = getdate($first);
+				$fday = intval($date['wday']);
+				$fday = ($fday == 0) ? 6 : $fday - 1;
+
+				$last = mktime(0, 0, 0, $month, $days, $year);
+				$date = getdate($last);
+				$lday = intval($date['wday']);
+				$lday = ($lday == 0) ? 6 : $lday - 1;
+
+				$pred = $prev - $fday + 1;
+				$succ = 6 - $lday;
+
+
+				$d = array();
+				while ($pred++ <= $prev)
+					$d[] = $start - ($prev - $pred + 2) * $_tday;
+
+				$f = 1;
+				while ($f++ <= $days)
+					$d[] = $start + ($f - 2) * $_tday;
+
+				if (count($d) + $succ < 6 * 7) $succ += 7;
+				$f = 1;
+				while ($f++ <= $succ)
+					$d[] = $start + ($days + $f - 2) * $_tday;
+
+				$c = 6;
+				$r = '';
+				while ($c-- > 0) {
+					$w = '';
+					for ($i = 0; $i < 7; $i++) {
+						$day = array_shift($d);
+						$nxt = $day + $_tday;
+
+						$current = !(($day < $start) || ($day >= $start + $days * $_tday));
+						$v = array();
+						if ($current)
+							foreach ($versions as $version)
+								if ($version >= $nxt)
+									continue;
+								else
+									if ($version < $day)
+										break;
+									else
+										$v[] = $version;
+
+						$current = $current ? '' : ' class="calendar-grey"';
+
+						$dayname = date('j', $day);
+						if ($v) {
+							$versions = array_diff($versions, $v);
+							$m = ($cnt = count($v)) > 1;
+
+								$e = array();
+								foreach ($v as $version) {
+									$new = ($version > $lastseen) ? ' calendar-new' : '';
+									$size = fs(@filesize("$storage/$version.html"));
+									$time = date('H:i:s', $version);
+									$version = date('d-m-Y/H-i-s', $version);
+									$e[] = "<li class=\"$new\">&raquo; $time, $size: <a href=\"/pages/version/$page/view/$version\">$read</a> | <a href=\"/pages/download/$page/$version\">$download</a></li>";
+								}
+								$v = join('', $e);
+								$m = ' calendar-multiple';
+								$action = '';
+								$dayname2 = date('j-m-Y', $day);
+								$up_form = aaxx($cnt, $update_base, $updates);
+								$dayname = "<a>$dayname</a><div class=\"calendar-multi-versions\"><b>$dayname2</b>: $cnt $up_form<br /><ul>$v</ul></div>";
+
+							$current = " class=\"calendar-version{$m}{$new}\"";
+						}
+
+						$w = "<td{$current}>$dayname</td>" . $w;
+					}
+
+					$r = "<tr>$w</tr>\r\n" . $r;
+				}
+
+				$cur = Loc::lget('updates_by') . ' ' . strftime('%B, %Y', mktime(0, 0, 0, $month, 1, $year));
+				$h = "<tr><td colspan=\"7\" class=\"calendar-header\">$cur</td></tr>\r\n";
+				$result .= "\r\n$h$r";
+			}
+
+
+			if (count($versions))
+				echo "oO?"; // omg, how did that happened
+
+			return "\r\n<table class='calendar'>\r\n$result\r\n</table>\r\n";
 		}
 
 		function actionDownload($r) {
@@ -442,31 +610,6 @@
 			$version = date('d-m-Y/H-i-s', $version);
 			View::addKey('options', PDW::enumFormats("/pages/download/$page/$version", $filename, $html_title, $cnt));
 			$this->view->renderTPL('pages/download');
-		}
-
-		function makeDetailHint($hint, $desc, $alink, $link) {
-				$original = Loc::lget('original');
-				$comments = Loc::lget('comments');
-				$link1 = "$alink/$link";
-				$link2 = str_replace('.shtml', '', $link1);
-				$hint = "
-				$hint<br />
-				<div style=\"font-weight: normal; color: #aaa;\">$desc</div>
-			</div>
-			<div class=\"cnt-item\" style=\"overflow: hidden;\">
-				<div>
-				<div class=\"title\" style=\"font-weight: normal;\">
-					$original: <div class=\"link samlib\" style=\"float: none;\">
-						<a href=\"http://samlib.ru/$link1\">/$link1</a>
-					</div>
-					$comments: <div class=\"link samlib\" style=\"float: none;\">
-						<a href=\"http://samlib.ru/comment/$link2\">/comment/$link2</a>
-					</div>
-				</div>
-				</div>
-				";
-
-				View::addKey('hint', $hint);
 		}
 
 		function genFilename($fio, $title) {
