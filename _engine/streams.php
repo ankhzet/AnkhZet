@@ -61,6 +61,11 @@
 			return @rmdir($path);
 		}
 
+		function unlink ($path) {
+			self::real($path, $path);
+			return @unlink($path);
+		}
+
 		function stream_read($count) {
 			return fread($this->fp, $count);
 		}
