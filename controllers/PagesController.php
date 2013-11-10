@@ -939,7 +939,7 @@
 			$p = 0;
 			while (preg_match('|<img [^>]*(src=(["\']?))/[^\2>]+\2[^>]*(>)|i', substr($c, $p), $m, PREG_OFFSET_CAPTURE)) {
 				$p += intval($m[1][1]);
-				$u = $m[1][0] . 'http://samlib.ru';
+				$u = $m[1][0] . 'http://samlib%2Eru';
 				$c = substr_replace($c, $u, $p, strlen($m[1][0]));
 				$p += strlen($u) + intval($m[3][1]) - intval($m[1][1]) - 5;
 			}

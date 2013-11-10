@@ -9,7 +9,8 @@ $(function() {
 		var m = $(this).attr("class").match(/pin(\d+)/i);
 		var idx = parseInt(m[1]) - 1;
 //		alert([p.attr("class"), idx]);
-		$(p).children("span").html(oldtext ? text_new[idx] : text_old[idx]);
+		var html = (oldtext ? text_new[idx] : text_old[idx]).replace(/&quot;/g, '"');
+		$(p).children("span").html(html);
 	});
 
 	$('.multi.link').click(function() {
