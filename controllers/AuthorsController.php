@@ -102,7 +102,7 @@
 					$o = $row[1];
 					$color = ($c == $filter) ? ' selected' : '';
 //					$c = strtoupper($c);
-					$a[] = "<a href=\"/authors?by_name=$c\" class=\"filter$color\">$c</a> <small style=\"font-weight: normal; color: #888;\">($o)</small>";
+					$a[] = "<a href=\"/authors?by_name=$c\" class=\"filter$color\">$c</a> <sup>($o)</sup>";
 				}
 			$this->view->fio_filter = join(', ', $a);
 

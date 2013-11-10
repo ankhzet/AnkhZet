@@ -38,8 +38,10 @@ input {
 }
 
 sub, sup {
-	font-size: 9px;
+	font-size: 80%;
 	line-height: 1px;
+	font-weight: normal;
+	color: #888;
 }
 
 li {
@@ -208,25 +210,16 @@ label {
 	color: #555;
 	font: normal 10px Tahoma, Geneva, sans-serif;
 	text-transform: none;
-	opacity: 0.3;
 	white-space: nowrap;
 	clear: both;
-}
-.cnt-item .title .head .pull_right {
-/*	position: absolute;*/
-}
-*:hover>.pull_right, .pull_right:hover {
-	opacity: 1.0;
 }
 .pull_left {
 	padding: 0 5px;
 	color: #555;
 	font: normal 10px Tahoma, Geneva, sans-serif;
 	text-transform: none;
-	opacity: 0.3;
 }
 *:hover>.pull_left, .pull_left:hover {
-	opacity: 1.0;
 }
 .pull_right a {
 	color: #999;
