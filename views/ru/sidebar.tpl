@@ -1,5 +1,5 @@
 	function sidebar_menu($view) {
-		$uid = $view->ctl->user->ID();
+		$uid = User::get()->ID();
 		$last = $feed = '';
 		$c = FrontEnd::getInstance()->get('config');
 		$logo = $c->get('main.offline') ? 'offline' : 'logo';

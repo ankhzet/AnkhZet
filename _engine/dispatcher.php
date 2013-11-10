@@ -31,9 +31,9 @@ TimeLeech::addTimes('before dispatch');
 				$front   = FrontEnd::getInstance();
 				$ctlroot = $front->getControllerRoot();
 				require_once 'user.php';
-TimeLeech::addTimes('before acl');
+//TimeLeech::addTimes('before acl');
 				$acl = User::get()->ACL();
-TimeLeech::addTimes('after acl');
+//TimeLeech::addTimes('after acl');
 				do {
 					$act = $this->_req->shiftAction();
 					if (!$act) break;
