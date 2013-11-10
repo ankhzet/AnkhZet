@@ -21,7 +21,7 @@
 							<span class="pull_right">[ <a href="/{%root}/uptodate?id[]={%id}">{%uptodate}</a> ]</span>
 						</span>
 						<span class="head small">
-						<span class="link size u2">{%size}KB (<span style="{%diff}">{%delta}KB</span>)</span>
+						<span class="link size u2">{%size}KB {%delta}</span>
 						<span class="link size">{%time}</span>
 						</span>
 					</div>
@@ -43,10 +43,10 @@
 		</div>
 		';
 		const UPDATES_CHECK = '<span class="pull_right">[<a href="/updates/trace">{%checkupdates}</a>]</span>';
-		const UPDATES_HIDDEN = '<span class="pull_right">[<a href="/updates?hidden={%hidden}">{%check}</a>]</span>';
+		const UPDATES_HIDDEN = '<span class="pull_right">[<a href="/updates?hidden={%hidden}{%muid}">{%check}</a>]</span>';
 		const UPDATES_RSS = '<span class="pull_right">[<a href="/rss.xml?channel={%uid}">{%rss}</a>]</span>';
 
-		const AUTHOR_FILTER = '<a href="/updates?{%hidden}author={%id}" class="filter {%color}">{%fio}</a>';
+		const AUTHOR_FILTER = '<a href="/updates?{%hidden}author={%id}{%uid}" class="filter {%color}">{%fio}</a>';
 
 		var $diff_sign = array(-1 => 'color:red', 0 => '', 1 => 'color:green');
 
@@ -69,21 +69,31 @@
 
 		function actionPage($r) {
 			$uid = $this->user->ID();
+			if ($this->userModer && ($muid = post_int('for_user'))) $uid = $muid;
+
 			$author = uri_frag($_REQUEST, 'author', 0);
+			$hidden = uri_frag($_REQUEST, 'hidden', 0);
+			$min_s = uri_frag($_REQUEST, 'min_size', 0);
+			$max_s = uri_frag($_REQUEST, 'max_size', 0);
 			$hidden = uri_frag($_REQUEST, 'hidden', 0);
 			$hidden_f = intval(!$hidden);
 			$author_f = $author ? " and p.`author` = $author" : '';
-			$this->query = '`user` = ' . $this->user->ID();
+			$minsize_f = $min_s ? " and p.`size` >= $min_s" : '';
+			$maxsize_f = $max_s ? " and p.`size` <= $max_s" : '';
+			$this->query = "`user` = $uid";
 			$aggregator = $this->getAggregator();
 			$this->page = $page = uri_frag($r, 0, 1);
 			$l = array();
 			if ($hidden) $l[] = "hidden=1";
 			if ($author) $l[] = "author=$author";
+			if ($muid) $l[] = "for_user=$uid";
+			if ($min_s) $l[] = "min_size=$min_s";
+			if ($max_s) $l[] = "max_size=$max_s";
 			$this->link = (!$l) ? '' : '?' . join('&', $l);
 			$params = array('page' => $page - 1, 'pagesize' => $aggregator->FETCH_PAGE, 'desc' => true);
 			$params['collumns'] = 'h.*, p.`author`, a.`fio`, p.`title`, p.`description`, p.`size` as `new_size`, p.`time` as `updated`, (p.`size` <> h.`size`) as `upd`';
 			$params['order'] = '`upd` desc, `time`';
-			$params['filter'] = "`user` = $uid and `trace` = $hidden_f $author_f";
+			$params['filter'] = "`user` = $uid and `trace` = $hidden_f $author_f $minsize_f $maxsize_f";
 
 			$aggregator->TBL_FETCH = '`history` h left join `pages` p on p.`id` = h.`page` left join `authors` a on a.`id` = p.`author`';
 			$this->data = $aggregator->fetch($this->prepareFetch($params));
@@ -101,6 +111,7 @@
 			, 'check' => Loc::lget($hidden ? 'checktraced' : 'checkhidden') . ($others ? " <sup>$others</sup>" : '')
 			, 'rss' => Loc::lget('RSS')
 			, 'uid' => $uid
+			, 'muid' => $muid ? "&for_user=$uid" : ''
 			, 'hidden' => $hidden_f
 			);
 
@@ -122,6 +133,7 @@
 
 				$pa = $this->getAggregator(2);
 				$i = 0;
+				$pp1 = '<sup style="font-weight: normal;{%diff}">{%delta}KB</sup>';
 				foreach($this->data['data'] as &$row) {
 					$id = intval($row['id']);
 //					$row = array_merge($updates[$id], $row);
@@ -130,9 +142,13 @@
 					$row['pageid'] = $row['page'];
 					$row['page'] = $page;
 					$delta = ($s = intval($row['new_size'])) - intval($row['size']);
-					$row['delta'] = (($delta < 0) ? '' : '+') . $delta;
 					$row['size'] = $s;
-					$row['diff'] = $this->diff_sign[sign($delta)];
+					if ($delta != 0) {
+//						$row['delta'] = (($delta < 0) ? '' : '+') . $delta;
+						$delta = array('diff' => $this->diff_sign[sign($delta)], 'delta' => (($delta < 0) ? '' : '+') . $delta);
+						$row['delta'] = patternize($pp1, $delta);
+					} else
+						$row['delta'] = '';
 					$row['uptodate'] = Loc::lget('uptodate');
 					$row['mark'] = $pa->traceMark($uid, $row['trace'], $row['pageid'], $row['author']);
 					$row['untrace'] = Loc::lget($row['trace'] ? 'untrace' : 'trace');
@@ -152,21 +168,52 @@
 
 			$this->view->data = $n ? $n : Loc::lget("{$this->_name}_nodata");
 
-			$a = $aggregator->authorsToUpdate($this->user->ID(), 1, 1, $hidden_f);
+			$a = $aggregator->authorsToUpdate($uid, 1, 1, $hidden_f);
 			if (count($a)) {
 				$aa = $this->getAggregator(1);
 				$d = $aa->get($a, '`id`, `fio`');
 				$a = array();
 				if (!!$d) {
-					$p = str_replace('{%hidden}', $hidden ? 'hidden=1&' : '', self::AUTHOR_FILTER);
+					$row = array(
+						'hidden' => $hidden ? 'hidden=1&' : ''
+					, 'uid' => $muid ? "&for_user=$uid" : ''
+					);
+					$p = patternize(self::AUTHOR_FILTER, $row);
 					foreach ($d as &$row) {
 						$row['color'] = ($row['id'] == $author) ? 'selected' : '';
 						$a[] = patternize($p, $row);
 					}
 				}
-				$this->view->authors = join(', ', $a);
+				View::addKey('authors', join(', ', $a));
 			} else
-				$this->view->authors = '#';
+				View::addKey('authors', '#');
+
+			$p = array(
+				'hidden' => $hidden ? '&hidden=1&' : ''
+			, 'uid' => $muid ? "&for_user=$uid" : ''
+			, 'author' => $author ? "&author=$author" : ''
+			);
+			$i = array(
+				array(0, 20, '0-20Kb', ' (micro)')
+			, array(20, 100, '20-100Kb', ' (mini)')
+			, array(20, 0, '20Kb+', '')
+			, array(100, 0, '100Kb+', ' (semi)')
+			, array(200, 0, '200Kb+', ' (maxi)')
+			, array(500, 0, '500Kb+', ' (book)')
+			);
+			$s = array();
+			foreach ($i as $range) {
+				$data = array_merge($p, array(
+					'root' => $this->_name
+				, 'from' => "min_size={$range[0]}"
+				, 'to' => $range[1] ? "&max_size={$range[1]}" : ''
+				, 'label' => $range[2]
+				, 'name' => "<span style=\"font-weight: normal\">$range[3]</span>"
+				, 'color' => ($min_s == $range[0] && $max_s == $range[1]) ? 'selected' : ''
+				));
+				$s[] = patternize("<a class=\"filter {%color}\" href=\"/{%root}?{%from}{%to}{%hidden}{%author}{%uid}\">{%label}</a>{%name}", $data);
+			}
+			View::addKey('sizes', join(', ', $s));
 
 			$this->view->renderTPL("{$this->_name}/index");
 		}
@@ -290,8 +337,8 @@
 			require_once 'core_updates.php';
 			$u = new AuthorWorker();
 			$left = $u->serveQueue($limit);
-			if ($left)
-				locate_to("/authors/update/$left");
+//			if ($left)
+//				locate_to("/updates/pages/$left");
 		}
 
 	}
