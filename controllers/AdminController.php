@@ -79,6 +79,9 @@
 		}
 
 		public function actionMain($r) {
+			require_once 'heartbeat.php';
+			Heartbeat::pulse($this->user->ID());
+
 			if (uri_frag($r, 0, 0, 0))
 				if (preg_match('/^[a-z]+$/i', $r[0])) {
 					$sub = Loc::lget('titles.admin' . $r[0]);
