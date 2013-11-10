@@ -9,13 +9,13 @@
 	require_once 'core_parser.php';
 	require_once 'core_comparator.php';
 
-	define('UPKIND_SIZE', 0);
-	define('UPKIND_GROUP', 1);
-	define('UPKIND_DELETE', 2);
-	define('UPKIND_INLINE', 3);
-	define('UPKIND_DELETED_GROUP', 4);
-	define('UPKIND_ADDED', 5);
-	define('UPKIND_DELETED', 6);
+	define('UPKIND_SIZE', 0); // page-related
+	define('UPKIND_GROUP', 1); // page-related
+	define('UPKIND_DELETE', 2); // page-related ???
+	define('UPKIND_INLINE', 3); // group-related
+	define('UPKIND_DELETED_GROUP', 4); // group-related
+	define('UPKIND_ADDED', 5); // page-related
+	define('UPKIND_DELETED', 6); // page-related
 
 	function echo_log($text, $postfix = '') {
 		echo Loc::lget($text) . $postfix . '<br />' . PHP_EOL;
@@ -49,14 +49,14 @@
 			$g->update(array('fio' => $fio, 'time' => time()), $author_id, true);
 
 //			debug2($html);
-//			debug($groups);
+//			debug2($groups);
 //			debug2($inline);
-//			debug($links);
+//			debug2($links);
 //			die();
 
 			// check updates
 			$ga = GroupsAggregator::getInstance();
-			$d = $ga->fetch(array('filter' => '`author` = ' . $author_id, 'nocalc' => 1, 'desc' => 0, 'collumns' => '`id`, `group`, `title`, `link`'));
+			$d = $ga->fetch(array('filter' => "`author` = $author_id", 'nocalc' => 1, 'desc' => 0, 'collumns' => '`id`, `group`, `title`, `link`'));
 			$gii = array();
 			$gl = array();
 			$gt = array();
@@ -127,7 +127,7 @@
 
 			$ua = UpdatesAggregator::getInstance();
 			foreach ($g as $g_id => $link) {
-				$chenge = array('link' => $link);
+				$change = array('link' => $link);
 				$g_changes[$g_id] = isset($g_changes[$g_id]) ? array_merge($g_changes[$g_id], $change) : $change;
 				$ua->changed($g_id, UPKIND_INLINE, $link && (strpos($link, '/') === false));
 			}
@@ -138,10 +138,11 @@
 			if (!!$old) { // there are deleted groups
 				echo_log('groups_to_delete');
 				$diff = array_diff(array_keys($gii), array_keys($gi));
+        $group_filter = join(',', $diff);
 //				debug(array($old, $diff), 'groups to delete');
 				$pa = PagesAggregator::getInstance();
 				$d = $pa->fetch(array(
-					'filter' => '`author` = ' . $author_id . ' and (`group` in (' . join(',', $diff) . '))'
+					'filter' => "`author` = $author_id and (`group` in ($group_filter))"
 				, 'nocalc' => 1, 'desc' => 0
 				, 'collumns' => '`id`, `group`, `title`, `link`'
 				));
@@ -211,25 +212,30 @@
 
 			if (count($check)) { // ok, there are smth to check
 				$diff = array();
+        $link_filter = join('", "', array_keys($check));
 				$pa = PagesAggregator::getInstance();
 				$d = $pa->fetch(array(
-					'filter' => '`author` = ' . $author_id . ' and (`link` in ("' . join('", "', array_keys($check)) . '"))'
+					'filter' => "`author` = $author_id and (`link` in (\"$link_filter\"))"
 				, 'nocalc' => 1, 'desc' => 0
 				, 'collumns' => '`id`, `link`, `size`, `group`'
 				));
 				if ($d['total']) { // there are smth in db, check it if size diff
 					foreach ($d['data'] as $row) {
 						$data = $check[$link = $row['link']]; // recently parsed data about page at @link
-						unset($check[$link]); // don't check it later in this function
 
-						$page_id = $row['id'];
+            // don't check this page later in this function (all pages
+            // that are contained in $check array, but not contained in
+            // database are assumed to be the "new" pages)
+						unset($check[$link]); // page isn't "new"
+
+						$page_id = intval($row['id']);
 						if (intval($row['size']) <> $data[2])
-							$diff[$page_id] = $link; // check it
+							$diff[$page_id] = $link; // size changed, check it later for version change
 
-						$old_group = intval($row['group']);
-						$old_group_i = isset($gi[$old_group]) ? $gi[$old_group] : null;
-						if ($old_group_i != $data[0]) {
-							$new_group = array_search($data[0], $gi);
+						$old_group = intval($row['group']); // old page group global index (GUID)
+						$old_group_i = isset($gi[$old_group]) ? $gi[$old_group] : null; // old group local index (index on author page)
+						if ($old_group_i != $data[0]) { // local index of page was changed -> means that page moved to another group
+							$new_group = array_search($data[0], $gi); // find GUID of new group
 							if ($new_group) {
 								$pa->update(array('group' => $new_group), $page_id);
 								$ua->changed($page_id, UPKIND_GROUP, $old_group);
@@ -242,29 +248,29 @@
 					}
 				}
 
-				if (count($diff))
+				if (!!$diff) // updated pages
 					echo_log('pages_updated');
 
-				if (count($check)) {
+				if (!!$check) { // new pages
 					echo_log('pages_new');
-					foreach ($check as $link => &$data) { // new pages
-						$idx = $data[0];
-						$gid = array_search($idx, $gi);
+					foreach ($check as $link => &$data) { // each new page
+						$idx = $data[0]; // group local id (IDX)
+						$gid = array_search($idx, $gi); // group global id (GUID)
 						$pid = $pa->add(array(
 							'author' => $author_id
 						, 'group' => $gid
 						, 'link' => $link
 						, 'title' => addslashes(htmlspecialchars($data[1], ENT_QUOTES))
 						, 'description' => addslashes(htmlspecialchars($data[3], ENT_QUOTES))
-						, 'size' => 0 // later it will be updated with diff checker
+						, 'size' => 0 // later it will be updated with version checker
 						));
-						$diff[$pid] = $link;
+						$diff[$pid] = $link; // check its version
 					}
 				}
 
-				if (count($diff)) {
+				if (!!$diff) { // there are updated or new pages
 					echo_log('pages_queue');
-					$this->queuePages($author_id, $diff);
+					$this->queuePages($author_id, $diff); // queue this page for version check
 				} else
 					echo_log('no_updates');
 			} else
@@ -302,17 +308,18 @@
 					$check[$link] = $data;
 
 			if (count($check)) { // ok, there are smth to check
+        $link_filter = join('", "', array_keys($check));
 				$ua = UpdatesAggregator::getInstance();
 				$diff = array();
 				$pa = PagesAggregator::getInstance();
 				$d = $pa->fetch(array(
-					'filter' => '`author` = ' . $author_id . ' and (`link` in ("' . join('", "', array_keys($check)) . '"))'
+					'filter' => "`author` = $author_id and (`link` in (\"$link_filter\"))"
 				, 'nocalc' => 1, 'desc' => 0
 				, 'collumns' => '`id`, `link`, `size`, `group`'
 				));
 				if ($d['total']) { // there are smth in db, check it if size diff
 					foreach ($d['data'] as $row) {
-						$data = $check[$link = $row['link']]; // recently parsed data about page at @link
+						$data = $check[$link = $row['link']]; // recently parsed data about group at @link
 						unset($check[$link]); // don't check it later in this function
 
 						$page_id = $row['id'];
@@ -364,7 +371,7 @@
 			$q = QueueAggregator::getInstance();
 
 			$worker_stamp = md5(uniqid(rand(),1));
-			$update = $q->queue(array_keys($pages), 0);
+			$update = $q->queue(array_keys($pages), 0); // returns intersection (already_queued - pages)
 			$idx = array_keys($pages);
 			if (count($update)) {
 				$diff = array_intersect($idx, $update);
@@ -388,6 +395,7 @@
 			$t = time();
 
 			$q = QueueAggregator::getInstance();
+      // fetch not processed yet pages, or those, which process time elapsed (due to hung-up or time-break)
 			$d = $q->fetch(array('desc' => 0
 			, 'filter' => '(`state` = 0) or (`state` <> 0 and `updated` < ' . ($t - QUEUE_FAILTIME) . ') limit ' . $limit
 			, 'collumns' => '`id` as `0`, `page` as `1`'
@@ -581,6 +589,111 @@
 			return $this->add(array('page' => $page, 'kind' => $kind, 'value' => $value));
 		}
 
+		function getAuthorUpdates($author) {
+			$d = $this->fetch(array(
+				'desc' => true
+			));
+			$r = array();
+			if ($d['total']) {
+				$a = array();
+				$g = array();
+				$p = array();
+				foreach ($d['data'] as &$row) {
+					switch ($row['kind']) {
+					case UPKIND_INLINE: // group updates
+						$g[intval($row['page'])] = 1;
+						break;
+					case UPKIND_DELETED_GROUP:
+						$a[intval($row['value'])] = 1;
+						break;
+					case UPKIND_GROUP:
+						$g[intval($row['value'])] = 1;
+					default:
+						$p[intval($row['page'])] = 1;
+						break;
+					}
+				}
+				$aa = AuthorsAggregator::getInstance();
+				$pa = PagesAggregator::getInstance();
+				$ga = GroupsAggregator::getInstance();
+				$pd = $pa->get(array_keys($p), '`id`, `title`, `author`, `group`');
+				foreach ($pd as &$row) {
+					$p[intval($row['id'])] = $row;
+					$g[intval($row['group'])] = 1;
+					$a[intval($row['author'])] = 1;
+				}
+				$gd = $ga->get(array_keys($g), '`id`, `title`, `author`');
+				$g = array();
+				foreach ($gd as &$row) {
+					$g[intval($row['id'])] = $row;
+					$a[intval($row['author'])] = 1;
+				}
+				$a = $aa->get($author, '`fio`');
+				$fio = $a['fio'];
+
+				foreach ($d['data'] as &$row) {
+					$aid = 0;
+					switch ($kind = $row['kind']) {
+					case UPKIND_INLINE: // group updates
+						$gid = intval($row['page']);
+						$aid = $g[$gid]['author'];
+						if ($aid != $author)
+							continue;
+
+						$r[] = array('id' => $gid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
+						, 'group' => $gid
+						, 'group_title' => $g[$gid]['title']
+						, 'author' => $aid
+						, 'fio' => $fio
+						);
+						break;
+					case UPKIND_DELETED_GROUP:
+						$aid = intval($row['value']);
+						if ($aid != $author)
+							continue;
+						$gid = intval($row['page']);
+						$r[] = array('id' => $gid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
+						, 'group' => $gid
+						, 'group_title' => "{@GROUP#$gid}"
+						, 'author' => $aid
+						, 'fio' => $fio
+						);
+						break;
+					case UPKIND_GROUP:
+						$pid = intval($row['page']);
+						$aid = $p[$pid]['author'];
+						if ($aid != $author)
+							continue;
+						$gid = $p[$pid]['group'];
+						$goid = intval($row['value']);
+						$r[] = array('id' => $pid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
+						, 'title' => $p[$pid]['title']
+						, 'group' => $gid
+						, 'group_title' => $g[$gid]['title']
+						, 'old_id' => $goid
+						, 'old_title' => ($t = uri_frag($g, $goid, 0, 0)) ? $t['title'] : "{@GROUP#$goid}"
+						, 'author' => $aid
+						, 'fio' => $fio
+						);
+						break;
+					default: // page updates
+						$pid = intval($row['page']);
+						$aid = $p[$pid]['author'];
+						if ($aid != $author)
+							continue;
+						$gid = $p[$pid]['group'];
+						$r[] = array('id' => $pid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
+						, 'title' => $p[$pid]['title']
+						, 'group' => $gid
+						, 'group_title' => isset($g[$gid]) ? $g[$gid]['title'] : "{@GROUP#$gid}"
+						, 'author' => $aid
+						, 'fio' => $fio
+						);
+						break;
+					}
+				}
+			}
+			return array('data' => $r, 'total' => $d['total']);
+		}
 	}
 
-?>

@@ -277,7 +277,7 @@
 
 	function safeSubstr($str, $maxlen, $lines = 0) {
 		if (($len = mb_strlen($str)) > $maxlen) {
-			$str = str_replace('<br />', PHP_EOL, $str);
+			$str = str_replace(array(PHP_EOL, '<br />'), array('', PHP_EOL), $str);
 			$s = $str;
 			$d = intval($maxlen * 0.1);
 			do {
@@ -300,7 +300,7 @@
 				} else
 					break;
 			} while (mb_strlen($matches[1]) <= 0);
-			$str = str_replace(PHP_EOL, '<br />', close_tags($str));
+			$str = str_replace(PHP_EOL, PHP_EOL . '<br />', close_tags($str));
 		}
 
 		return $str;
@@ -308,7 +308,7 @@
 
 	function safeSubstrl($str, $maxlen, $lines = 0) {
 		if (($len = mb_strlen($str)) > $maxlen) {
-			$str = str_replace('<br />', PHP_EOL, $str);
+			$str = str_replace(array(PHP_EOL, '<br />'), array('', PHP_EOL), $str);
 			$s = $str;
 			$d = intval($maxlen * 0.1);
 			do {
@@ -331,7 +331,7 @@
 				} else
 					break;
 			} while (mb_strlen($matches[1]) <= 0);
-			$str = str_replace(PHP_EOL, '<br />', close_tags($str));
+			$str = str_replace(PHP_EOL, PHP_EOL . '<br />', close_tags($str));
 		}
 
 		return $str;

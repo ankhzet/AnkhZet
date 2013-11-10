@@ -49,6 +49,7 @@
 			<div class="text">[
 				<a href="/{%root}/version/{%page}/view/{%version}">{%view}</a>
 			| <a href="/{%root}/download/{%page}/{%version}" noindex nofollow>{%download}</a>
+			{%moderated}
 				<span class="v-diff {%last}">&nbsp;| {%diff}: {%prev}</span>
 			]</div>
 		</div>
@@ -62,9 +63,18 @@
 			<div class="text">[
 				<a href="/{%root}/version/{%page}/view/{%version}">{%view}</a>
 			| <a noindex nofollow href="/{%root}/download/{%page}/{%version}">{%download}</a>
+			{%moderated}
 			]</div>
 		</div>
 		';
+
+		const VERSION_MODER = '| <a href="/{%root}/remove/{%page}/{%version}">{%delete}</a>';
+
+		const AGGR_PAGES = 0;
+		const AGGR_AUTHO = 1;
+		const AGGR_GROUP = 2;
+		const AGGR_HISTO = 3;
+		const AGGR_GRAMM = 4;
 
 		function getAggregator($p = 0) {
 			switch ($p) {
@@ -187,7 +197,7 @@
 			$row['content'] = $this->prepareForGrammar($row['content'], true);
 			$row['content'] = mb_convert_encoding($row['content'], 'UTF-8', 'CP1251');
 
-			View::addKey('grammar', $this->fetchGrammarSuggestions(intval($row['id'])));
+//			View::addKey('grammar', $this->fetchGrammarSuggestions(intval($row['id'])));
 			View::addKey('preview', $row['content']);
 			View::addKey('h_old', '');
 			View::addKey('h_new', '');
@@ -274,6 +284,16 @@
 			return $diff_mode;
 		}
 
+		function fetchVersions($storage) {
+			$p = array();
+			$d = is_dir($storage) ? @dir($storage) : null;
+			if ($d)
+				while (($entry = $d->read()) !== false)
+					if (is_file($storage . '/' . $entry) && ($version = intval(basename($entry, '.html'))))
+						$p[] = $version;
+			return $p;
+		}
+
 		function actionVersion($r) {
 			$page = uri_frag($r, 0);
 			if (!$page)
@@ -294,12 +314,7 @@
 			View::addKey('meta-description', Loc::lget('last_updates') . ": {$adata['fio']} - {$data['title']}. {$data['description']}");
 
 			$storage = 'cms://cache/pages/' . $page;
-			$p = array();
-			$d = is_dir($storage) ? @dir($storage) : null;
-			if ($d)
-				while (($entry = $d->read()) !== false)
-					if (is_file($storage . '/' . $entry) && ($version = intval(basename($entry, '.html'))))
-						$p[] = $version;
+			$p = $this->fetchVersions($storage);
 
 			$ha = $this->getAggregator(3);
 			$uid = $this->user->ID();
@@ -338,7 +353,7 @@
 					throw new Exception('Version not found!');
 
 				View::addKey('preview', mb_convert_encoding($cnt, 'UTF-8', 'CP1251'));
-				View::addKey('grammar', $this->fetchGrammarSuggestions($page));
+//				View::addKey('grammar', $this->fetchGrammarSuggestions($page));
 				View::addKey('h_old', '');
 				View::addKey('h_new', '');
 				$this->view->renderTPL('pages/view');
@@ -352,18 +367,24 @@
 					$lastseen = ($lastseen >= 0) ? $lastseen : $newest;
 					$diffopen = ($v = post_int('version')) ? $v : $lastseen;
 
-					if ($this->isDiffMode()) {
+					$p1 = '';
+//					if ($this->isDiffMode()) {
 						$row = array('root' => $this->_name, 'page' => $page);
 
 						$ldate = date('d.m.Y', $newest);
 						$full = Loc::lget('full_last_version');
 						$last = $newest ? "<br /><span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>" : '';
 						View::addKey('moder', $last);
+						$_ldiff = Loc::lget('diff');
+						$_lview = Loc::lget('view');
+						$_ldownload = Loc::lget('download');
+						$_ldelete = Loc::lget('delete');
 						foreach ($p as $idx => $version) {
 							$row = array_merge($data, $row, $adata);
-							$row['view'] = Loc::lget('view');
-							$row['diff'] = Loc::lget('diff');
-							$row['download'] = Loc::lget('download');
+							$row['view'] = $_lview;
+							$row['diff'] = $_ldiff;
+							$row['download'] = $_ldownload;
+							$row['delete'] = $_ldelete;
 							$row['version'] = date('d-m-Y/H-i-s', $version);
 							$row['prew'] = ($idx < $l) ? intval($p[$idx + 1]) : 0;
 							$row['timestamp'] = date('d.m.Y H:i:s', $version);
@@ -381,10 +402,16 @@
 
 							$row['prev'] = count($u) ? '&rarr; <div class="versions"><div>' . join('', $u) . '</div></div>' : '';
 							$row['last'] = !$idx ? 'last' : '';
-							echo patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
+							$row['moderated'] = $this->userModer ? patternize(self::VERSION_MODER, $row) : '';
+							$p1 .= patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
 						}
-					} else
-						echo $this->buildCalendar($page, $p, $lastseen, $storage);
+//					} else
+						if ($this->isDiffMode())
+							echo $p1;
+						else {
+							$p2 = $this->buildCalendar($page, $p, $lastseen, $storage);
+							echo "<div style='float: left; overflow: hidden;'>$p2</div><div style='float: left; overflow: hidden;'>$p1</div>";
+						}
 				} else {
 					echo Loc::lget('pages_noversions');
 					View::addKey('moder', '');
@@ -407,66 +434,103 @@
 			$row['diff'] = Loc::lget('diff');
 			$download = Loc::lget('download');
 			$ccc = count($versions);
+			$daynames = '';
 			while ($versions && ($ccc-- > 0)) {
 				rsort($versions);
 
-				$date = getdate($versions ? $versions[0] : time());
+				//datetime of current update version
+				$date = getdate($versions[0]);
+//				debug($date);
 				$month = intval($date['mon']);
 				$day = intval($date['mday']);
 				$year = intval($date['year']);
-				$days = intval(date('d', mktime(0, 0, 0, $month + 1, 0, $year)));
-				$prev = intval(date('d', mktime(0, 0, 0, $month, 0, $year)));
 
-				$start = mktime(0, 0, 0, $month, 1, $year);
-
+				//timestamp of the beginning of month
 				$first= mktime(0, 0, 0, $month, 1, $year);
+				//timestamp of last day of month
+				$last = mktime(0, 0, 0, $month + 1, 0, $year);
+				$last2= mktime(0, 0, 0, $month + 1, 1, $year);
+
+				//days in current version related month
+				$days = intval(gmdate('d', $last));
+				//days in previous month
+				$prev = intval(gmdate('d', mktime(0, 0, 0, $month, 0, $year)));
+
+
+				//first week-day index of month
 				$date = getdate($first);
 				$fday = intval($date['wday']);
 				$fday = ($fday == 0) ? 6 : $fday - 1;
 
-				$last = mktime(0, 0, 0, $month, $days, $year);
+				//last week-day index of month
 				$date = getdate($last);
 				$lday = intval($date['wday']);
 				$lday = ($lday == 0) ? 6 : $lday - 1;
 
+				//last day of previous mont in current month-slot
 				$pred = $prev - $fday + 1;
+				//last day of next mont in current month-slot
 				$succ = 6 - $lday;
 
-
-				$d = array();
-				while ($pred++ <= $prev)
-					$d[] = $start - ($prev - $pred + 2) * $_tday;
-
-				$f = 1;
-				while ($f++ <= $days)
-					$d[] = $start + ($f - 2) * $_tday;
-
+				// fill in days of next month
 				if (count($d) + $succ < 6 * 7) $succ += 7;
-				$f = 1;
-				while ($f++ <= $succ)
-					$d[] = $start + ($days + $f - 2) * $_tday;
 
-				$c = 6;
+
+				//fill in days of previous month
+				$d = array();
+//				while ($pred++ <= $prev)
+//					$d[] = $first - ($prev - $pred + 2) * $_tday;
+
+				//fill in days of current month
+				$_date = getdate($first);
+				$_month = intval($_date['mon']);
+				$_year = intval($_date['year']);
+				$f = 0 - $fday;
+				while (++$f <= $days + $succ + 1)
+					$d[] = mktime(0, 0, 0, $_month, $f, $_year);
+
+//				$f = 1;
+//				while ($f++ <= $succ)
+//					$d[] = $first + ($days + $f - 2) * $_tday;
+
+
+				$c = 8;
 				$r = '';
-				while ($c-- > 0) {
+				if (!$daynames) {
 					$w = '';
 					for ($i = 0; $i < 7; $i++) {
-						$day = array_shift($d);
-						$nxt = $day + $_tday;
+						$dn = strftime('%a', mktime(0, 0, 0, $month, $days + $succ - $c * 7 + $i + 2, $year));
+						$w = "<td>" . mb_substr($dn, 0, 2) . "</td>" . $w;
+					}
+					$daynames = "<tr class=\"day-name\">$w</tr>\r\n";
+				}
 
-						$current = !(($day < $start) || ($day >= $start + $days * $_tday));
+				while (($c-- > 0) && $d) {
+					$w = '';
+
+					for ($i = 0; $i < 7; $i++) {
+						$day = array_shift($d); // day timastamp to process
+
+						$_date = getdate($day);
+						$_month = intval($_date['mon']);
+						$_day = intval($_date['mday']);
+						$_year = intval($_date['year']);
+
+						//timestamp of the beginning of next day
+						$nxt = mktime(0, 0, 0, $_month, $_day + 1, $_year);
+
+						// is this day belongs to current month
+						$current = !(($day < $first) || ($day >= $last2));
 						$v = array();
 						if ($current)
-							foreach ($versions as $version)
-								if ($version >= $nxt)
-									continue;
+							foreach ($versions as $version) // foreach version
+								if (($version < $day) || ($version >= $nxt))
+									continue;  // if version don't belongs to current day - break
 								else
-									if ($version < $day)
-										break;
-									else
-										$v[] = $version;
+									$v[] = $version;
 
-						$current = $current ? '' : ' class="calendar-grey"';
+
+						$current = $current ? '' : ' class="grey"';
 
 						$dayname = date('j', $day);
 						if ($v) {
@@ -499,7 +563,7 @@
 
 				$cur = Loc::lget('updates_by') . ' ' . strftime('%B, %Y', mktime(0, 0, 0, $month, 1, $year));
 				$h = "<tr><td colspan=\"7\" class=\"calendar-header\">$cur</td></tr>\r\n";
-				$result .= "\r\n$h$r";
+				$result .= "\r\n$h\r\n$daynames\r\n$r";
 			}
 
 
@@ -574,13 +638,16 @@
 			$cnt = @file_get_contents("$storage/$version.html");
 			$cnt1 = @gzuncompress/**/($cnt);
 			if ($cnt1 !== false) $cnt = $cnt1; else @file_put_contents("$storage/$version.html", gzcompress($cnt));
-			$cnt1 = preg_replace('">([_\.]+)<"', '&gt;\1&lt;', $cnt1);
+
+/*			$cnt1 = preg_replace('">([_\.]+)<"', '&gt;\1&lt;', $cnt1);
 
 			$cnt1 = trim(str_replace(array("\r", "\n"), '', $cnt1));
 			$cnt1 = strip_tags($cnt1, '<strong><small><h1><h2><h3><h4><h5><h6><h7><h8><font><dd><p><div><span><a><ul><ol><li><img><table><tr><td><thead><tbody><br><u><b><i><s>');
 			$cnt1 = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $cnt1);
 			$cnt1 = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $cnt1);
-			$cnt = str_replace(PHP_EOL, '<br />', $cnt1);
+			$cnt = str_replace(PHP_EOL, '<br />', $cnt1);*/
+
+			$cnt = $this->prepareForGrammar($cnt1, true);
 
 			require_once 'download.php';
 			$filename = $this->genFilename($fio, $title);
@@ -617,6 +684,136 @@
 			$filename = preg_replace('/[_]{2,}/', '_', $filename);
 			$filename = translit($filename);
 			return str_replace('_.', '.', $filename);
+		}
+
+		function actionRemove($r) {
+			$page = uri_frag($r, 0);
+			if (!$page)
+				throw new Exception('Page ID not specified!');
+
+			$timestamp = ($v = $this->decodeVersion($r, 1)) !== false ? $v : uri_frag($r, 1);
+			if (!$timestamp)
+				throw new Exception('Unknown version!');
+
+			$a = $this->getAggregator(0);
+			$data = $a->get($page, '`id`, `title`, `author`, `description`, `link`, `size`, `time`');
+
+			if (!$data['id'])
+				throw new Exception('Page not found!');
+
+			$aa = $this->getAggregator(1);
+			$adata = $aa->get($author = intval($data['author']), '`fio`, `link`');
+
+			$storage = 'cms://cache/pages/' . $page;
+			$filename = "$storage/$timestamp.html";
+
+			if (!is_file($filename))
+				throw new Exception('Cache not found!');
+
+			$p = $this->fetchVersions($storage);
+			sort($p);
+			$version = date("d/m/Y H:i:s", $timestamp);
+			View::addKey('version', "<i>$version ($timestamp)</i>");
+			View::addKey('size', fs(filesize($filename)));
+
+			$fio = $adata['fio'];
+			$title = $data['title'];
+			if (!$dld) {
+				$alink = "<a href=\"/authors/id/{$data['author']}\">{$adata['fio']}</a>";
+				$plink = "<a href=\"/pages/version/{$page}\">{$data['title']}</a>";
+
+				$ha = $this->getAggregator(3);
+				$uid = $this->user->ID();
+				$trace    = -1;
+				if ($uid) {
+					$f = $ha->fetch(array('nocalc' => true, 'desc' => 0, 'filter' => "`user` = $uid and `page` = $page limit 1", 'collumns' => '`trace`'));
+					if ($f['total'])
+						$trace = intval($f['data'][0]['trace']);
+				}
+
+				View::addKey('title', "$alink - $plink");
+				View::addKey('version', date('d.m.Y H:i:s', $timestamp));
+				$this->makeDetailHint($a->traceMark($uid, $trace, $page, $author), $data['description'], $adata['link'], $data['link']);
+			}
+
+			$echoed = '';
+
+			$idx = array_search($timestamp, $p);
+
+			require_once 'core_updates.php';
+			$f = array(UPKIND_ADDED, UPKIND_DELETED, UPKIND_SIZE);
+			$f = join(',', $f);
+			$ua = UpdatesAggregator::getInstance();
+//			$ua->dbc->debug = 1;
+			$d = $ua->fetch(array(
+				'pagesize' => 0
+			, 'nocalc' => 0
+			, 'desc' => 0
+			, 'filter' => "page = $page and `kind` in ($f) order by `time` limit 1"
+			, 'collumns' => 'id'
+			));
+			$total = $d['total'];
+			if ($total < ($vc = count($p))) {
+				$p = array_slice($p, $vc - $total, $total);
+				$idx = array_search($timestamp, $p);
+				$echoed .= 'Warning: file versions are more than update records!<br />';
+			}
+//		debug(array($p, $timestamp, $idx));
+			$d = $ua->fetch(array(
+				'pagesize' => 0
+			, 'nocalc' => 1
+			, 'desc' => 0
+			, 'filter' => "page = $page and `kind` in ($f) order by `time` limit $idx, 1"
+			, 'collumns' => '*'
+			));
+			if ($d['total']) {
+//				debug($d);
+				$uid = intval($d['data'][0]['id']);
+				$udelta = intval($d['data'][0]['value']);
+				$sign = (($udelta >= 0) ? '+' : '') . $udelta;
+				$echoed .= "Specified update has delta at $sign KB.<br />";
+			} else
+				$udelta = 0;
+
+			if (post_int('force')) {
+				if ($d['total']) {
+//					debug($d);
+					$uid = intval($d['data'][0]['id']);
+					$udelta = intval($d['data'][0]['value']);
+					$sign = ($udelta >= 0) ? '+' : '';
+					$ua->dbc->update($ua->TBL_INSERT
+					, "`value` = `value`{$sign}{$udelta}"
+					, "`page` = '{$page}' and `kind` in ($f) and `id` > $uid"
+					);
+					$ua->delete($uid);
+					$echoed .= 'Corresponding update record deleted, relative records modified.<br />';
+				} else
+					$udelta = 0;
+
+				$last = ($c = count($p)) ? $p[$c - 1] : 0;
+				// version to delete is latest in db -> move "latest" marker to previous version
+				if ($last && ($last == $timestamp)) {
+					// try to find latest update
+					unlink("$storage/last.html");
+					$latest = $c - 2;
+					if ($latest >= 0) {
+						$ts = $p[$latest];
+						copy("$storage/$ts.html", "$storage/last.html");
+					}
+					$a->update(array('size' => intval($data['size']) - $udelta), $page);
+					$echoed .= 'Last version shifted, page actual size modified.<br />';
+				}
+
+				// now, delete the version files
+				View::renderMessage(Loc::lget(unlink($filename) ? 'msg_ok' : 'msg_err'), View::MSG_INFO);
+			} else {
+				$delete = ucfirst(Loc::lget('delete'));
+				$a = array('delete' => $delete);
+				View::addKey('action', patternize('<br /><br />&nbsp; <a href="?force=1">{%delete}</a>?', $a));
+			}
+
+			$this->view->renderTPL('pages/remove');
+			echo '<br /><br />' . $echoed;
 		}
 
 		function updateTrace($page_id, $version) {
@@ -678,26 +875,12 @@
 			$_t2 = @gzuncompress/**/($t2);
 			if ($_t2 !== false) $t2 = $_t2; else @file_put_contents("$storage/{$cur}.html", gzcompress($t2));
 
-			/*
-			 >_< >.<
-			 */
-			$t1 = preg_replace('">([_\.]+)<"', '&gt;\1&lt;', $t1);
-			$t2 = preg_replace('">([_\.]+)<"', '&gt;\1&lt;', $t2);
+			$t1 = $this->prepareForGrammar($t1, true);
+			$t2 = $this->prepareForGrammar($t2, true);
+//			$t1 = mb_convert_encoding($t1, 'UTF8', 'cp1251');
+//			$t2 = mb_convert_encoding($t2, 'UTF8', 'cp1251');
+//			debug(array($t1, $t2));
 
-			$t1 = trim(str_replace(array("\r", "\n"), '', $t1));
-			$t1 = strip_tags($t1, '<dd><p><br><u><i><s>');
-			$t1 = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $t1);
-			$t1 = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $t1);
-
-			$t2 = trim(str_replace(array("\r", "\n"), '', $t2));
-			$t2 = strip_tags($t2, '<dd><p><br><u><i><s>');
-			$t2 = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $t2);
-			$t2 = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $t2);
-
-//			$t1 = preg_replace('"<([^>]+)>((<br\s*/>|\s)*)</\1>"', '\2', $t1);
-//			$t1 = preg_replace('"</([^>]+)>((<br\s*/>|\s|\&nbsp;)*)?<\1>"i', '\2', $t1);
-//			$t2 = preg_replace('"<([^>]+)>((<br\s*/>|\s)*)</\1>"', '\2', $t2);
-//			t2 = preg_replace('"</([^>]+)>((<br\s*/>|\s|\&nbsp;)*)?<\1>"i', '\2', $t2);
 //			@ob_end_flush();
 //			@ob_end_flush();
 			require_once 'core_diff.php';
@@ -709,11 +892,11 @@
 			$c = ob_get_contents();
 			ob_end_clean();
 
-			$c = $this->prepareForGrammar($c);
+//			$c = $this->prepareForGrammar($c, true);
 
 			$old = count($h[0]) ? str_replace(array(PHP_EOL, '\n'), '<br />', join('", "', $h[0])) : '';
 			$new = count($h[1]) ? str_replace(array(PHP_EOL, '\n'), '<br />', join('", "', $h[1])) : '';
-			View::addKey('grammar', $this->fetchGrammarSuggestions($page));
+//			View::addKey('grammar', $this->fetchGrammarSuggestions($page));
 			View::addKey('preview', $c);
 			View::addKey('h_old', $old);
 			View::addKey('h_new', $new);
@@ -724,19 +907,21 @@
 
 		function prepareForGrammar($c, $cleanup = false) {
 			if ($cleanup) {
-				$c = strip_tags($c, '<dd><p><div><span><a><ul><ol><li><img><table><tr><td><thead><tbody><br><u><b><i><s>');
-				$c = preg_replace('"<p([^>]*)?>(.*?)<dd>"i', '<p\1>\2</p><dd>', $c);
+				$c = strip_tags($c, '<strong><small><h1><h2><h3><h4><h5><h6><h7><h8><font><dd><p><div><span><a><ul><ol><li><img><table><tr><td><thead><tbody><br><u><b><i><s>');
+				$c = preg_replace('"<p([^>]*)?>(.*?)<dd>"i', '<p\1>\2<dd>', $c);
 				$c = preg_replace('"(</?(td|tr|table)[^>]*>)'.PHP_EOL.'"', '\1', $c);
 				$c = preg_replace('"'.PHP_EOL.'(</?(td|tr|table)[^>]*>)"', '\1', $c);
+				$c = str_replace(array("\r", "\n"), '', $c);
 				$c = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $c);
+				$c = preg_replace('"<p\s*>([^<]*)</p>"i', '<p/>\1', $c);
 				$c = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $c);
 				$c = preg_replace('"<(i|s|u)>(\s*)</\1>"', '\2', $c);
 				$c = preg_replace('"</(i|s|u)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
-
+				$c = preg_replace('"<(font|span)\s*(lang=\"?[^\"]+\"?)\s*>([^<]*)</\1>"i', '\3', $c);
 			} else
 				$c = str_replace('<br />', PHP_EOL, $c);
 
-			$idx = 0;
+/*			$idx = 0;
 			$p = 0;
 			while (preg_match('"<(([\w\d]+)([^>]*))>"', substr($c, $p), $m, PREG_OFFSET_CAPTURE)) {
 				$p += intval($m[0][1]);
@@ -750,7 +935,7 @@
 					$p += strlen($u);
 				} else
 					$p += strlen($sub);
-			}
+			}*/
 			$p = 0;
 			while (preg_match('|<img [^>]*(src=(["\']?))/[^\2>]+\2[^>]*(>)|i', substr($c, $p), $m, PREG_OFFSET_CAPTURE)) {
 				$p += intval($m[1][1]);
@@ -758,7 +943,7 @@
 				$c = substr_replace($c, $u, $p, strlen($m[1][0]));
 				$p += strlen($u) + intval($m[3][1]) - intval($m[1][1]) - 5;
 			}
-			return str_replace(PHP_EOL, '<br />', $c);
+			return /*$cleanup ? $c : */str_replace(PHP_EOL, PHP_EOL . '<br />', $c);
 		}
 
 		function fetchGrammarSuggestions($page, $approved = 1) {
