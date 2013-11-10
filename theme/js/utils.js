@@ -1,14 +1,15 @@
 
-$(document).ready(function() {
+$(function() {
 	$('.pin').click(function() {
-		var idx = $(this).attr('pin');
-		var p = this.parentNode;
-		var s = p.getElementsByTagName('SPAN')[0];
-		var told = text_old[parseInt(idx) - 1];
-		var tnew = text_new[parseInt(idx) - 1];
-		var oldtext = p.className == 'old';
-		p.className = oldtext ? 'new' : 'old';
-		s.innerHTML = oldtext ? tnew : told;
+		var p = $(this).parents(":first");
+		var oldtext = p.hasClass('old');
+		p.removeClass(oldtext ? 'old' : 'new');
+		p.addClass(oldtext ? 'new' : 'old');
+
+		var m = $(this).attr("class").match(/pin(\d+)/i);
+		var idx = parseInt(m[1]) - 1;
+//		alert([p.attr("class"), idx]);
+		$(p).children("span").html(oldtext ? text_new[idx] : text_old[idx]);
 	});
 
 	$('.multi.link').click(function() {

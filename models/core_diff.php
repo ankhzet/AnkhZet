@@ -36,26 +36,26 @@ class DiffIO {
 	public function left($text) {
 		$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
 		if ($this->show_new)
-			$this->out('<span class="old">' . ($text) . '</span> ');
+			$this->out(join('', array('<del>',$text,'</del> ')));
 		else
-			$this->out('<span class="new">' . ($text) . '</span> ');
+			$this->out(join('', array('<ins>',$text,'</ins> ')));
 	}
 	public function right($text) {
 		$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
 		if ($this->show_new)
-			$this->out('<span class="new">' . ($text) . '</span> ');
+			$this->out(join('', array('<ins>',$text,'</ins> ')));
 		else
-			$this->out('<span class="old">' . ($text) . '</span> ');
+			$this->out(join('', array('<del>',$text,'</del> ')));
 	}
 	public function same($text) {
 		$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
 /**/
 		$l = strlen($text);
 		if ($this->context && ($l >= $this->context)) {
-			$text = str_replace('&nbsp;', ' ', $text);
+//			$text = str_replace('&nbsp;', ' ', $text);
 			$s1 = safeSubstr($text, $this->context / 2, 100);
 			$s2 = safeSubstrl($text, $this->context / 2, 100);
-			$text = "<br /><span class=\"context\">{$s1}</span><br />~~~<br /><span class=\"context\">{$s2}</span>";
+			$text = "<span class=\"context\">{$s1}</span><br />~~~<br /><span class=\"context\">{$s2}</span>";
 		}
 /**/
 		$this->out($text);//mb_convert_encoding($text, 'UTF8', 'cp1251');
@@ -67,33 +67,41 @@ class DiffIO {
 		$diff->repl[] = array($old, $new);
 		if ($this->show_new)
 			if (trim($new))
-				$this->out('<span class="new"><span>' . $new . '</span><a class="pin" href="javascript:void(0)" pin="' . count($diff->repl) . '"></a></span>');
+				$this->out('<ins><span>' . $new . '</span><a class="pin pin' . count($diff->repl) . '"></a></ins>');
+//				$this->out('<span class="new">' . $new . '</span>');//<a class="pin" href="javascript:void(0)" pin="' . count($diff->repl) . '"></a></span>');
 			else
 				;
 		else
+//		;
 			if (trim($old))
-				$this->out('<span class="old"><span>' . $old . '</span><a class="pin" href="javascript:void(0)" pin="' . count($diff->repl) . '"></a></span>');
+				$this->out('<del><span>' . $old . '</span><a class="pin pin' . count($diff->repl) . '"></a></del>');
 	}
 
 }
 
 class DiffSubsplitter {
 	var $stage = 0;
-	var $DIFF_TEXT_SPLITTERS = array (
-//		array("/(\x0A[\x0A\s]*\x0A)/", "/\x0A[\x0A\s]*\x0A/")
-		array("/(\n)/", "/\n/")
-	, array('/([\.\!\?]+)/', '/[\.\!\?]+/')
-	, array('/([\s]+)/', '/[\s]+/')
-	);
+
+	function __construct() {
+		$this->DIFF_TEXT_SPLITTERS = array (
+//			array('/(' . PHP_EOL . '[' . PHP_EOL . '\s]*' . PHP_EOL . ')/', '/' . PHP_EOL . '[' . PHP_EOL . '\s]*' . PHP_EOL . '/')
+			array('/(' . PHP_EOL . ')/', '/' . PHP_EOL . '/')
+		, array('/([\.\!\?]+)/', '/[\.\!\?]+/')
+		, array('/([\>\s]+)/', '/[\>\s]+/')
+		);
+	}
 
 	function split($t1, $t2, $stage = 0) {
 		switch ($stage) {
 		case 0:
-			return $this->sequentialMerge($t1, $t2);
+			$split = $this->sequentialMerge($t1, $t2);
+			break;
 		default:
-			$splitter = $this->DIFF_TEXT_SPLITTERS[$stage - 1];
-			return $splitter ? array(textsplit($t1, $splitter), textsplit($t2, $splitter)) : false;
+			$splitter = $this->DIFF_TEXT_SPLITTERS[$stage];
+			$split = $splitter ? array(textsplit($t1, $splitter), textsplit($t2, $splitter)) : false;
 		}
+//		debug($split);
+		return $split;
 	}
 
 	function sequentialMerge($t1, $t2) {
@@ -152,6 +160,7 @@ class DiffSubsplitter {
 		$n2 = array();
 		foreach ($h1 as $hash) $n1[$hash] = isset($n1[$hash]) ? intval($n1[$hash]) + 1 : 1;
 		foreach ($h2 as $hash) $n2[$hash] = isset($n2[$hash]) ? intval($n2[$hash]) + 1 : 1;
+//		debug(array($c1, $c2, $n1, $n2));
 
 		arsort($n1);
 		$d = array();
@@ -161,6 +170,8 @@ class DiffSubsplitter {
 			unset($n1[$key]);
 			unset($n2[$key]);
 		}
+
+//		debug(array($n1, $n2));
 
 		$n = array_intersect($n1, $n2);
 		$n = array_keys($n);
@@ -230,47 +241,35 @@ class DiffSubsplitter {
 			$o2[] = $h[$hash];
 /**/
 
+		$u1 = $this->_merge($c1, $h1, $h, $s);
+//		TimeLeech::addTimes('seq::merge_h1()?'.rand());
+		$u2 = $this->_merge($c2, $h2, $h, $s);
+//		TimeLeech::addTimes('seq::merge_h2()?'.rand());
+
+		unset($h, $h1, $h2);
+//		debug(array(count($u1), count($u2)));
+		return array($u1, $u2);
+	}
+
+	function _merge($c, &$_h, &$h, &$s) {
 		$u1 = array();
 		$i = 0;
-		while ($i < $c1) {
-			if (!($e = $h1[$i++])) continue;
+		while ($i < $c) {
+			if (!($e = $_h[$i++])) continue;
 			if ($sequence = &$s[$e]) {
 				$t = '';
 				$i--;
 				foreach ($sequence as $hash) {
 					if ($e != $hash) break;
-					$h1[$i] = 0;
-					$e = (++$i < $c1) ? $h1[$i] : null;
+					$_h[$i] = 0;
+					$e = (++$i < $c) ? $_h[$i] : null;
 					$t .= PHP_EOL . $h[$hash];
 				}
 				$u1[] = $t;
 			} else
 				$u1[] = PHP_EOL . $h[$e];
 		}
-//		TimeLeech::addTimes('seq::merge_h1()?'.rand());
-
-		$u2 = array();
-		$i = 0;
-		while ($i < $c2) {
-			if (!($e = $h2[$i++])) continue;
-			if ($sequence = &$s[$e]) {
-				$t = '';
-				$i--;
-				foreach ($sequence as $hash) {
-					if ($e != $hash) break;
-					$h2[$i] = 0;
-					$e = (++$i < $c2) ? $h2[$i] : null;
-					$t .= PHP_EOL . $h[$hash];
-				}
-				$u2[] = $t;
-			} else
-				$u2[] = PHP_EOL . $h[$e];
-		}
-//		TimeLeech::addTimes('seq::merge_h2()?'.rand());
-
-		unset($h, $h1, $h2);
-//		debug2(array(count($u1), count($u2)));
-		return array($u1, $u2);
+		return $u1;
 	}
 }
 
@@ -287,14 +286,17 @@ class DiffBuilder {
 
 	function diff($t1, $t2, $stage = 0) {
 //		TimeLeech::addTimes('diff::start()?'.rand());
-/**/
+/** /
 		if ($t1 == $t2)
-			$f = 100;
-		else
-			if (strlen($t1) + strlen($t2) < 40000)
-				$s = similar_text(preg_replace('/\W/', '', $t1), preg_replace('/\W/', '', $t2), $f);
+			$f = 101;
+		else {
+			$tt1 = preg_replace('/\W/', '', $t1);
+			$tt2 = preg_replace('/\W/', '', $t2);
+			if (strlen($tt1) + strlen($tt2) < 40000)
+				$s = similar_text($tt1, $tt2, &$f);
 			else
 				$f = 100;
+		}
 
 //		TimeLeech::addTimes('diff::same_text()?'.rand());
 		if ($f < 50) {
@@ -364,18 +366,30 @@ class DiffBuilder {
 	}
 
 	function lcs() {
-		$this->f = array();
+//		gc_enable();
+		$f = array();
 		$c1 = $this->c1;
 		$c2 = $this->c2;
-		$this->f = array_fill(0, $c1 + 1, 0);
+
+		$f = new SplFixedArray($c1 + 1);
+//		$f1 = array_fill(0, $c2 + 1, 0);
+//		for ($i = $c1 - 1; $i >= 0; $i--)
+//			$f[$i] = ;//array_fill(0, $c2 + 1, 0);
+
+//		debug2(array($c1, $c2));
 		for ($i = $c1 - 1; $i >= 0; $i--) {
-			$this->f[$i] = array_fill(0, $c2 + 1, 0);
+//		$u = memory_get_usage(true);
+//		echo "usage (row $i): $u<br />" . PHP_EOL;
+			$f[$i] = new SplFixedArray($c2 + 1);
+//		gc_collect_cycles();
 			for ($j = $c2 - 1; $j >= 0; $j--)
 				if ($this->h1[$i] == $this->h2[$j])
-					$this->f[$i][$j] = 1 + $this->f[$i + 1][$j + 1];
+					$f[$i][$j] = 1 + $f[$i + 1][$j + 1];
 				else
-					$this->f[$i][$j] = max($this->f[$i + 1][$j], $this->f[$i][$j + 1]);
+					$f[$i][$j] = max($f[$i + 1][$j], $f[$i][$j + 1]);
 		}
+		$this->f = $f;
+//		die();
 
 		return $this->f[0][0];
 	}
@@ -400,11 +414,11 @@ class DiffBuilder {
 		$i = $j = $idx = 0;
 		$c1 = $this->c1;
 		$c2 = $this->c2;
-		$this->out = array();
+		$out = array();
 		$c = $this->fts[$idx];
 		$cc = count($this->fts);
 		while (($i < $c1) && (($t = $this->h1[$i]) != $c)) {
-			$this->out[] = array(-1, $t);
+			$out[] = array(-1, $t);
 			$i++;
 		}
 //		debug(array($this->h1, $i), '>>>');
@@ -412,11 +426,11 @@ class DiffBuilder {
 			if (!isset($this->fts[$idx])) break;
 			$c = $this->fts[$idx];
 			while (($j < $c2) && (($t = $this->h2[$j]) != $c)) {
-				$this->out[] = array(1, $t);
+				$out[] = array(1, $t);
 				$j++;
 			}
 			while (($i < $c1 && $j < $c2) && ($t = $this->h1[$i]) == $this->h2[$j]) {
-				$this->out[] = array(0, $t);
+				$out[] = array(0, $t);
 				$i++;
 				$j++;
 				$idx++;
@@ -425,19 +439,19 @@ class DiffBuilder {
 			if ($idx < $cc) {
 				$c = $this->fts[$idx];
 				while (($i < $c1) && (($t = $this->h1[$i]) != $c)) {
-					$this->out[] = array(-1, $t);
+					$out[] = array(-1, $t);
 					$i++;
 				}
 			}
 		}
 		while ($j < $c2) {
-			$this->out[] = array(1, $this->h2[$j]);
+			$out[] = array(1, $this->h2[$j]);
 			$j++;
 		}
 		$o = 0;
 		$b = array();
 		$c = array();
-		foreach ($this->out as &$block)
+		foreach ($out as &$block)
 			if ($block[0] != $o) {
 				if (count($b)) $c[] = array($o, $b);
 				$o = $block[0];
@@ -446,6 +460,19 @@ class DiffBuilder {
 				$b[] = $block[1];
 
 		if (count($b)) $c[] = array($o, $b);
+
+		$this->fts = null;
+		$this->f = null;
+		$this->h1 = null;
+		$this->h2 = null;
+		$this->l1 = null;
+		$this->l2 = null;
+		$b = null;
+		$out = null;
+
+//		gc_collect_cycles();
+//		time_nanosleep(0, 10000000);
+//		return;
 
 		$i = 0;
 		$l = count($c);

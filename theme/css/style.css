@@ -96,6 +96,14 @@ label {
 	color: red;
 }
 
+.green {
+	color: green;
+}
+
+.blue {
+	color: blue;
+}
+
 .nowrap {
 	white-space: nowrap;
 }
@@ -329,10 +337,10 @@ label {
 
 /* Diff
 --------------------------------------------*/
-.old {
+del, .old {
 	color: red;
 }
-.new {
+ins, .new {
 	color: green;
 }
 .context {
@@ -340,10 +348,10 @@ label {
 }
 
 ins {
-	text-decoration: underline;
+	text-decoration: none;/*underline;*/
 }
 del {
-	text-decoration: line-through;
+	text-decoration: none;/*line-through;*/
 }
 
 .msg-box {
@@ -731,7 +739,7 @@ label span {
 	border-left: 0;
 	border-right: 0;
 }
-.calendar .calendar-grey {
+.grey {
 	color: grey;
 }
 
@@ -768,3 +776,10 @@ label span {
 	background: #8f8;
 }
 
+.calendar .day-name td {
+	color: #444;
+	text-align: center;
+	font-size: 80%;
+	background-color: silver;
+	border: 1px solid #aaa;
+}
