@@ -61,7 +61,7 @@
 
 			}
 
-//			debug($groups);
+//			debug2($groups);
 //			debug($inline);
 
 			$pieces = explode('<a name=gr', $m);
@@ -71,17 +71,21 @@
 			foreach ($groups as $idx => &$g) {
 				$id = $g[0];
 				$block = array_shift($pieces);
+				//takin description
 				preg_match('/<br>(.*?)<(dl|\/small)>/ism', $block, $t1);
 				$g[2] = ($t1 && isset($t1[1])) ? trim(preg_replace(array('/<br( \/)?>/i', '/<[^>]+>/'), array(PHP_EOL, ''), $t1[1])) : '';
+				// ok
 
-//				debug($g[2]);
-				preg_match_all('/<dl>(.*?)<\/dl>/i', $block, $t);
-//				debug($t, htmlspecialchars($block));
+//				debug2($g[2], 'description');
+				//breaking group onto pages
+				preg_match_all('/<dl>(.*?)<\/dl>/ism', $block, $t);
+//				debug2(array('html' => $block, 'parsed' => $t), 'pages');
 				if ($t)
 					foreach ($t[1] as $link)
+						// pull out a page
 						if (preg_match('/<a href="?([^ >"]+)"?>(.*?)<\/a>[^<]*<b>(.*?)k<\/b>/i', $link, $t2)) {
 							preg_match('/<dd>(.*)/i', $link, $t3);
-//							debug($t2, htmlspecialchars($link));
+//							debug2(array($t2, $link), 'links');
 							$links[$id][$t2[1]] = array(
 								$idx
 							, strip_tags($t2[2])
@@ -89,7 +93,7 @@
 							, ($t3 && isset($t3[1])) ? strip_tags($t3[1], '<br><p>') : ''
 							);
 						}
-//				debug($links[$id], "Group #$id");
+//				debug2($links[$id], "Group #$id");
 			}
 //			debug($m);
 //			debug($html);

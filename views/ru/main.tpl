@@ -4,7 +4,10 @@
 						<span class="head"><a href="/authors/id/{%id}">{%fio}</a></span>
 						<span class="head small">
 							<span class="link time size u2">{%time}</span>
-							<span class="link past_since">Прошло с последнего обновления:&nbsp;<span class="link time" style="min-width: 60px;width: 70px;">{%delta}</span></span>
+							<span class="past_since" style="float: right">Обновление:&nbsp;
+								<span class="time" style="min-width: 60px;width: 70px;">{%delta} назад</span>
+								<span class="time" style="min-width: 60px;width: 70px;"> (проверка через {%after})</span>
+							</span>
 						</span>
 					</div>
 				</div>
@@ -25,7 +28,7 @@
 							{%inline}<a href="/pages?group={%group}" class="nowrap">{%group_title}</a>{%title}
 						</span>
 						<span class="head small break">
-							<span class="delta" style="color:{%color}"><b>{%delta}</b></span>
+							<span class="delta {%color}"><b>{%delta}</b></span>
 							<span class="link time">{%time}</span>
 						</span>
 					</div>
@@ -108,6 +111,7 @@
 				$hint = $pageid ? $p->traceMark($uid, $trace, $pageid, $row['author']) : '';
 				$hint = '<span style="position: absolute; margin-left: 10px;">' . $hint . '</span>';
 				$row['hint'] = $hint;
+				$change = 0; // don't move, UPKIND_SIZE/ADD/DELETE depends on this
 				switch ($row['kind']) {
 				case UPKIND_GROUP:
 					$row['delta'] = patternize('перенесено из <a href="/pages?group={%old_id}">{%old_title}</a>', $row);
@@ -125,12 +129,15 @@
 					break;
 				case UPKIND_SIZE:
 					$change = $sizes[$row['id']] - $val;
+				case UPKIND_ADDED:
+				case UPKIND_DELETED:
+					$added = $val > 0;
 					if (!$change) {
-						$row['delta'] = Loc::lget(($added = $val > 0) ? 'added' : 'deleted');
+						$row['delta'] = Loc::lget($added ? 'added' : 'deleted') . ' (' . fs(abs($val * 1024)) . ')';
 						$row['color'] = $added ? 'green' : 'maroon';
 					} else {
-						$row['delta'] = (($pos = $val > 0) ? '+' : '-') . fs(abs($val * 1024));
-						$row['color'] = $pos ? 'green' : 'red';
+						$row['color'] = $added ? 'green' : 'red';
+						$row['delta'] = ($added ? '+' : '-') . fs(abs($val * 1024));
 					}
 				default:
 				}
@@ -162,14 +169,18 @@
 	else {
 		require_once 'core_authors.php';
 		$a = AuthorsAggregator::getInstance();
-		$idx = $h->authorsToUpdate(0, 1);
-		$d = $a->get($idx, '`id`, `fio`, `time`');
+		$idx = $h->authorsToUpdate(0, 1, true);
+		$d = $a->get($idx, '`id`, `fio`, `time`, `update_freq`');
 		$r = array();
+		$time = time();
 		if (!!$d)
 			foreach ($d as &$row) {
-				$row['delta'] = tmDelta($row['time']);
-				$row['time'] = date('d.m.Y H:i:s', $t = intval($row['time']));
-				$r["$t . " . count($r)] = patternize($p1, $row);
+				$row['delta'] = tmDelta($t = intval($row['time']));
+				$row['time'] = date('d.m.Y H:i:s', $t);
+				$delta = 60 * intval(intval($row['update_freq']) - ($time - $t) / 60);
+				$delta = $delta > 0 ? $delta : 0;
+				$row['after'] = tmDelta($time - $delta);
+				$r["$delta." . count($r)] = patternize($p1, $row);
 			}
 
 		ksort($r);
@@ -238,10 +249,6 @@
 
 <?php
 	if (!$updatelist) {
-?>
-				<div class="title content-header">Очередь на проверку обновлений:</div>
-				<?=$r?>
-<?php
 		if ($_c2) {
 ?>
 
@@ -249,5 +256,9 @@
 				<?=$e?>
 <?php
 		}
+?>
+				<div class="title content-header">Очередь на проверку обновлений:</div>
+				<?=$r?>
+<?php
 	}
 ?>

@@ -96,6 +96,14 @@ label {
 	color: red;
 }
 
+.green {
+	color: green;
+}
+
+.blue {
+	color: blue;
+}
+
 .nowrap {
 	white-space: nowrap;
 }
@@ -329,10 +337,10 @@ label {
 
 /* Diff
 --------------------------------------------*/
-.old {
+del, .old {
 	color: red;
 }
-.new {
+ins, .new {
 	color: green;
 }
 .context {
@@ -340,10 +348,10 @@ label {
 }
 
 ins {
-	text-decoration: underline;
+	text-decoration: none;/*underline;*/
 }
 del {
-	text-decoration: line-through;
+	text-decoration: none;/*line-through;*/
 }
 
 .msg-box {
@@ -506,13 +514,9 @@ span.multi {
 /* - */
 
 .v-diff {
-	display: none;
 	padding: 0;
 	position: relative;
 	margin: -1px;
-}
-*:hover>*>.v-diff {
-	display: inline-block;
 }
 
 .versions {
@@ -535,10 +539,10 @@ span.multi {
 	border-radius: 3px;
 	margin: 0;
 	padding: 2px 1px;
+	background: #ddd;
 }
 .versions:hover div {
 	border: 1px solid #333;
-	background: #ddd;
 }
 
 .versions a {
@@ -704,4 +708,78 @@ label span {
 	.v-diff {
 		display: inline-block;
 	}
+}
+
+/* calendar */
+
+.calendar {
+	border: 1px solid #555;
+	border-radius: 3px;
+	-webkit-border-radius: 3px;
+	-moz-border-radius: 3px;
+	margin: 5px;
+	background: #ddd;
+	overflow: hidden;
+	cursor: default;
+}
+.calendar td {
+	text-align: right;
+	border: 1px solid #eee;
+	padding: 2px;
+	line-height: 16px;
+	width: 16px;
+}
+.calendar .calendar-header {
+	text-align: center;
+	background: #aaa;
+	font-weight: bold;
+	color: #fff;
+	border-top: 1px solid #fff;
+	border-bottom: 1px solid #888;
+	border-left: 0;
+	border-right: 0;
+}
+.grey {
+	color: grey;
+}
+
+.calendar .calendar-version {
+	font-weight: bold;
+	border: 1px solid #55e;
+}
+.calendar .calendar-multiple .calendar-multi-versions {
+	position: absolute;
+	display: none;
+	border: 1px solid #555;
+	margin: 5px;
+	background: #ddd;
+	margin: -19px 0 0 -3px;
+	text-align: left;
+	padding: 5px 10px;
+	line-height: 16px;
+}
+
+.calendar .calendar-multiple:hover .calendar-multi-versions {
+	display: block;
+	font-weight: normal;
+}
+
+.calendar .calendar-version:hover {
+	background: #eee;
+}
+
+.calendar .calendar-new {
+	background: #dfd;
+}
+
+.calendar li.calendar-new {
+	background: #8f8;
+}
+
+.calendar .day-name td {
+	color: #444;
+	text-align: center;
+	font-size: 80%;
+	background-color: silver;
+	border: 1px solid #aaa;
 }

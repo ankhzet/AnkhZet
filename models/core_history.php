@@ -6,6 +6,10 @@
 	define('AUTHORS_UPDATE_PER_BATCH', 5);
 	define('GROUPS_UPDATE_PER_BATCH', 10);
 
+	define('AUTHOR_CHECK_MININTERVAL', 30); // check not oftener, than once per 30 minutes
+	define('AUTHOR_CHECK_MAXINTERVAL', 60 * 6); // check at least once per 6 hours
+	define('USEFUL_INTERVAL', 60 * 60 * 24 * 7); // one week
+
 	class HistoryAggregator extends Aggregator {
 		static $instance = null;
 		var $TBL_FETCH  = 'history';
@@ -76,7 +80,7 @@
 		}
 
 		function authorsToUpdate($uid, $force = 0, $all = 0, $trace = 1) {
-			$t = time() - ($force ? ($all ? -100 : 5) : 60 * 60); // 60 minutes
+			$t = time() - ($force ? ($all ? -100 : 5) : AUTHOR_CHECK_MININTERVAL * 60); // 60 minutes
 			$all = $all ? 100 : AUTHORS_UPDATE_PER_BATCH;
 			if ($uid)
 				$s = $this->dbc->select('`history` h, `pages` p, `authors` a'
@@ -85,11 +89,15 @@
 					. ' group by a.`id` order by a.`time` limit ' . $all
 				, 'a.`id` as `0`'
 				);
-			else
+			else {
+				$now = time();
+				$flag = "(($now - `time`) / 60) - update_freq";
+				$filter = $force ? "1" : "$flag > 0";
 				$s = $this->dbc->select('authors'
-				, '`time` < ' . $t . ' order by `time` limit ' . $all
+				, "$filter order by $flag desc limit " . $all
 				, '`id` as `0`'
 				);
+			}
 			$a = array();
 			if ($s)
 				foreach($this->dbc->fetchrows($s) as $row)
@@ -99,14 +107,17 @@
 		}
 
 		function groupsToUpdate($force = 0) {
+			$a = array();
 			$dbc = msqlDB::o();
 			$t = time() - ($force ? 5 : 60 * 60); // 60 minutes
+			$a_ids = $this->authorsToUpdate(0, $force);
+			if (!$a_ids) return $a;
+			$filter = join(', ', $a_ids);
 			$s = $dbc->select('groups'
-			, 	'`time` < ' . $t . ' and `link` <> "" and `link` not like "/%"'
-				. ' order by `time` limit ' . GROUPS_UPDATE_PER_BATCH
+			, 'author in ($filter) and `time` < ' . $t . ' and `link` <> "" and `link` not like "/%"'
+			. ' order by `time` limit ' . GROUPS_UPDATE_PER_BATCH
 			, '`id` as `0`'
 			);
-			$a = array();
 			if ($s)
 				foreach($dbc->fetchrows($s) as $row)
 					$a[] = intval($row[0]);
@@ -155,5 +166,68 @@
 					$this->update(array('trace' => $trace, 'time' => time()), $in_list[$page_id]);
 		}
 
+
+		function calcCheckFreq() {
+			$a = AuthorsAggregator::getInstance();
+			$d = $a->fetch(array('pagesize'=>0,'nocalc'=>true,'collumns'=>'id'));
+			$d = $d['total'] ? grabList($d['data'], 'id'): array();
+
+			$at1 = $a->get($d, 'id, time');
+			$at = array();
+			foreach ($at1 as $row)
+				$at[intval($row['id'])] = $row['time'];
+
+			if (!!$d) {
+				$u = array();
+				$now = time();
+				foreach ($d as $author_id) {
+					$s = $this->dbc->query("
+						select t.time from (select u.id, u.time from updates u, groups g where u.kind = 3 and g.id = u.page and g.author = $author_id
+							union select u.id, u.time from updates u, pages p where u.kind not in (3, 4) and p.id = u.page and p.author = $author_id
+							union select u.id, u.time from updates u where u.kind = 4 and u.value = $author_id) t
+							order by t.time desc
+					");
+					$f = grabList($this->dbc->fetchrows($s), 'time');
+					$f = array_unique($f);
+					$r = array();
+					if ($f) {
+						$last_update = $f[0];
+						$week_updates = $last_update - USEFUL_INTERVAL;
+						foreach ($f as $timestamp)
+							if ($timestamp > $week_updates)
+								$r[] = $timestamp;
+							else
+								break; // array is sorted
+					}
+					$update_freq = ($now - $last_update > USEFUL_INTERVAL) ? ($now - $last_update) / USEFUL_INTERVAL : 1;
+					$u[$author_id] = array(0 => count($r) / $update_freq, 1 => $author_id, 2 => $at[$author_id]);
+				}
+
+				usort ($u, "array_comparator");
+				$last = count($u) - 1;
+				$c_max = $u[0][0];
+				$c_min = $u[$last][0];
+				$time_denom = (AUTHOR_CHECK_MAXINTERVAL - AUTHOR_CHECK_MININTERVAL) / ($c_max - $c_min);
+				foreach ($u as &$author)
+					$author[3] = intval(($c_max + $c_min - $author[0]) * $time_denom) + AUTHOR_CHECK_MININTERVAL;
+
+				foreach ($u as $update_data)
+					$a->update(array('time' => $update_data[2], 'update_freq' => $update_data[3]), $update_data[1], true);
+
+//				debug2(array(AUTHOR_CHECK_MAXINTERVAL, AUTHOR_CHECK_MININTERVAL, $time_denom, $u));
+			}
+		}
+
 	}
 
+	function array_comparator($a1, $a2) {
+		if ($a1[0] == $a2[0]) return 0;
+		return ($a1[0] > $a2[0]) ? -1 : 1;
+	}
+
+	function grabList($rows, $field) {
+		$r = array();
+		foreach ($rows as &$row)
+			$r[] = intval($row[$field]);
+		return $r;
+	}

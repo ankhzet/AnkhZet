@@ -20,7 +20,7 @@ Snippets:<br />
 <hr />
 <?php debug2($f)?>
 
-<!--LiveInternet counter--><script type="text/javascript"><!--
+<!--LiveInternet counter --><sc ript type="text/javascript"><!--
 document.write("<a style='float: right; padding: 0 5px;' href='http://www.liveinternet.ru/click' "+
 "target=_blank><img src='//counter.yadro.ru/hit?t28.1;r"+
 escape(document.referrer)+((typeof(screen)=="undefined")?"":
