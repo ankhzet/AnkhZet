@@ -3,7 +3,6 @@
 					<div class="title update">
 						<span class="head"><a href="/authors/id/{%id}">{%fio}</a></span>
 						<span class="head small">
-							<span class="link time size u2">{%time}</span>
 							<span class="past_since" style="float: right">Обновление:&nbsp;
 								<span class="time" style="min-width: 60px;width: 70px;">{%delta} назад</span>
 								<span class="time" style="min-width: 60px;width: 70px;"> (проверка через {%after})</span>
@@ -16,7 +15,6 @@
 					<div class="title update">
 						<span class="head"><a href="/pages/version/{%id}">{%title}</a></span>
 						<span class="head small">
-							<span class="link time size u2" >{%time}</span>
 							<span class="link past_since">Прошло с изменения страницы:&nbsp;<span class="link time" style="min-width: 60px;width: 70px;">{%delta}</span></span>
 						</span>
 					</div>
@@ -226,9 +224,14 @@
 		$t = ($t - $m) / 60;
 		$h = $t % 24;
 		$d = ($t - $h) / 24;
-		$h+= $d * 24;
+//		$h+= $d * 24;
 		if ($m < 10) $m = "0" . $m;
-		return "{$h}ч. {$m}м.";
+		if ($h < 10) $h = "0" . $h;
+		$l = array();
+		if ($d) $l[] = "{$d}д.";
+		if ($h) $l[] = "{$h}ч.";
+		$l[] = "{$m}м.";
+		return join(' ', $l);
 	}
 
 	function daysAgo($delta) {

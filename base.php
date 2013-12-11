@@ -35,6 +35,7 @@
 	$timezone = $config->get('main.timezone');
 //	debug($timezone);
 	date_default_timezone_set($timezone);
+	setlocale(LC_TIME, 'ru_RU.UTF-8');
 
 	set_error_handler("error_handler");
 

@@ -299,6 +299,8 @@
 			if (!$page)
 				throw new Exception('Page ID not specified!');
 
+			View::addKey('rss-link', "?page=$page");
+
 			$a = $this->getAggregator(0);
 			$data = $a->get($page, '`id`, `title`, `author`, `description`, `link`');
 
@@ -390,17 +392,21 @@
 							$row['timestamp'] = date('d.m.Y H:i:s', $version);
 							$row['size'] = fs(filesize("$storage/$version.html"));
 							$t = '<a href="/{%root}/diff/{%page}/{%version}/{%prev}" {%oldest}>{%time}</a>';
-							$u = array();
+							$u1 = array();
 							foreach ($p as $v2)
 								if ($v2 < $version) {
 									$row['prev'] = date('d-m-Y/H-i-s', $v2);
 									$row['time'] = date('d.m.Y', $v2);
 									$fresh = ($v2 >= $diffopen) ? 'fresh' : 'new';
 									$row['oldest'] = ($v2 >= $lastseen) ? " class=\"diff-to-{$fresh}\"" : '';
-									$u[] = patternize($t, $row);
+									$u1[strftime('%B, %Y', $v2)][] = patternize($t, $row);
 								}
+							$u = array();
+							foreach ($u1 as $month => $versions) {
+								$u[] = "<span class=\"nowrap\">$month</span><br />" . join('', $versions) . '<br />';
+							}
 
-							$row['prev'] = count($u) ? '&rarr; <div class="versions"><div>' . join('', $u) . '</div></div>' : '';
+							$row['prev'] = count($u) ? '<div class="versions"><div>' . join('', $u) . '</div></div>' : '';
 							$row['last'] = !$idx ? 'last' : '';
 							$row['moderated'] = $this->userModer ? patternize(self::VERSION_MODER, $row) : '';
 							$p1 .= patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
@@ -429,7 +435,6 @@
 			$result = '';
 			$updates = explode(',', Loc::lget('updates'));
 			$update_base = array_shift($updates);
-			setlocale(LC_TIME, 'ru_RU.UTF-8');
 			$read = Loc::lget('view');
 			$row['diff'] = Loc::lget('diff');
 			$download = Loc::lget('download');
@@ -939,7 +944,7 @@
 			$p = 0;
 			while (preg_match('|<img [^>]*(src=(["\']?))/[^\2>]+\2[^>]*(>)|i', substr($c, $p), $m, PREG_OFFSET_CAPTURE)) {
 				$p += intval($m[1][1]);
-				$u = $m[1][0] . 'http://samlib.ru';
+				$u = $m[1][0] . 'http://samlib%2Eru';
 				$c = substr_replace($c, $u, $p, strlen($m[1][0]));
 				$p += strlen($u) + intval($m[3][1]) - intval($m[1][1]) - 5;
 			}

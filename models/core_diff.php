@@ -87,7 +87,7 @@ class DiffSubsplitter {
 //			array('/(' . PHP_EOL . '[' . PHP_EOL . '\s]*' . PHP_EOL . ')/', '/' . PHP_EOL . '[' . PHP_EOL . '\s]*' . PHP_EOL . '/')
 			array('/(' . PHP_EOL . ')/', '/' . PHP_EOL . '/')
 		, array('/([\.\!\?]+)/', '/[\.\!\?]+/')
-		, array('/([\>\s]+)/', '/[\>\s]+/')
+//		, array('/([\>\s]+)/', '/[\>\s]+/')
 		);
 	}
 

@@ -38,8 +38,10 @@ input {
 }
 
 sub, sup {
-	font-size: 9px;
+	font-size: 80%;
 	line-height: 1px;
+	font-weight: normal;
+	color: #888;
 }
 
 li {
@@ -208,25 +210,16 @@ label {
 	color: #555;
 	font: normal 10px Tahoma, Geneva, sans-serif;
 	text-transform: none;
-	opacity: 0.3;
 	white-space: nowrap;
 	clear: both;
-}
-.cnt-item .title .head .pull_right {
-/*	position: absolute;*/
-}
-*:hover>.pull_right, .pull_right:hover {
-	opacity: 1.0;
 }
 .pull_left {
 	padding: 0 5px;
 	color: #555;
 	font: normal 10px Tahoma, Geneva, sans-serif;
 	text-transform: none;
-	opacity: 0.3;
 }
 *:hover>.pull_left, .pull_left:hover {
-	opacity: 1.0;
 }
 .pull_right a {
 	color: #999;
@@ -521,8 +514,8 @@ span.multi {
 
 .versions {
 	overflow: hidden;
+	width: 130px;
 	height: 20px;
-	width: 60px;
 	display: inline-block;
 	position: relative;
 	margin: -5px 0;
@@ -533,28 +526,30 @@ span.multi {
 }
 
 .versions div {
+	width: 130px;
 	border: 1px solid transparent;
-	width: auto;
 	position: absolute;
 	border-radius: 3px;
 	margin: 0;
 	padding: 2px 1px;
 	background: #ddd;
+	border: 1px solid transparent;
+	text-align: center;
 }
 .versions:hover div {
 	border: 1px solid #333;
 }
 
 .versions a {
-	display: block;
-	margin: -1px 1px 1px;
-	margin: -1px auto;
-	padding: 0 2px;
+	width: 40px;
+	display: inline-block;
+	padding: 0 9px 0 2px;
+	text-align: center;
+	border-radius: 2px;
+	margin: 2px 4px;
 }
 .versions a:hover {
-	display: block;
 	background: #eee;
-	border-radius: 2px;
 }
 
 /* - */
