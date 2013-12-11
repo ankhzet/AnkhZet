@@ -299,6 +299,8 @@
 			if (!$page)
 				throw new Exception('Page ID not specified!');
 
+			View::addKey('rss-link', "?page=$page");
+
 			$a = $this->getAggregator(0);
 			$data = $a->get($page, '`id`, `title`, `author`, `description`, `link`');
 

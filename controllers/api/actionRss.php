@@ -1,83 +1,86 @@
 <?php
 	require_once 'core_rss.php';
-	require_once 'core_history.php';
+	require_once 'core_page.php';
+	require_once 'core_authors.php';
 
 	class actionRss {
 		function execute($params) {
 			$rss = RSSWorker::get();
-			$uid = intval($params['channel']);
-			if (!$uid)
-				$this->_404('Channel UID not specified');
-
-			$u = User::get($uid);
-			if (!$u->valid())
-				$this->_404('Unknown channel UID');
-
 			$time = time();
 			$c = Config::read('INI', 'cms://config/config.ini');
 			$data = array();
 			$data['title'] = $c->get('site-title');
 			$data['link'] = 'http://' . $_SERVER['HTTP_HOST'] . '/';
-			$data['self'] = "{$data['link']}rss.xml?channel=$uid";
 			$data['description'] = $data['title'];
 			$data['generator'] = $c->get('rss-feeder');
 			$data['lastbuilddate'] = date('r', $time);
+			$data['self'] = "{$data['link']}rss.xml";
 
+			msqlDB::o()->debug = post('debug');
 
-			$h = HistoryAggregator::getInstance();
-			$h->dbc->debug = post('debug');
-			$f = $h->fetchUpdates($uid);
+			$uid = uri_frag($params, 'channel');
+			$author = uri_frag($params, 'author');
+			$page = uri_frag($params, 'page');
+			$limit = uri_frag($params, 'last');
+
+			$limit = $limit ? $limit : 30;
+
+			switch (true) {
+			case !!$uid:
+				$u = User::get($uid);
+				if (!$u->valid())
+					$this->_404('Unknown channel UID');
+
+				$t = array_merge($data, array('sub-channel' => htmlspecialchars($u->readable())));
+				$data['title'] = patternize(Loc::lget('rss-title-channel'), $t);
+				$data['self'] = "{$data['link']}rss.xml?channel=$uid";
+
+				$pageIDs = $this->fetchForUID($uid, $pages, $limit);
+				break;
+			case !!$author:
+				$aa = AuthorsAggregator::getInstance();
+				$a = $aa->get($author, 'id as `0`, fio as `1`');
+				if (intval($a[0]) != $author)
+					$this->_404('Unknown author UID');
+
+				$t = array_merge($data, array('sub-channel' => htmlspecialchars($a[1])));
+				$data['title'] = patternize(Loc::lget('rss-title-author'), $t);
+				$data['self'] = "{$data['link']}rss.xml?author=$author";
+
+				$pageIDs = $this->fetchForAuthor($author, $pages, $limit);
+				break;
+			case !!$page:
+				$pa = PagesAggregator::getInstance();
+				$p = $pa->get($page, 'id as `0`, title as `1`');
+				if (intval($p[0]) != $page)
+					$this->_404('Unknown page UID');
+
+				$t = array_merge($data, array('sub-channel' => htmlspecialchars($p[1])));
+				$data['title'] = patternize(Loc::lget('rss-title-page'), $t);
+				$data['self'] = "{$data['link']}rss.xml?page=$page";
+				$pageIDs = $this->fetchForPage($page, $pages, $limit);
+				break;
+			default:
+//				$pageIDs = $h->fetchUpdates($uid, $pages);
+			}
+
 			$i = array();
-			if (count($f)) {
-				$pages = array();
-				foreach ($f as &$row)
-					$pages[intval($row['page'])] = $row;
+			if ($pageIDs) {
+				$this->fetchData($pageIDs, $pageData, $authorData, $groupData);
 
-				$h_ids = array_keys($pages);
-
-				require_once 'core_page.php';
-				require_once 'core_authors.php';
-
-				$p = PagesAggregator::getInstance();
-				$pd = $p->fetch(array('nocalc' => 1, 'desc' => 0
-				, 'filter' => '`id` in (' . join(',', $h_ids) . ')'
-				, 'collumns' => '`id`, `link`, `author`, `group`'));
-
-				$pa = array();
-				foreach ($pd['data'] as &$row)
-					$pa[intval($row['id'])] = $row;
-
-
-				$a = AuthorsAggregator::getInstance();
-				$ad = $a->fetch(array('nocalc' => 1, 'desc' => 0
-				, 'filter' => '`id` in (' . join(',', array_unique(fetch_field($pa, 'author'))) . ')'
-				, 'collumns' => '`id`, `fio`, `link`'));
-
-				$g = GroupsAggregator::getInstance();
-				$gd = $g->fetch(array('nocalc' => 1, 'desc' => 0
-				, 'filter' => '`id` in (' . join(',', array_unique(fetch_field($pa, 'group'))) . ')'
-				, 'collumns' => '`id`, `title`'));
-
-				$at = array();
-				foreach ($ad['data'] as &$row)
-					$at[intval($row['id'])] = $row;
-
-				$gt = array();
-				foreach ($gd['data'] as &$row)
-					$gt[intval($row['id'])] = $row['title'];
-
-				foreach ($pages as $page_id => $row) {
-					$author = intval($pa[$page_id]['author']);
-					$group = intval($pa[$page_id]['group']);
-					$alink = $at[$author]['link'];
-					$link = $pa[$page_id]['link'];
+				foreach ($pages as $hID => $row) {
+					$page_id = intval($row['page']);
+					$author = intval($pageData[$page_id]['author']);
+					$group = intval($pageData[$page_id]['group']);
+					$alink = $authorData[$author]['link'];
+					$link = $pageData[$page_id]['link'];
 					$slink = str_replace('.shtml', '', $link);
 					$delta = intval($row['size']) - intval($row['size_old']);
 					$old_version_date = date('d-m-Y/H-i-s', $row['time_old']);
-					$i[$page_id] = array(
+					$i[$hID] = array(
 						'title' => $row['title']
-					, 'author' => $author ? $at[$author]['fio'] : '&lt;неизвестный автор&gt;'
-					, 'group' => $group ? $gt[$group] : '&lt;неизвестная группа&gt;'
+					, 'author' => $author ? $authorData[$author]['fio'] : '&lt;неизвестный автор&gt;'
+					, 'group' => $group ? $groupData[$group] : '&lt;неизвестная группа&gt;'
 					, 'link' => "{$data['link']}pages/version/{$page_id}/$old_version_date"
 					, 'samlib' => "$alink/$slink"
 					, 'pubDate' => date('r', $row['time'])
@@ -85,25 +88,24 @@
 					);
 
 					$diff = ($delta < 0) ? 'red' : 'green';
-					$i[$page_id]['description'] = array(
-						'title' => $i[$page_id]['title']
-					, 'group' => $i[$page_id]['group']
-					, 'author' => $i[$page_id]['author']
+					$i[$hID]['description'] = array(
+						'title' => $i[$hID]['title']
+					, 'group' => $i[$hID]['group']
+					, 'author' => $i[$hID]['author']
 					, 'size' => $row['size']
 					, 'delta' => (($delta < 0) ? '' : '+') . $delta
 					, 'diff' => $diff
 					, 'samlib' => "$alink/$link"
-					, 'link' => $i[$page_id]['link']
+					, 'link' => $i[$hID]['link']
 					, 'link2' => "{$data['link']}pages/id/{$page_id}"
 					, 'pubdate' => date('d.m.Y H:i:s', $row['time'])
 					, 'description' => safeSubstr($row['description'], 200, 3)
 					);
 				}
-
-//				$h->upToDate(fetch_field($pages, '0'));
 			}
 
 			$data['items'] = $i;
+
 			$gzip = !post_int('nogzip');
 			$debug = post_int('debug');
 			if ($gzip) {
@@ -133,8 +135,10 @@
 			header("Content-Disposition: inline; filename=$file");
 //			$rss = ob_get_contents();
 
-			if ($gzip)
-			$rss = gzencode($rss);
+			header('Cache-Control: no-store; no-cache');
+
+			if ($gzip) $rss = gzencode($rss);
+
 			echo $rss;
 
 //			if ($gzip)
@@ -146,6 +150,98 @@
 		function _404($text) {
 			header('HTTP/1.0 404 Not Found');
 			die($text);
+		}
+
+		function fetchData($pageIds, &$pageData, &$authorData, &$groupData) {
+			$pa = PagesAggregator::getInstance();
+			$pd = $pa->fetch(array('nocalc' => 1, 'desc' => 0
+			, 'filter' => '`id` in (' . join(',', $pageIds) . ')'
+			, 'collumns' => '`id`, `link`, `author`, `group`'));
+
+			$pageData = array();
+			foreach ($pd['data'] as &$row)
+				$pageData[intval($row['id'])] = $row;
+
+			$aa = AuthorsAggregator::getInstance();
+			$ad = $aa->fetch(array('nocalc' => 1, 'desc' => 0
+			, 'filter' => '`id` in (' . join(',', array_unique(fetch_field($pageData, 'author'))) . ')'
+			, 'collumns' => '`id`, `fio`, `link`'));
+
+			$authorData = array();
+			foreach ($ad['data'] as &$row)
+				$authorData[intval($row['id'])] = $row;
+
+			$ga = GroupsAggregator::getInstance();
+			$gd = $ga->fetch(array('nocalc' => 1, 'desc' => 0
+			, 'filter' => '`id` in (' . join(',', array_unique(fetch_field($pageData, 'group'))) . ')'
+			, 'collumns' => '`id`, `title`'));
+
+			$groupData = array();
+			foreach ($gd['data'] as &$row)
+				$groupData[intval($row['id'])] = $row['title'];
+		}
+
+		function fetchForUID($uid, &$pages, $limit) {
+			require_once 'core_history.php';
+			$f = HistoryAggregator::getInstance()->fetchUpdates($uid);
+
+			$pages = array();
+			if (!!$f) {
+				$f = array_slice($f, 0, $limit);
+
+				foreach ($f as &$row)
+					$pages[intval($row['page'])] = $row;
+
+				return array_keys($pages);
+			} else
+				return null;
+		}
+
+		function fetchForAuthor($author, &$pages, $limit) {
+			require_once 'core_updates.php';
+			$dbc = msqlDB::o();
+			$f1 = array(UPKIND_SIZE, UPKIND_DELETE, UPKIND_ADDED, UPKIND_DELETED);
+			$f1 = join(',', $f1);
+			$s = $dbc->select('pages p, updates u'
+			, "p.author = $author and u.kind in ($f1) and u.page = p.id order by u.time desc limit $limit"
+			, 'u.id as `0`, p.id as `page`, p.`description`, p.`size`, u.`time`, p.`title`, u.`value` as `delta`, u.`time` as `time_old`'
+			);
+			$f = $dbc->fetchrows($s);
+			$pages = array();
+			$pageIDs = array();
+			$sizes = array();
+			foreach ($f as &$row) {
+				$pageIDs[] = $pid = intval($row['page']);
+				$sizes[$pid] = (isset($sizes[$pid]) ? $sizes[$pid] : intval($row['size'])) - intval($row['delta']);
+				$row['size'] = $sizes[$pid] + intval($row['delta']);
+				$row['size_old'] = $sizes[$pid];
+				$pages[] = $row;
+			}
+
+			return array_unique($pageIDs);
+		}
+		function fetchForPage($page, &$pages, $limit) {
+			require_once 'core_updates.php';
+			$dbc = msqlDB::o();
+			$f1 = array(UPKIND_SIZE, UPKIND_DELETE, UPKIND_ADDED, UPKIND_DELETED);
+			$f1 = join(',', $f1);
+			$s = $dbc->select('pages p, updates u'
+			, "p.id = $page and u.kind in ($f1) and u.page = p.id order by u.time desc limit $limit"
+			, 'u.id as `0`, p.id as `page`, p.`description`, p.`size`, u.`time`, p.`title`, u.`value` as `delta`, u.`time` as `time_old`'
+			);
+			$f = $dbc->fetchrows($s);
+			$pages = array();
+			$pageIDs = array();
+			$sizes = array();
+			foreach ($f as &$row) {
+				$pageIDs[] = $pid = intval($row['page']);
+				$sizes[$pid] = (isset($sizes[$pid]) ? $sizes[$pid] : intval($row['size'])) - intval($row['delta']);
+				$row['size'] = $sizes[$pid] + intval($row['delta']);
+				$row['size_old'] = $sizes[$pid];
+				$pages[] = $row;
+			}
+
+			return array_unique($pageIDs);
 		}
 	}
 
