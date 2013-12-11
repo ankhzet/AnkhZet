@@ -65,6 +65,7 @@
 		}
 
 		function giveFile($title, $filename, $data, $options, $date = 0, $download = true) {
+			$filename = preg_replace('/_+$/i', '', $filename);
 			$_format   = ($options >> 0) & 0x00F;
 			$_encoding = ($options >> 0) & 0x0F0;
 			$_archive  = ($options >> 0) & 0xF00;
@@ -76,11 +77,13 @@
 				if ($this->_text)
 					$data = $this->_text;
 				else {
-					$data = str_replace(array('<br />', '<dd>', '<p>'), PHP_EOL, $data);
+					$data = str_ireplace(array('</p>', PHP_EOL), "", strip_tags($data, '<br><p><dd>'));
+					$data = str_ireplace(array('<br />', '<dd>', '<p>' ,'<p />'), PHP_EOL, $data);
+					$data = preg_replace('/[ ]{2,}/', ' ', $data);
 					$trans = get_html_translation_table(HTML_ENTITIES);
 					$trans = array_flip($trans);
 					$data = strtr($data, $trans);
-					$data = strip_tags($data);
+					$data = rtrim(str_replace(PHP_EOL, "\r\n", strip_tags($data))) . "\r\n";
 					$this->_text = $data;
 				}
 				break;

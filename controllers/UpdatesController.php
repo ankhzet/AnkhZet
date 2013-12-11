@@ -72,6 +72,8 @@
 			$uid = $this->user->ID();
 			if ($this->userModer && ($muid = post_int('for_user'))) $uid = $muid;
 
+			View::addKey('rss-link', "?channel=$uid");
+
 			$author = uri_frag($_REQUEST, 'author', 0);
 			$hidden = uri_frag($_REQUEST, 'hidden', 0);
 			$min_s = uri_frag($_REQUEST, 'min_size', 0);
