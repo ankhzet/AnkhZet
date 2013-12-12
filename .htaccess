@@ -6,7 +6,7 @@
 	RewriteRule ^(.*)$ http://%1/$1 [R=301,L]
 
 	RewriteRule \.(?:js|html?)$ compress.php
-	RewriteRule ([^\.]+)\.(?:xml)$ api.php?action=$1
+	RewriteRule ([^\.]+)\.((?:xml|json))$ api.php?action=$1&response_type=$2
 
 	RewriteCond %{REQUEST_URI} !/theme
 	RewriteCond %{REQUEST_URI} !/thumbnails

@@ -40,6 +40,7 @@
 			, 'sitemap' => 0
 			, 'nop'
 			, 'heartbeat' => 0
+			, 'clientapi' => 0
 			);
 		}
 

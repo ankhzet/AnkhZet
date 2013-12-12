@@ -35,6 +35,33 @@
 		return $name ? '"'.$name.'": '.$data : $data;
 	}
 
+	function format2 ($tab, $data, $name = null) {
+		$delim = '=';
+		switch (true) {
+		case is_bool($data):
+		case is_numeric($data):
+			break;
+		case is_array($data):
+			$delim = '';
+			$e = array();
+			$assoc = is_assoc($data);
+			if (!$assoc)
+				foreach ($data as $row)
+					$e[] = format2($tab, $row);
+			else
+				foreach ($data as $id => $row)
+					$e[] = format2($tab, $row, $id);
+
+			$data = (!!$data && $assoc)
+				? "{\n$tab" . join(";\n$tab", $e) . "\n$tab}\n"
+				: '['.PHP_EOL . join(', ', $e) . PHP_EOL.']';
+			break;
+		default:
+			$data = '"' . addslashes(str_replace("'", '&#39;', $data)) . '"';
+		}
+		return $name ? "{$tab}$name {$delim} $data" : $data;
+	}
+
 	function JSON_result($result, $data = null, $die = true) {
 		$response = '{"result": "' . addslashes($result) . '"' . (($data || is_array($data)) ? ', ' . format($data, 'data') : '') . '}';
 		if ($die)
@@ -42,4 +69,11 @@
 		else
 			return $response;
 	}
-?>
+
+	function Config_result($name, $result, $data = null, $die = true) {
+		$response = "config \"$name\" {\n\tresult = \"" . addslashes($result) . '"' . (($data || is_array($data)) ? ";\n" . format2("\t", $data, 'data') : '') . "\n}";
+		if ($die)
+			die($response);
+		else
+			return $response;
+	}

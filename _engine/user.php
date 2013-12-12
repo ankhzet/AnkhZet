@@ -29,6 +29,7 @@
 
 	class User extends msqlTableRow {
 		private static $data = null;
+		private static $cache = array();
 		const COL_LOGIN  = 'login';
 		const COL_PASS   = 'password';
 		const COL_ACL    = 'acl';
@@ -100,16 +101,24 @@
 
 		static function get($id = null) {
 			if ($id = intval($id)) {
-				$u = new User();
-				$u->_set(self::COL_ID, $id, true);
-				return $u;
+				if (!isset(self::$cache[$id])) {
+					self::$cache[$id] = new User();
+					self::$cache[$id]->_set(self::COL_ID, $id, true);
+				}
+
+				return self::$cache[$id];
 			}
+
 			if (null === self::$data) {
-				self::$data = new User();
 				$s = Ses::get(SAM::SAM_COOKIES);
 
-				if ($s->valid()){
-					self::$data->_set(self::COL_ID, $s->linked, true);}
+				$id = $s->linked;
+				if (!isset(self::$cache[$id])) {
+					self::$cache[$id] = new User();
+					if ($s->valid())
+						self::$cache[$id]->_set(self::COL_ID, $id, true);
+				}
+				self::$data = self::$cache[$id];
 			};
 			return self::$data;
 		}
