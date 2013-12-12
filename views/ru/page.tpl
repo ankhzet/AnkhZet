@@ -7,11 +7,7 @@
 	<meta name="server-time" content="{%page#time%}" />
 	<meta name="google-site-verification" content="mvUHJdHQHZgnjIzVdyR7zW8n-9OTjVlM_0GdxWA-czo" />
 {%TPL:content#meta%}
-<?php
-	if ($uid = User::get()->ID()) {
-?>
-	<link href="/rss.xml?channel=<?=$uid?>" type="application/rss+xml" rel="alternate" title="RSS Feed">
-<?php } ?>
+	<link href="/rss.xml{%rss-link%}" type="application/rss+xml" rel="alternate" title="RSS Feed">
 	<link rel="stylesheet" href="/theme/css/style.css" type="text/css" media="screen, projection" />
 	<link rel="stylesheet" href="/theme/css/upd.css" type="text/css" media="screen, projection" />
 	<script type="text/javascript" asynchronous src="/theme/js/jquery.js"></script>

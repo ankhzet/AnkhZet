@@ -39,7 +39,7 @@
 							<a href="/{%root}/version/{%id}">{%versions}</a> | <span class="size">{%size}KB</span>{%group}
 						</div>
 					</div>
-';
+';
 		const VERSION_PATT = '
 		<div class="cnt-item">
 			<div class="title">
@@ -90,12 +90,15 @@
 			$author = post_int('author');
 			$group = post_int('group');
 			$this->group_title = '';
-			$this->author = '';
+			$this->author = 0;
+			$this->group = 0;
 			if (!$author && $group) {
 				$ga = $this->getAggregator(2);
 				$g = $ga->get($group, '`author`, `title`');
 				if ($g) {
 					$g['title'] = str_replace(array('@ ', '@'), '', $g['title']);
+					$this->group = $group;
+					$this->groups[$group] = $g;
 					$this->group_title = $g['title'];
 					$author = intval($g['author']);
 				}
@@ -107,6 +110,7 @@
 				$g = $this->getAggregator(1);
 				$a = $g->get($author);
 				$this->author = $author;
+				$this->authors[$author] = $a;
 				$this->author_fio = $a['fio'] ? $a['fio'] : '&lt;author&gt;';
 				$this->author_link = $a['link'];
 			}
@@ -120,8 +124,13 @@
 		}
 
 		public function actionPage($r) {
-			if (!$this->author)
-				locate_to('/authors');
+//			if (!$this->author)
+//				locate_to('/authors');
+
+			if ($this->author)
+				View::addKey('rss-link', "?author={$this->author}");
+			if ($this->group)
+				View::addKey('rss-link', "?group={$this->group}");
 
 			return parent::actionPage($r);
 		}
@@ -131,8 +140,18 @@
 
 			$row['versions'] = Loc::lget('versions');
 			$row['trace'] = Loc::lget('trace');
-			$row['fio'] = $this->author_fio;
-			$row['autolink'] = $this->author_link;
+
+			$author = intval($row['author']);
+			if ($author) {
+				if (!isset($this->authors[$author])) {
+					$aa = $this->getAggregator(1);
+					$a = $aa->get($author, '`id`, `fio`, `link`');
+					$this->authors[$author] = $a;
+				} else
+					$a = &$this->authors[$author];
+				$row['fio'] = $a['fio'];
+				$row['autolink'] = $a['link'];
+			}
 
 			$group = intval($row['group']);
 			if ($group && !isset($this->groups[$group])) {
@@ -165,6 +184,8 @@
 			$page = intval($row['id']);
 			$version = intval($row['utime']);
 			$file = "cms://cache/pages/{$row['id']}/last.html";
+
+			View::addKey('rss-link', "?page=$page");
 
 			$ha = $this->getAggregator(3);
 			$uid = $this->user->ID();
@@ -298,6 +319,8 @@
 			$page = uri_frag($r, 0);
 			if (!$page)
 				throw new Exception('Page ID not specified!');
+
+			View::addKey('rss-link', "?page=$page");
 
 			$a = $this->getAggregator(0);
 			$data = $a->get($page, '`id`, `title`, `author`, `description`, `link`');
@@ -476,7 +499,7 @@
 				$succ = 6 - $lday;
 
 				// fill in days of next month
-				if (count($d) + $succ < 6 * 7) $succ += 7;
+//				if (count($d) + $succ < 6 * 7) $succ += 7;
 
 
 				//fill in days of previous month
@@ -584,6 +607,8 @@
 			$version = ($v = $this->decodeVersion($r, 1)) !== false ? $v : uri_frag($r, 1);
 			if (!$version)
 				throw new Exception('Unknown version!');
+
+			View::addKey('rss-link', "?page=$page");
 
 			$a = $this->getAggregator(0);
 			$data = $a->get($page, '`id`, `title`, `author`, `description`, `link`, `time`');
@@ -838,6 +863,8 @@
 			if (!$page)
 				throw new Exception('Page ID not specified!');
 
+			View::addKey('rss-link', "?page=$page");
+
 			$a = $this->getAggregator(0);
 			$data = $a->get($page, '`id`, `title`, `author`');
 			if ($data['id'] != $page)
@@ -910,7 +937,7 @@
 
 		function prepareForGrammar($c, $cleanup = false) {
 			if ($cleanup) {
-				$c = strip_tags($c, '<strong><small><h1><h2><h3><h4><h5><h6><h7><h8><font><dd><p><div><span><a><ul><ol><li><img><table><tr><td><thead><tbody><br><u><b><i><s>');
+				$c = preg_replace('"<([^\/[:alpha:]])"i', '&lt;\1', $c);
 				$c = preg_replace('"<p([^>]*)?>(.*?)<dd>"i', '<p\1>\2<dd>', $c);
 				$c = preg_replace('"(</?(td|tr|table)[^>]*>)'.PHP_EOL.'"', '\1', $c);
 				$c = preg_replace('"'.PHP_EOL.'(</?(td|tr|table)[^>]*>)"', '\1', $c);

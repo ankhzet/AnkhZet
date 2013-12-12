@@ -106,11 +106,12 @@
 				}
 			$this->view->fio_filter = join(', ', $a);
 
-			parent::actionPage($r);
+			return parent::actionPage($r);
 		}
 
 		public function makeIDItem(&$aggregator, &$row) {
-			View::addKey('hint', ' - ' . $row['fio']);
+			View::addKey('title', "<a href=\"/authors/id/{$row['id']}\">{$row['fio']}</a>");
+
 			html_escape($row, array('fio', 'link'));
 			$row['pages'] = Loc::lget('pages');
 			$row['checkupdates'] = Loc::lget('checkupdates');
@@ -254,10 +255,18 @@
 			$this->view->renderTPL("{$this->_name}/add");
 		}
 
+		public function actionId($r) {
+			$author = uri_frag($r, 0);
+			View::addKey('rss-link', $author ? "?author=$author" : '');
+			return parent::actionId($r);
+		}
+
 		public function actionChronology($r) {
 			$author = uri_frag($r, 0);
 			if (!$author)
 				throw new Exception('Author ID not specified!');
+
+			View::addKey('rss-link', "?author=$author");
 
 			$a = $this->getAggregator(0);
 			$data = $a->get($author, '`id`, `fio`');

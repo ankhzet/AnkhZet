@@ -45,7 +45,6 @@
 		const UPDATES_CHECK = '<span class="pull_right">[<a href="/updates/trace">{%checkupdates}</a>]</span>';
 		const UPDATES_HIDDEN = '<span class="pull_right">[<a href="/updates?hidden={%hidden}{%muid}">{%check}</a>{%opposite}]</span>';
 		const UPDATES_OPPOSITE = ' <sup><a href="/updates?hidden={%hidden}{%opposite:filter}">{%opposite}</a></sup>';
-		const UPDATES_RSS = '<span class="pull_right">[<a href="/rss.xml?channel={%uid}">{%rss}</a>]</span>';
 
 		const AUTHOR_FILTER = '<a href="/updates?{%hidden}author={%id}{%uid}{%opposite:filter}" class="filter {%color}">{%fio}</a> <sup>({%count})</sup>';
 
@@ -126,7 +125,6 @@
 			$loc = array(
 				'checkupdates' => Loc::lget('checkupdates')
 			, 'check' => Loc::lget($hidden ? 'checktraced' : 'checkhidden')
-			, 'rss' => Loc::lget('RSS')
 			, 'uid' => $uid
 			, 'muid' => $muid ? "&for_user=$uid" : ''
 			, 'hidden' => $hidden_f
@@ -136,7 +134,7 @@
 			);
 			$loc['opposite'] = patternize(self::UPDATES_OPPOSITE, $loc);
 
-			View::addKey('moder', patternize(self::UPDATES_RSS . ' ' . self::UPDATES_CHECK . ' ' . self::UPDATES_HIDDEN, $loc));
+			View::addKey('moder', patternize(self::UPDATES_CHECK . ' ' . self::UPDATES_HIDDEN, $loc));
 
 
 			$last  = intval(ceil($this->data['total'] / $aggregator->FETCH_PAGE));
