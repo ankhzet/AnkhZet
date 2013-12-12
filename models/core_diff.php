@@ -371,7 +371,7 @@ class DiffBuilder {
 		$c1 = $this->c1;
 		$c2 = $this->c2;
 
-		$f = new SplFixedArray($c1 + 1);
+		$f = class_exists("SplFixedArray") ? new SplFixedArray($c1 + 1) : array_fill(0, $c1 + 1, 0);
 //		$f1 = array_fill(0, $c2 + 1, 0);
 //		for ($i = $c1 - 1; $i >= 0; $i--)
 //			$f[$i] = ;//array_fill(0, $c2 + 1, 0);
@@ -380,7 +380,7 @@ class DiffBuilder {
 		for ($i = $c1 - 1; $i >= 0; $i--) {
 //		$u = memory_get_usage(true);
 //		echo "usage (row $i): $u<br />" . PHP_EOL;
-			$f[$i] = new SplFixedArray($c2 + 1);
+			$f[$i] = class_exists("SplFixedArray") ? new SplFixedArray($c2 + 1) : array_fill(0, $c2 + 1, 0);
 //		gc_collect_cycles();
 			for ($j = $c2 - 1; $j >= 0; $j--)
 				if ($this->h1[$i] == $this->h2[$j])
