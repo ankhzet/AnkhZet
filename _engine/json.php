@@ -46,15 +46,15 @@
 			$e = array();
 			$assoc = is_assoc($data);
 			if (!$assoc)
-				foreach ($data as $row)
-					$e[] = format2($tab, $row);
+				foreach ($data as $idx => $row)
+					$e[] = format2($tab, $row, "item_$idx");
 			else
 				foreach ($data as $id => $row)
 					$e[] = format2($tab, $row, $id);
 
 			$data = (!!$data && $assoc)
-				? "{\n$tab" . join(";\n$tab", $e) . "\n$tab}\n"
-				: '['.PHP_EOL . join(', ', $e) . PHP_EOL.']';
+				? "{\n$tab\t" . join(";\n$tab\t", $e) . ";\n$tab\t}"
+				: "{\n$tab" . join(";\n$tab", $e) . ";\n$tab}";
 			break;
 		default:
 			$data = '"' . addslashes(str_replace("'", '&#39;', $data)) . '"';
@@ -71,7 +71,7 @@
 	}
 
 	function Config_result($name, $result, $data = null, $die = true) {
-		$response = "config \"$name\" {\n\tresult = \"" . addslashes($result) . '"' . (($data || is_array($data)) ? ";\n" . format2("\t", $data, 'data') : '') . "\n}";
+		$response = "config \"$name\" {\n\tresult = \"" . addslashes($result) . '"' . (($data || is_array($data)) ? ";\n" . format2("\t", $data, 'data') : '') . ";\n}";
 		if ($die)
 			die($response);
 		else

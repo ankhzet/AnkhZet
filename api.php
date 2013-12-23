@@ -24,6 +24,5 @@
 		exit(PHP_EOL . '<!-- ;) -->');
 	}
 
-
 	if (API::handle($action, $_REQUEST) === false)
 		die('METHOD_UNKNOWN');

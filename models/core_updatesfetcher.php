@@ -52,6 +52,7 @@
 				$pageIDs = self::fetchForPage($page, $pages, $limit);
 				break;
 			default:
+				return 'Category unspecified';
 //				$pageIDs = $h->fetchUpdates($uid, $pages);
 			}
 
@@ -70,7 +71,10 @@
 					$delta = intval($row['size']) - intval($row['size_old']);
 					$old_version_date = date('d-m-Y/H-i-s', $row['time_old']);
 					$i[$hID] = array(
-						'title' => $row['title']
+						'authorID' => $author
+					, 'groupID' => $group
+					, 'pageID' => $pageId
+					, 'title' => $row['title']
 					, 'author' => $author ? $authorData[$author]['fio'] : '&lt;неизвестный автор&gt;'
 					, 'group' => $group ? $groupData[$group] : '&lt;неизвестная группа&gt;'
 					, 'link' => "{$data['link']}pages/version/{$pageId}/$old_version_date"
