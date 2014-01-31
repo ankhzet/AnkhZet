@@ -13,7 +13,13 @@
 		}
 
 		function run() {
-			if ((User::ACL() < ACL::ACL_ADMINS) && $this->frontend->get('config')->get('main.offline')) {
+			$showOffline = (User::ACL() < ACL::ACL_ADMINS) && $this->frontend->get('config')->get('main.offline');
+			if ($showOffline) {
+				$uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : null;
+				$showOffline = strpos($uri, '/user/login') === false;
+			}
+
+			if ($showOffline) {
 				require_once 'view.php';
 				$v = new View();
 				$v->renderTPL('offline');
@@ -33,3 +39,4 @@
 	header('Content-Type: text/html');
 	header('X-Frame-Options: SAMEORIGIN');
 	ob_end_flush();
+?>
