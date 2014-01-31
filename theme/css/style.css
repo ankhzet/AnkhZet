@@ -110,6 +110,10 @@ label {
 	white-space: nowrap;
 }
 
+.right {
+	text-align: right!important;
+}
+
 #wrapper {
 	width: 100%;
 	margin: 0 auto;
@@ -380,14 +384,14 @@ span.multi {
 	margin-right: 5px;
 }
 
-.diff-to-fresh, .diff-to-new {
+.d-t-f, .d-t-n {
 	background: #4dd;
 	border-radius: 3px;
 	margin: -1px;
 	padding: 2px;
 	color: blue;
 }
-.diff-to-fresh {
+.d-t-f {
 	background: #4d4;
 }
 
@@ -507,14 +511,14 @@ span.multi {
 /* - */
 
 .v-diff {
+	margin: 0;
 	padding: 0;
 	position: relative;
-	margin: -1px;
 }
 
 .versions {
 	overflow: hidden;
-	width: 130px;
+	width: 310px;
 	height: 20px;
 	display: inline-block;
 	position: relative;
@@ -526,7 +530,7 @@ span.multi {
 }
 
 .versions div {
-	width: 130px;
+	width: 307px;
 	border: 1px solid transparent;
 	position: absolute;
 	border-radius: 3px;
@@ -541,12 +545,13 @@ span.multi {
 }
 
 .versions a {
-	width: 40px;
+	width: 20px;
 	display: inline-block;
-	padding: 0 9px 0 2px;
+	padding: 0 10px 0 2px;
 	text-align: center;
 	border-radius: 2px;
 	margin: 2px 4px;
+	font: 11px/14px normal Tahoma !important;
 }
 .versions a:hover {
 	background: #eee;
@@ -738,11 +743,11 @@ label span {
 	color: grey;
 }
 
-.calendar .calendar-version {
+.calendar .c-v {
 	font-weight: bold;
 	border: 1px solid #55e;
 }
-.calendar .calendar-multiple .calendar-multi-versions {
+.calendar .c-m .c-m-v {
 	position: absolute;
 	display: none;
 	border: 1px solid #555;
@@ -754,20 +759,21 @@ label span {
 	line-height: 16px;
 }
 
-.calendar .calendar-multiple:hover .calendar-multi-versions {
+.calendar .c-m:hover .c-m-v {
 	display: block;
 	font-weight: normal;
+	z-index: 100;
 }
 
-.calendar .calendar-version:hover {
+.calendar .c-v:hover {
 	background: #eee;
 }
 
-.calendar .calendar-new {
+.calendar .c-n {
 	background: #dfd;
 }
 
-.calendar li.calendar-new {
+.calendar li.c-n {
 	background: #8f8;
 }
 

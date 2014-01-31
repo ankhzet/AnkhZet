@@ -45,28 +45,17 @@
 		const VERSION_PATT = '
 		<div class="cnt-item">
 			<div class="title">
-				<span class="head">{%timestamp}</span>
-				<span class="link size">{%size}</span>
+				<span class="head" style="font-weight: normal;">{%timestamp} <span class="text"><span class="v-diff {%last}">&rarr; {%diff}: {%prev}</span></span></span>
+				<span class="link size right">{%size}</span>
 			</div>
-			<div class="text">[
-				<a href="/{%root}/version/{%page}/view/{%version}">{%view}</a>
-			| <a href="/{%root}/download/{%page}/{%version}" noindex nofollow>{%download}</a>
-			{%moderated}
-				<span class="v-diff {%last}">&nbsp;| {%diff}: {%prev}</span>
-			]</div>
 		</div>
 		';
 		const VERSION_PATT2 = '
 		<div class="cnt-item">
 			<div class="title">
 				<span class="head">{%timestamp}</span>
-				<span class="link size">{%size}</span>
+				<span class="link size right">{%size}</span>
 			</div>
-			<div class="text">[
-				<a href="/{%root}/version/{%page}/view/{%version}">{%view}</a>
-			| <a noindex nofollow href="/{%root}/download/{%page}/{%version}">{%download}</a>
-			{%moderated}
-			]</div>
 		</div>
 		';
 
@@ -319,60 +308,70 @@
 				$l = count($p) - 1;
 
 				if ($l >= 0) {
+					$chunks = array();
+					$updates = array();
+					foreach ($p as $idx => $version) {
+						$chunk = date('Y.m', $version);
+						$chunks[$chunk] = $version;
+						$updates[$chunk][$idx] = $version;
+					}
+
+					krsort($chunks);
+
 					$newest = $p[0];
 					$oldest = $p[count($p) - 1];
 					$lastseen = ($lastseen >= 0) ? $lastseen : $newest;
 					$diffopen = ($v = post_int('version')) ? $v : $lastseen;
 
 					$p1 = '';
-//					if (PageUtils::isDiffMode()) {
-						$row = array('root' => $this->_name, 'page' => $page);
+					$row = array('root' => $this->_name, 'page' => $page);
 
-						$ldate = date('d.m.Y', $newest);
-						$full = Loc::lget('full_last_version');
-						$last = $newest ? "<br /><span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>" : '';
-						View::addKey('moder', $last);
-						$_ldiff = Loc::lget('diff');
-						$_lview = Loc::lget('view');
-						$_ldownload = Loc::lget('download');
-						$_ldelete = Loc::lget('delete');
-						foreach ($p as $idx => $version) {
+					$ldate = date('d.m.Y', $newest);
+					$full = Loc::lget('full_last_version');
+					$last = $newest ? "<br /><span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>" : '';
+					View::addKey('moder', $last);
+					$_ldiff = Loc::lget('diff');
+					$_lview = Loc::lget('view');
+					$_ldownload = Loc::lget('download');
+					$_ldelete = Loc::lget('delete');
+
+					foreach ($chunks as $chunk => $chunkTimestamp) {
+						$chunkDate = strftime('%B, %Y', $chunkTimestamp);
+						$p1 .= "<div class=\"cnt-item\"><span class=\"title\">$chunkDate</span></div>";
+						foreach ($updates[$chunk] as $idx => $version) {
 							$row = array_merge($data, $row, $adata);
-							$row['view'] = $_lview;
 							$row['diff'] = $_ldiff;
-							$row['download'] = $_ldownload;
-							$row['delete'] = $_ldelete;
 							$row['version'] = date('d-m-Y/H-i-s', $version);
 							$row['prew'] = ($idx < $l) ? intval($p[$idx + 1]) : 0;
-							$row['timestamp'] = date('d.m.Y H:i:s', $version);
+							$row['timestamp'] = date('d, H:i', $version);
 							$row['size'] = fs(filesize("$storage/$version.html"));
 							$t = '<a href="/{%root}/diff/{%page}/{%version}/{%prev}" {%oldest}>{%time}</a>';
 							$u1 = array();
 							foreach ($p as $v2)
 								if ($v2 < $version) {
 									$row['prev'] = date('d-m-Y/H-i-s', $v2);
-									$row['time'] = date('d.m.Y', $v2);
-									$fresh = ($v2 >= $diffopen) ? 'fresh' : 'new';
-									$row['oldest'] = ($v2 >= $lastseen) ? " class=\"diff-to-{$fresh}\"" : '';
+									$row['time'] = date('d.m', $v2);
+									$fresh = ($v2 >= $diffopen) ? 'f' : 'n';
+									$row['oldest'] = ($v2 >= $lastseen) ? " class=\"d-t-{$fresh}\"" : '';
 									$u1[strftime('%B, %Y', $v2)][] = patternize($t, $row);
 								}
 							$u = array();
-							foreach ($u1 as $month => $versions) {
+							foreach ($u1 as $month => $versions)
 								$u[] = "<span class=\"nowrap\">$month</span><br />" . join('', $versions) . '<br />';
-							}
 
 							$row['prev'] = count($u) ? '<div class="versions"><div>' . join('', $u) . '</div></div>' : '';
 							$row['last'] = !$idx ? 'last' : '';
-							$row['moderated'] = $this->userModer ? patternize(self::VERSION_MODER, $row) : '';
+//							$row['moderated'] = $this->userModer ? patternize(self::VERSION_MODER, $row) : '';
 							$p1 .= patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
 						}
-//					} else
-						if (PageUtils::isDiffMode())
-							echo $p1;
-						else {
-							$p2 = PageUtils::buildCalendar($page, $p, $lastseen, $storage);
-							echo "<div style='float: left; overflow: hidden;'>$p2</div><div style='float: left; overflow: hidden;'>$p1</div>";
-						}
+					}
+
+					if (PageUtils::isDiffMode())
+						echo $p1;
+					else {
+						$p2 = PageUtils::buildCalendar($page, $p, $lastseen, $storage);
+						echo "<div style='float: left; overflow: hidden;'>$p2</div><div style='float: left; overflow: hidden;'>$p1</div>";
+					}
 				} else {
 					echo Loc::lget('pages_noversions');
 					View::addKey('moder', '');
