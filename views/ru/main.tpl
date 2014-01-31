@@ -55,14 +55,14 @@
 	$c3 = 0;
 	$nn = count($d['data']);
 
-	$day = 60 * 60 * 24;
+	$day = 60 * 60 * 24.0;
 	$config = Config::read('INI', 'cms://config/config.ini');
 	$offset = $config->get('main.time-offset');
 	$offset = explode('=', $offset);
 	$offset = $offset[0] * 60 * 60;
 	$now = time() + $offset;
 
-	$now = ($now - $now % $day) / $day;
+	$now = intval(floor($now / $day));
 	$timeslice = array();
 	$pages = array();
 	if ($d['total']) {
@@ -70,7 +70,10 @@
 		foreach ($d['data'] as &$row) {
 			$pages[] = intval($row['id']);
 			$time = intval($row['time']) + $offset;
-			$time = ($time - $time % $day) / $day;
+			$days = intval(floor($time / $day));
+			$delta = date('d', intval($row['time'])) - date('d', intval($days * $day));
+			$time = $days + $delta;
+
 			if ($now - $time > 30) $time = $now - 31;
 			$timeslice[$time][] = &$row;
 			if ($row['kind'] == UPKIND_SIZE)
@@ -94,13 +97,17 @@
 //		debug($sizes);
 //		debug($timeslice);
 
-		foreach ($timeslice as $time => $day) {
+		foreach ($timeslice as $time => $dayUpdates) {
 			$t = array();
-			foreach ($day as &$row) {
+			$daysDelta = $now - $time;
+			$nearPast = $daysDelta <= 30;
+			$daysAgo = daysAgo($daysDelta) . ($nearPast ? ', ' . date('d.m.Y', $time * $day) : '');
+			$timestamp = $nearPast ? 'H:i' : 'd.m.Y H:i';
+			foreach ($dayUpdates as &$row) {
 				$c3++;
 				$val = $row['value'];
 //				if (!$val) continue;
-				$row['time'] = date('d.m.Y H:i:s', intval($row['time']));
+				$row['time'] = date($timestamp, intval($row['time']));
 				$row['inline'] = (strpos($row['group_title'], '@') !== false) ? '<span class="inline-mark">@</span>' : '';
 				$row['group_title'] = str_replace(array('@ ', '@'), '', $row['group_title']);
 				$row['title'] = patternize($p5, $row);
@@ -150,7 +157,7 @@
 						</div>
 						";
 			}
-			$u[] = '<small><b>&nbsp; ' . daysAgo($now - $time) . '</b></small>' . join('', $e);
+			$u[] = "<small><b>&nbsp; $daysAgo</b></small>" . join('', $e);
 		}
 	}
 
