@@ -8,4 +8,3 @@
 	<span style="font-size: 80%; color: #89a;">Последняя версия полностью: <a style="color: #89b;" href="{%link2}">{%link2}</a></span><br />
 	<div style="font-size: 90%; color: #777">{%description}</div>
 </div>
-
