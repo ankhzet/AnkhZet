@@ -52,7 +52,9 @@
 				$pageIDs = self::fetchForPage($page, $pages, $limit);
 				break;
 			default:
-				return 'Category unspecified';
+				$title_opts = array('title' => 'all', 'channel' => '-all', 'self' => "");
+				$pageIDs = self::fetchWithFilter("1", $pages, $limit);
+//				return 'Category unspecified';
 //				$pageIDs = $h->fetchUpdates($uid, $pages);
 			}
 
@@ -153,21 +155,21 @@
 		}
 
 		static function fetchForAuthor($author, &$pages, $limit) {
-			return self::fetchWithFilter("`author` = $author", $pages, $limit);
+			return self::fetchWithFilter("p.`author` = $author", $pages, $limit);
 		}
 		static function fetchForGroup($group, &$pages, $limit) {
-			return self::fetchWithFilter("`group` = $group", $pages, $limit);
+			return self::fetchWithFilter("p.`group` = $group", $pages, $limit);
 		}
 		static function fetchForPage($page, &$pages, $limit) {
-			return self::fetchWithFilter("`id` = $page", $pages, $limit);
+			return self::fetchWithFilter("p.`id` = $page", $pages, $limit);
 		}
-		static function fetchWithFilter($filter, &$pages, $limit) {
+		static function fetchWithFilter($filter = "1", &$pages, $limit) {
 			require_once 'core_updates.php';
 			$dbc = msqlDB::o();
 			$f1 = array(UPKIND_SIZE, UPKIND_DELETE, UPKIND_ADDED, UPKIND_DELETED);
 			$f1 = join(',', $f1);
 			$s = $dbc->select('pages p, updates u'
-			, "p.{$filter} and u.kind in ($f1) and u.page = p.id order by u.time desc limit $limit"
+			, "{$filter} and u.kind in ($f1) and u.page = p.id order by u.time desc limit $limit"
 			, 'u.id as `0`, p.id as `page`, p.`description`, p.`size`, u.`time`, p.`title`, u.`value` as `delta`, u.`time` as `time_old`'
 			);
 			$f = $dbc->fetchrows($s);
