@@ -1,12 +1,21 @@
 User-Agent: *
+Allow: /authors
+Allow: /authors/page
+Allow: /pages?group=*
+Allow: /pages/page
+Allow: /pages/version
+Allow: /pages/version/*/view
+
+
+
 Disallow: /user/
 Disallow: /admin
 Disallow: /feedback
 Disallow: /updates
 Disallow: /pages/id
 Disallow: /pages/diff
+Disallow: /pages/download
 Disallow: /authors/check
 Disallow: /authors/trace
 Disallow: /authors/add
 Disallow: /authors/edit
-Crawl-delay: 5
