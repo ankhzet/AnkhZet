@@ -127,8 +127,18 @@
 					return;
 				}
 
-				$uid = $uid = intval($r[0]['id']);
-				$s->gen($uid);
+				$uid = intval($r[0]['id']);
+
+				$db = msqlDB::o();
+				$q = $db->select('sessions', "`user` = $uid", '`id`');
+				$id = $q ? mysql_result($q, 0) : null;
+
+				if ($id) {
+					$s->uid = $id;
+					$s->linked = $uid;
+				} else
+					$s->gen($uid);
+
 				$s->write(SAM::SAM_COOKIES, false);
 				$location = uri_frag($_REQUEST, 'url', '', 0);
 				locate_to(preg_match('-^/-', $location) ? $location : "/$location");
