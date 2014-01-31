@@ -22,43 +22,40 @@ function textsplit($text, $splitgroup) {
 class DiffIO {
 	var $show_new = true;
 	var $context = 100;
-	function __construct($context) {
+	public function __construct($context) {
 		$this->context = $context ? $context : $this->context;
 	}
 
-	function __destruct() {
+	public function __destruct() {
 	}
 
-	function out($text) {
+	public function out($text) {
 		echo $text;
 	}
 
 	public function left($text) {
 		$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
 		if ($this->show_new)
-			$this->out(join('', array('<del>',$text,'</del> ')));
+			$this->out("<del>$text</del> ");
 		else
-			$this->out(join('', array('<ins>',$text,'</ins> ')));
+			$this->out("<ins>$text</ins> ");
 	}
 	public function right($text) {
 		$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
 		if ($this->show_new)
-			$this->out(join('', array('<ins>',$text,'</ins> ')));
+			$this->out("<ins>$text</ins> ");
 		else
-			$this->out(join('', array('<del>',$text,'</del> ')));
+			$this->out("<del>$text</del> ");
 	}
 	public function same($text) {
 		$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
-/**/
 		$l = strlen($text);
 		if ($this->context && ($l >= $this->context)) {
-//			$text = str_replace('&nbsp;', ' ', $text);
 			$s1 = safeSubstr($text, $this->context / 2, 100);
 			$s2 = safeSubstrl($text, $this->context / 2, 100);
 			$text = "<span class=\"context\">{$s1}</span><br />~~~<br /><span class=\"context\">{$s2}</span>";
 		}
-/**/
-		$this->out($text);//mb_convert_encoding($text, 'UTF8', 'cp1251');
+		$this->out($text);
 	}
 
 	public function replace($diff, $old, $new) {
@@ -68,13 +65,27 @@ class DiffIO {
 		if ($this->show_new)
 			if (trim($new))
 				$this->out('<ins><span>' . $new . '</span><a class="pin pin' . count($diff->repl) . '"></a></ins>');
-//				$this->out('<span class="new">' . $new . '</span>');//<a class="pin" href="javascript:void(0)" pin="' . count($diff->repl) . '"></a></span>');
 			else
 				;
 		else
-//		;
 			if (trim($old))
 				$this->out('<del><span>' . $old . '</span><a class="pin pin' . count($diff->repl) . '"></a></del>');
+	}
+
+}
+class DiffIOClean extends DiffIO {
+	public function replace($diff, $old, $new) {
+		$old = mb_convert_encoding($old, 'UTF8', 'cp1251');
+		$new = mb_convert_encoding($new, 'UTF8', 'cp1251');
+		$diff->repl[] = array($old, $new);
+		if ($this->show_new)
+			if (trim($new))
+				$this->out("<ins>$new</ins>");
+			else
+				;
+		else
+			if (trim($old))
+				$this->out("<del>$old</del>");
 	}
 
 }
@@ -97,7 +108,7 @@ class DiffSubsplitter {
 			$split = $this->sequentialMerge($t1, $t2);
 			break;
 		default:
-			$splitter = $this->DIFF_TEXT_SPLITTERS[$stage];
+			$splitter = isset($this->DIFF_TEXT_SPLITTERS[$stage]) ? $this->DIFF_TEXT_SPLITTERS[$stage] : null;
 			$split = $splitter ? array(textsplit($t1, $splitter), textsplit($t2, $splitter)) : false;
 		}
 //		debug($split);
@@ -366,22 +377,14 @@ class DiffBuilder {
 	}
 
 	function lcs() {
-//		gc_enable();
 		$f = array();
 		$c1 = $this->c1;
 		$c2 = $this->c2;
 
-		$f = class_exists("SplFixedArray") ? new SplFixedArray($c1 + 1) : array_fill(0, $c1 + 1, 0);
-//		$f1 = array_fill(0, $c2 + 1, 0);
-//		for ($i = $c1 - 1; $i >= 0; $i--)
-//			$f[$i] = ;//array_fill(0, $c2 + 1, 0);
-
-//		debug2(array($c1, $c2));
+		$sparse = class_exists("SplFixedArray");
+		$f = $sparse ? new SplFixedArray($c1 + 1) : array_fill(0, $c1 + 1, 0);
 		for ($i = $c1 - 1; $i >= 0; $i--) {
-//		$u = memory_get_usage(true);
-//		echo "usage (row $i): $u<br />" . PHP_EOL;
-			$f[$i] = class_exists("SplFixedArray") ? new SplFixedArray($c2 + 1) : array_fill(0, $c2 + 1, 0);
-//		gc_collect_cycles();
+			$f[$i] = $sparse ? new SplFixedArray($c2 + 1) : array_fill(0, $c2 + 1, 0);
 			for ($j = $c2 - 1; $j >= 0; $j--)
 				if ($this->h1[$i] == $this->h2[$j])
 					$f[$i][$j] = 1 + $f[$i + 1][$j + 1];
@@ -389,7 +392,6 @@ class DiffBuilder {
 					$f[$i][$j] = max($f[$i + 1][$j], $f[$i][$j + 1]);
 		}
 		$this->f = $f;
-//		die();
 
 		return $this->f[0][0];
 	}
@@ -415,13 +417,13 @@ class DiffBuilder {
 		$c1 = $this->c1;
 		$c2 = $this->c2;
 		$out = array();
-		$c = $this->fts[$idx];
+		$c = isset($this->fts[$idx]) ? $this->fts[$idx] : 0;
 		$cc = count($this->fts);
 		while (($i < $c1) && (($t = $this->h1[$i]) != $c)) {
 			$out[] = array(-1, $t);
 			$i++;
 		}
-//		debug(array($this->h1, $i), '>>>');
+
 		while ($i < $c1 && $j < $c2) {
 			if (!isset($this->fts[$idx])) break;
 			$c = $this->fts[$idx];
@@ -470,10 +472,6 @@ class DiffBuilder {
 		$b = null;
 		$out = null;
 
-//		gc_collect_cycles();
-//		time_nanosleep(0, 10000000);
-//		return;
-
 		$i = 0;
 		$l = count($c);
 		while ($i < $l) {
@@ -487,7 +485,6 @@ class DiffBuilder {
 					$t2 .= $this->hash[$hash];
 				$i += 2;
 
-//				debug(array(($t1), ($t2)), 'T1 => T2');
 				if ($t1 != $t2) {
 					$db = new DiffBuilder($this->io, $this->repl);
 					$db->diff($t1, $t2, $stage + 1);

@@ -70,6 +70,7 @@
 			View::addKey('root', $this->_name);
 			View::addKey('title', strip_tags((($page != '') && ($t2 = Loc::lget($ta)) != $ta) ? $t2 : Loc::lget("titles.{$this->_name}")));
 			View::addKey('grip', $this->buildGrip(array_merge(array($this->_name), $r)));
+			View::addKey('rss-link', "");
 
 			if ($page) {
 				View::addKey('page', $this->_name . ($page != $this->_name ? '-' . $page : ''));

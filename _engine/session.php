@@ -97,14 +97,15 @@
 			switch ($to) {
 			case SAM::SAM_NONE   : break;
 			case SAM::SAM_COOKIES:
-				$t = time() + ($this->valid() ? 1 : -1) * 2592000;
+				$t = $this->valid() ? time() + 2592000 : 1;
 				$t2= time() + 2592000;
 				$host = $_SERVER['HTTP_HOST'];
-				preg_match('/(.*\.|^)([^\.]+\.[^\.]+)$/i', $host, $m);
-				$m = '.' . $m[2];
-				setcookie('ssid', $this->uid, $t, "/", $m);
-				setcookie('user', $this->linked, $t, "/", $m);
-				setcookie('locale', $this->locale, $t2, "/", $m);
+				preg_match('/\.?(www.)?(.*\.)*([^\.]+\.[^\.]+)$/i', $host, $m);
+				$domain = '.' . $m[2] . $m[3];
+
+				setcookie('ssid', $this->uid, $t, "/", $domain);
+				setcookie('user', $this->linked, $t, "/", $domain);
+				setcookie('locale', $this->locale, $t2, "/", $domain);
 				if ($redirect) {
 					header('location: http://' . $host);
 					die();
