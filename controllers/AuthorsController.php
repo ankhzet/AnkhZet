@@ -4,6 +4,7 @@
 	require_once 'core_authors.php';
 	require_once 'core_queue.php';
 	require_once 'core_page.php';
+	require_once 'core_pagecontroller_utils.php';
 	require_once 'core_history.php';
 
 	require_once 'AggregatorController.php';
@@ -170,7 +171,7 @@
 						foreach ($d['data'] as $rowp) {
 							$id = $rowp['id'];
 							$trace = $uid ? (isset($r[$id]) ? $r[$id] : -1) : -1;
-							$rowp['mark'] = $pa->traceMark($uid, $trace, $id, $row['id']);
+							$rowp['mark'] = PageUtils::traceMark($uid, $trace, $id, $row['id']);
 							$u[] = patternize('&rarr; <a href="/pages/version/{%id}">{%title}</a>{%mark}', $rowp);
 						}
 
@@ -355,7 +356,7 @@
 						$row['title'] = patternize($p2, $row);
 						$pageid = intval($row['id']);
 						$trace = ($uid && isset($traces[$pageid])) ? $traces[$pageid] : -1;
-						$hint = $pageid ? $p->traceMark($uid, $trace, $pageid, $row['author']) : '';
+						$hint = $pageid ? PageUtils::traceMark($uid, $trace, $pageid, $row['author']) : '';
 						$hint = '<span style="position: absolute; margin-left: 10px;">' . $hint . '</span>';
 						$row['hint'] = $hint;
 						$change = 0; // don't move, UPKIND_SIZE/ADD/DELETE depends on this

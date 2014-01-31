@@ -4,6 +4,8 @@
 	require_once 'core_history.php';
 	require_once 'AggregatorController.php';
 
+	require_once 'core_pagecontroller_utils.php';
+
 	class PagesController extends AggregatorController {
 		protected $_name = 'pages';
 
@@ -124,13 +126,8 @@
 		}
 
 		public function actionPage($r) {
-//			if (!$this->author)
-//				locate_to('/authors');
-
-			if ($this->author)
-				View::addKey('rss-link', "?author={$this->author}");
-			if ($this->group)
-				View::addKey('rss-link', "?group={$this->group}");
+			if ($this->author) View::addKey('rss-link', "?author={$this->author}");
+			if ($this->group) View::addKey('rss-link', "?group={$this->group}");
 
 			return parent::actionPage($r);
 		}
@@ -170,20 +167,19 @@
 				if ($f['total'])
 					$trace = intval($f['data'][0][0]);
 			}
-			$row['mark'] = $aggregator->traceMark($uid, $trace, $page, $row['author']);
+			$row['mark'] = PageUtils::traceMark($uid, $trace, $page, $row['author']);
 
 			$row['group'] = $group ? patternize(Loc::lget('group_patt'), $this->groups[$group]) : '';
 			return patternize($this->LIST_ITEM, $row);
 		}
 
 		public function makeIDItem(&$aggregator, &$row) {
-			$g = $this->getAggregator(1);
-			$a = $g->get($author = $row['author'], '`fio`, `link`');
+			$authorsAggregator = $this->getAggregator(1);
+			$a = $authorsAggregator->get($author = $row['author'], '`fio`, `link`');
 			$this->author_fio = $a['fio'] ? $a['fio'] : '&lt;author&gt;';
 			$this->author_link = $a['link'];
 			$page = intval($row['id']);
 			$version = intval($row['utime']);
-			$file = "cms://cache/pages/{$row['id']}/last.html";
 
 			View::addKey('rss-link', "?page=$page");
 
@@ -200,7 +196,7 @@
 			View::addKey('meta-keywords', "{$a['fio']}, {$row['title']}");
 			View::addKey('meta-description', "{$a['fio']} - {$row['title']}. {$row['description']}");
 
-			View::addKey('hint', $aggregator->traceMark($uid, $trace, $page, $author));
+			View::addKey('hint', PageUtils::traceMark($uid, $trace, $page, $author));
 
 			View::addKey('title', "<a href=\"/authors/id/{$row['author']}\">{$this->author_fio}</a> - <a href=\"/pages/version/{$page}\">{$row['title']}</a>");
 			html_escape($row, array('author', 'link'));
@@ -208,15 +204,10 @@
 			$row['original'] = Loc::lget('original');
 			$row['fio'] = $this->author_fio;
 			$row['autolink'] = $this->author_link;
-			$row['content'] = is_file($file) ? @file_get_contents($file) : false;
-			if ($row['content'] !== false) {
-				$c = @gzuncompress/**/($row['content']);
-				if ($c !== false) $row['content'] = $c;
-			} else
-				$row['content'] = '&lt;no file&gt;';
 
-			$row['content'] = $this->prepareForGrammar($row['content'], true);
-			$row['content'] = mb_convert_encoding($row['content'], 'UTF-8', 'CP1251');
+
+			$content = PageUtils::getPageContents($page);
+			$row['content'] = mb_convert_encoding($content, 'UTF-8', 'CP1251');
 
 //			View::addKey('grammar', $this->fetchGrammarSuggestions(intval($row['id'])));
 			View::addKey('preview', $row['content']);
@@ -224,7 +215,7 @@
 			View::addKey('h_new', '');
 			$this->view->renderTPL('pages/view');
 			$this->updateTrace($page, $version);
-			return '';//patternize($this->ID_PATTERN, $row);
+			return '';
 		}
 
 		function makeDetailHint($hint, $desc, $alink, $link) {
@@ -233,7 +224,7 @@
 			$link1 = "$alink/$link";
 			$link2 = str_replace('.shtml', '', $link1);
 
-			$adiff = $this->isDiffMode();
+			$adiff = PageUtils::isDiffMode();
 			$ndiff = intval(!$adiff);
 			$diffs = Loc::lget(($ndiff ? 'show' : 'hide') . '_diffs');
 			$diffst = Loc::lget(($ndiff ? 'diffs' : 'calendar') . '_mode');
@@ -263,58 +254,6 @@
 				View::addKey('hint', $hint);
 		}
 
-		function decodeVersion($r, $offset = 2, $diff = false) {
-			if ($version = post_int('version'))
-				return $version;
-
-			$date = uri_frag($r, $offset, 0, false);
-			if (strpos($date, ',') === false) {
-				$date = explode('-', $date);
-				$time = explode('-', uri_frag($r, $offset + 1, 0, false));
-				$t1 = mktime($time[0], $time[1], $time[2], $date[1], $date[0], $date[2]);
-				if ($diff) {
-					$offset += 2;
-					$date = explode('-', uri_frag($r, $offset + 0, 0, false));
-					$time = explode('-', uri_frag($r, $offset + 1, 0, false));
-					$t2 = mktime($time[0], $time[1], $time[2], $date[1], $date[0], $date[2]);
-					$t = array($t1, $t2);
-				} else
-					$t = $t1;
-
-
-			} else
-				$t = explode(',', $date);
-
-//			debug(array($t, $r, $date, $time));
-			return $t;
-		}
-
-		function isDiffMode() {
-			if (isset($_REQUEST['diff_always'])) {
-				$diff_mode = intval($_REQUEST['diff_always']);
-				$t = time() + ($diff_mode ? 1 : -1) * 2592000;
-				$host = $_SERVER['HTTP_HOST'];
-				preg_match('/(.*\.|^)([^\.]+\.[^\.]+)$/i', $host, $m);
-				setcookie('diff_mode', $diff_mode, $t, "/", '.' . $m[2]);
-				$_REQUEST['diff_mode'] = $diff_mode;
-			} else {
-				$dm_cook = isset($_COOKIE['diff_mode']);
-				$dm_post = isset($_GET['diff_mode']);
-				$diff_mode = $dm_post ? intval($_GET['diff_mode']) : ($dm_cook ? intval($_COOKIE['diff_mode']) : 0);
-			}
-			return $diff_mode;
-		}
-
-		function fetchVersions($storage) {
-			$p = array();
-			$d = is_dir($storage) ? @dir($storage) : null;
-			if ($d)
-				while (($entry = $d->read()) !== false)
-					if (is_file($storage . '/' . $entry) && ($version = intval(basename($entry, '.html'))))
-						$p[] = $version;
-			return $p;
-		}
-
 		function actionVersion($r) {
 			$page = uri_frag($r, 0);
 			if (!$page)
@@ -336,8 +275,8 @@
 			View::addKey('meta-keywords', "{$adata['fio']}, {$data['title']}");
 			View::addKey('meta-description', Loc::lget('last_updates') . ": {$adata['fio']} - {$data['title']}. {$data['description']}");
 
-			$storage = 'cms://cache/pages/' . $page;
-			$p = $this->fetchVersions($storage);
+			$storage = PageUtils::getPageStorage($page);
+			$p = PageUtils::fetchVersions($storage);
 
 			$ha = $this->getAggregator(3);
 			$uid = $this->user->ID();
@@ -351,7 +290,7 @@
 				}
 			}
 
-			View::addKey('hint', $a->traceMark($uid, $trace, $page, $author));
+			View::addKey('hint', PageUtils::traceMark($uid, $trace, $page, $author));
 			$action = post('action');
 			if (!$action)
 				$action = uri_frag($r, 1, null, false);
@@ -361,21 +300,16 @@
 			$cur_version = '';
 			switch ($action) {
 			case 'view':
-				$version = $this->decodeVersion($r, 2);
+				$version = PageUtils::decodeVersion($r, 2);
 				$cur_version = '&nbsp; <span style="font-size: 80%;">[' . Loc::lget('date') . ': ' . date('d.m.Y', $version) . ']</span>';
-				$cnt = @file_get_contents("$storage/$version.html");
-				if ($cnt !== false) {
-					$cnt1 = @gzuncompress/**/($cnt);
-					if ($cnt1 !== false)
-						$cnt = $cnt1;
-					else
-						@file_put_contents("$storage/$version.html", gzcompress($cnt));
-					$cnt1 = preg_replace('">([_\.]+)<"', '&gt;\1&lt;', $cnt1);
-					$cnt = $this->prepareForGrammar($cnt, true);
-				} else
-					throw new Exception('Version not found!');
 
-				View::addKey('preview', mb_convert_encoding($cnt, 'UTF-8', 'CP1251'));
+				$content = PageUtils::getPageContents($page, $version);
+				if (!$content)
+					throw new Exception('Version not found!');
+				$content = PageUtils::prepareForGrammar($content, true);
+				$content = mb_convert_encoding($content, 'UTF-8', 'CP1251');
+
+				View::addKey('preview', $content);
 //				View::addKey('grammar', $this->fetchGrammarSuggestions($page));
 				View::addKey('h_old', '');
 				View::addKey('h_new', '');
@@ -391,7 +325,7 @@
 					$diffopen = ($v = post_int('version')) ? $v : $lastseen;
 
 					$p1 = '';
-//					if ($this->isDiffMode()) {
+//					if (PageUtils::isDiffMode()) {
 						$row = array('root' => $this->_name, 'page' => $page);
 
 						$ldate = date('d.m.Y', $newest);
@@ -433,10 +367,10 @@
 							$p1 .= patternize(($idx != $l) ? self::VERSION_PATT : self::VERSION_PATT2, $row);
 						}
 //					} else
-						if ($this->isDiffMode())
+						if (PageUtils::isDiffMode())
 							echo $p1;
 						else {
-							$p2 = $this->buildCalendar($page, $p, $lastseen, $storage);
+							$p2 = PageUtils::buildCalendar($page, $p, $lastseen, $storage);
 							echo "<div style='float: left; overflow: hidden;'>$p2</div><div style='float: left; overflow: hidden;'>$p1</div>";
 						}
 				} else {
@@ -444,159 +378,10 @@
 					View::addKey('moder', '');
 				}
 			}
-			$this->makeDetailHint($a->traceMark($uid, $trace, $page, $author) . $cur_version, $data['description'], $adata['link'], $data['link']);
+			$this->makeDetailHint(PageUtils::traceMark($uid, $trace, $page, $author) . $cur_version, $data['description'], $adata['link'], $data['link']);
 
 			if ($action == 'view')
 				$this->updateTrace($page, post_int('version'));
-		}
-
-		function buildCalendar($page, $versions, $lastseen, $storage) {
-			$_tday = 60 * 60 * 24; // 1 day in seconds
-
-			$result = '';
-			$updates = explode(',', Loc::lget('updates'));
-			$update_base = array_shift($updates);
-			$read = Loc::lget('view');
-			$row['diff'] = Loc::lget('diff');
-			$download = Loc::lget('download');
-			$ccc = count($versions);
-			$daynames = '';
-			while ($versions && ($ccc-- > 0)) {
-				rsort($versions);
-
-				//datetime of current update version
-				$date = getdate($versions[0]);
-//				debug($date);
-				$month = intval($date['mon']);
-				$day = intval($date['mday']);
-				$year = intval($date['year']);
-
-				//timestamp of the beginning of month
-				$first= mktime(0, 0, 0, $month, 1, $year);
-				//timestamp of last day of month
-				$last = mktime(0, 0, 0, $month + 1, 0, $year);
-				$last2= mktime(0, 0, 0, $month + 1, 1, $year);
-
-				//days in current version related month
-				$days = intval(gmdate('d', $last));
-				//days in previous month
-				$prev = intval(gmdate('d', mktime(0, 0, 0, $month, 0, $year)));
-
-
-				//first week-day index of month
-				$date = getdate($first);
-				$fday = intval($date['wday']);
-				$fday = ($fday == 0) ? 6 : $fday - 1;
-
-				//last week-day index of month
-				$date = getdate($last);
-				$lday = intval($date['wday']);
-				$lday = ($lday == 0) ? 6 : $lday - 1;
-
-				//last day of previous mont in current month-slot
-				$pred = $prev - $fday + 1;
-				//last day of next mont in current month-slot
-				$succ = 6 - $lday;
-
-				// fill in days of next month
-//				if (count($d) + $succ < 6 * 7) $succ += 7;
-
-
-				//fill in days of previous month
-				$d = array();
-//				while ($pred++ <= $prev)
-//					$d[] = $first - ($prev - $pred + 2) * $_tday;
-
-				//fill in days of current month
-				$_date = getdate($first);
-				$_month = intval($_date['mon']);
-				$_year = intval($_date['year']);
-				$f = 0 - $fday;
-				while (++$f <= $days + $succ + 1)
-					$d[] = mktime(0, 0, 0, $_month, $f, $_year);
-
-//				$f = 1;
-//				while ($f++ <= $succ)
-//					$d[] = $first + ($days + $f - 2) * $_tday;
-
-
-				$c = 8;
-				$r = '';
-				if (!$daynames) {
-					$w = '';
-					for ($i = 0; $i < 7; $i++) {
-						$dn = strftime('%a', mktime(0, 0, 0, $month, $days + $succ - $c * 7 + $i + 2, $year));
-						$w = "<td>" . mb_substr($dn, 0, 2) . "</td>" . $w;
-					}
-					$daynames = "<tr class=\"day-name\">$w</tr>\r\n";
-				}
-
-				while (($c-- > 0) && $d) {
-					$w = '';
-
-					for ($i = 0; $i < 7; $i++) {
-						$day = array_shift($d); // day timastamp to process
-
-						$_date = getdate($day);
-						$_month = intval($_date['mon']);
-						$_day = intval($_date['mday']);
-						$_year = intval($_date['year']);
-
-						//timestamp of the beginning of next day
-						$nxt = mktime(0, 0, 0, $_month, $_day + 1, $_year);
-
-						// is this day belongs to current month
-						$current = !(($day < $first) || ($day >= $last2));
-						$v = array();
-						if ($current)
-							foreach ($versions as $version) // foreach version
-								if (($version < $day) || ($version >= $nxt))
-									continue;  // if version don't belongs to current day - break
-								else
-									$v[] = $version;
-
-
-						$current = $current ? '' : ' class="grey"';
-
-						$dayname = date('j', $day);
-						if ($v) {
-							$versions = array_diff($versions, $v);
-							$m = ($cnt = count($v)) > 1;
-
-								$e = array();
-								foreach ($v as $version) {
-									$new = ($version > $lastseen) ? ' calendar-new' : '';
-									$size = fs(@filesize("$storage/$version.html"));
-									$time = date('H:i:s', $version);
-									$version = date('d-m-Y/H-i-s', $version);
-									$e[] = "<li class=\"$new\">&raquo; $time, $size: <a href=\"/pages/version/$page/view/$version\">$read</a> | <a href=\"/pages/download/$page/$version\">$download</a></li>";
-								}
-								$v = join('', $e);
-								$m = ' calendar-multiple';
-								$action = '';
-								$dayname2 = date('j-m-Y', $day);
-								$up_form = aaxx($cnt, $update_base, $updates);
-								$dayname = "<a>$dayname</a><div class=\"calendar-multi-versions\"><b>$dayname2</b>: $cnt $up_form<br /><ul>$v</ul></div>";
-
-							$current = " class=\"calendar-version{$m}{$new}\"";
-						}
-
-						$w = "<td{$current}>$dayname</td>" . $w;
-					}
-
-					$r = "<tr>$w</tr>\r\n" . $r;
-				}
-
-				$cur = Loc::lget('updates_by') . ' ' . strftime('%B, %Y', mktime(0, 0, 0, $month, 1, $year));
-				$h = "<tr><td colspan=\"7\" class=\"calendar-header\">$cur</td></tr>\r\n";
-				$result .= "\r\n$h\r\n$daynames\r\n$r";
-			}
-
-
-			if (count($versions))
-				echo "oO?"; // omg, how did that happened
-
-			return "\r\n<table class='calendar'>\r\n$result\r\n</table>\r\n";
 		}
 
 		function actionDownload($r) {
@@ -604,7 +389,7 @@
 			if (!$page)
 				throw new Exception('Page ID not specified!');
 
-			$version = ($v = $this->decodeVersion($r, 1)) !== false ? $v : uri_frag($r, 1);
+			$version = ($v = PageUtils::decodeVersion($r, 1)) !== false ? $v : uri_frag($r, 1);
 			if (!$version)
 				throw new Exception('Unknown version!');
 
@@ -619,7 +404,7 @@
 			$aa = $this->getAggregator(1);
 			$adata = $aa->get($author = intval($data['author']), '`fio`, `link`');
 
-			$storage = 'cms://cache/pages/' . $page;
+			$storage = PageUtils::getPageStorage($page);
 
 			if (!is_file("$storage/$version.html"))
 				throw new Exception('Cache not found!');
@@ -660,22 +445,10 @@
 
 				View::addKey('title', "$alink - $plink");
 				View::addKey('version', date('d.m.Y H:i:s', $version));
-				$this->makeDetailHint($a->traceMark($uid, $trace, $page, $author), $data['description'], $adata['link'], $data['link']);
+				$this->makeDetailHint(PageUtils::traceMark($uid, $trace, $page, $author), $data['description'], $adata['link'], $data['link']);
 			}
 
-			$cnt = @file_get_contents("$storage/$version.html");
-			$cnt1 = @gzuncompress/**/($cnt);
-			if ($cnt1 !== false) $cnt = $cnt1; else @file_put_contents("$storage/$version.html", gzcompress($cnt));
-
-/*			$cnt1 = preg_replace('">([_\.]+)<"', '&gt;\1&lt;', $cnt1);
-
-			$cnt1 = trim(str_replace(array("\r", "\n"), '', $cnt1));
-			$cnt1 = strip_tags($cnt1, '<strong><small><h1><h2><h3><h4><h5><h6><h7><h8><font><dd><p><div><span><a><ul><ol><li><img><table><tr><td><thead><tbody><br><u><b><i><s>');
-			$cnt1 = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $cnt1);
-			$cnt1 = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $cnt1);
-			$cnt = str_replace(PHP_EOL, '<br />', $cnt1);*/
-
-			$cnt = $this->prepareForGrammar($cnt1, true);
+			$cnt = PageUtils::getPageContents($page, $version);
 
 			require_once 'download.php';
 			$filename = $this->genFilename($fio, $title);
@@ -719,7 +492,7 @@
 			if (!$page)
 				throw new Exception('Page ID not specified!');
 
-			$timestamp = ($v = $this->decodeVersion($r, 1)) !== false ? $v : uri_frag($r, 1);
+			$timestamp = ($v = PageUtils::decodeVersion($r, 1)) !== false ? $v : uri_frag($r, 1);
 			if (!$timestamp)
 				throw new Exception('Unknown version!');
 
@@ -732,13 +505,13 @@
 			$aa = $this->getAggregator(1);
 			$adata = $aa->get($author = intval($data['author']), '`fio`, `link`');
 
-			$storage = 'cms://cache/pages/' . $page;
+			$storage = PageUtils::getPageStorage($page);
 			$filename = "$storage/$timestamp.html";
 
 			if (!is_file($filename))
 				throw new Exception('Cache not found!');
 
-			$p = $this->fetchVersions($storage);
+			$p = PageUtils::fetchVersions($storage);
 			sort($p);
 			$version = date("d/m/Y H:i:s", $timestamp);
 			View::addKey('version', "<i>$version ($timestamp)</i>");
@@ -761,7 +534,7 @@
 
 				View::addKey('title', "$alink - $plink");
 				View::addKey('version', date('d.m.Y H:i:s', $timestamp));
-				$this->makeDetailHint($a->traceMark($uid, $trace, $page, $author), $data['description'], $adata['link'], $data['link']);
+				$this->makeDetailHint(PageUtils::traceMark($uid, $trace, $page, $author), $data['description'], $adata['link'], $data['link']);
 			}
 
 			$echoed = '';
@@ -870,7 +643,7 @@
 			if ($data['id'] != $page)
 				throw new Exception('Resource not found o__O');
 
-			$u = $this->decodeVersion($r, 1, true);
+			$u = PageUtils::decodeVersion($r, 1, true);
 			$cur = intval($u[0]);
 			$old = intval($u[1]);
 
@@ -883,9 +656,6 @@
 			if (!($cur * $old))
 				throw new Exception('Old or current version not found');
 
-			$storage = SUB_DOMEN . "/cache/pages/$page";
-
-
 			$d = array(false => '=&gt;', true => '&lt;=');
 			$show_old = post('showold') == 'true';
 			$aa = $this->getAggregator(1);
@@ -895,24 +665,11 @@
 			$old_d = date('d.m.Y', $old);
 			$cur_d = date('d.m.Y', $cur);
 			$diff_ver = date('d-m-Y/H-i-s', $cur) . '/' . date('d-m-Y/H-i-s', $old);
-//			$diff_ver = $cur . ',' . $old;
 			View::addKey('title', $alink . ' - ' . $plink . " <span style=\"font-size: 80%;\">[$old_d <a href=\"/pages/diff/$page/$diff_ver" . ($show_old ? '' : '?showold=true') . "\">" . $d[$show_old] . "</a> $cur_d]</span>");
 
-			$t1 = @file_get_contents("$storage/{$old}.html");
-			$t2 = @file_get_contents("$storage/{$cur}.html");
-			$_t1 = @gzuncompress/**/($t1);
-			if ($_t1 !== false) $t1 = $_t1; else @file_put_contents("$storage/{$old}.html", gzcompress($t1));
-			$_t2 = @gzuncompress/**/($t2);
-			if ($_t2 !== false) $t2 = $_t2; else @file_put_contents("$storage/{$cur}.html", gzcompress($t2));
+			$t1 = PageUtils::getPageContents($page, $old);
+			$t2 = PageUtils::getPageContents($page, $cur);
 
-			$t1 = $this->prepareForGrammar($t1, true);
-			$t2 = $this->prepareForGrammar($t2, true);
-//			$t1 = mb_convert_encoding($t1, 'UTF8', 'cp1251');
-//			$t2 = mb_convert_encoding($t2, 'UTF8', 'cp1251');
-//			debug(array($t1, $t2));
-
-//			@ob_end_flush();
-//			@ob_end_flush();
 			require_once 'core_diff.php';
 			ob_start();
 			$io = new DiffIO(1024);
@@ -921,8 +678,6 @@
 			$h = $db->diff($t1, $t2);
 			$c = ob_get_contents();
 			ob_end_clean();
-
-//			$c = $this->prepareForGrammar($c, true);
 
 			$old = count($h[0]) ? str_replace(array(PHP_EOL, '\n'), '<br />', join('", "', $h[0])) : '';
 			$new = count($h[1]) ? str_replace(array(PHP_EOL, '\n'), '<br />', join('", "', $h[1])) : '';
@@ -933,47 +688,6 @@
 			$this->view->renderTPL('pages/view');
 
 			$this->updateTrace($page, $cur);
-		}
-
-		function prepareForGrammar($c, $cleanup = false) {
-			if ($cleanup) {
-				$c = preg_replace('"<([^\/[:alpha:]])"i', '&lt;\1', $c);
-				$c = preg_replace('"<p([^>]*)?>(.*?)<dd>"i', '<p\1>\2<dd>', $c);
-				$c = preg_replace('"(</?(td|tr|table)[^>]*>)'.PHP_EOL.'"', '\1', $c);
-				$c = preg_replace('"'.PHP_EOL.'(</?(td|tr|table)[^>]*>)"', '\1', $c);
-				$c = str_replace(array("\r", "\n"), '', $c);
-				$c = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $c);
-				$c = preg_replace('"<p\s*>([^<]*)</p>"i', '<p/>\1', $c);
-				$c = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $c);
-				$c = preg_replace('"<(i|s|u)>(\s*)</\1>"', '\2', $c);
-				$c = preg_replace('"</(i|s|u)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
-				$c = preg_replace('"<(font|span)\s*(lang=\"?[^\"]+\"?)\s*>([^<]*)</\1>"i', '\3', $c);
-			} else
-				$c = str_replace('<br />', PHP_EOL, $c);
-
-/*			$idx = 0;
-			$p = 0;
-			while (preg_match('"<(([\w\d]+)([^>]*))>"', substr($c, $p), $m, PREG_OFFSET_CAPTURE)) {
-				$p += intval($m[0][1]);
-				$sub = $m[0][0];
-				if (strpos($sub, 'class="pin"') === false) {
-					$idx++;
-					$tag = $m[2][0];
-					$attr = $m[3][0];
-					$u = "<$tag node=\"$idx\"$attr>";
-					$c = substr_replace($c, $u, $p, strlen($sub));
-					$p += strlen($u);
-				} else
-					$p += strlen($sub);
-			}*/
-			$p = 0;
-			while (preg_match('|<img [^>]*(src=(["\']?))/[^\2>]+\2[^>]*(>)|i', substr($c, $p), $m, PREG_OFFSET_CAPTURE)) {
-				$p += intval($m[1][1]);
-				$u = $m[1][0] . 'http://samlib%2Eru';
-				$c = substr_replace($c, $u, $p, strlen($m[1][0]));
-				$p += strlen($u) + intval($m[3][1]) - intval($m[1][1]) - 5;
-			}
-			return /*$cleanup ? $c : */str_replace(PHP_EOL, PHP_EOL . '<br />', $c);
 		}
 
 		function fetchGrammarSuggestions($page, $approved = 1) {
@@ -1006,7 +720,7 @@
 			$save = uri_frag($r, 0, 3);
 			$save = max(2, $save);
 			$force = post_int('force');
-			$dir = 'cms://cache/pages';
+			$dir = dirname(PageUtils::getPageStorage(0));
 			$d = is_dir($dir) ? @dir($dir) : null;
 			$p = array();
 			if ($d)
@@ -1072,5 +786,3 @@
 		}
 
 	}
-
-?>

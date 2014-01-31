@@ -1,22 +1,16 @@
 <?php
 	require_once 'core_bridge.php';
+	require_once 'core_pagecontroller_utils.php';
 
 	class PageComparator {
 
 		function compare($page, $link, $time) {
-			$path = SUB_DOMEN . "/cache/pages/{$page}";
+			$path = PageUtils::getPageStorage($page);
 			$last = "{$path}/last.html";
 			$store = "{$path}/{$time}.html";
 
 			assume_dir_exists($path);
-			$html1 = is_file($last) ? @file_get_contents($last) : false;
-			if ($html1) {
-				$_html1 = @gzuncompress($html1);
-				if ($_html1 !== false)
-					$html1 = $_html1;
-				else
-					file_put_contents($last, $html1);
-			}
+			$html1 = PageUtils::getPageContents($page, 'last', false);
 
 			$html2 = url_get_contents("http://samlib.ru/{$link}");
 			$c = null;
@@ -48,5 +42,3 @@
 		}
 
 	}
-
-?>

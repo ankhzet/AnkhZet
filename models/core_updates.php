@@ -5,6 +5,7 @@
 	require_once 'core_authors.php';
 	require_once 'core_queue.php';
 	require_once 'core_page.php';
+	require_once 'core_pagecontroller_utils.php';
 
 	require_once 'core_parser.php';
 	require_once 'core_comparator.php';
@@ -24,8 +25,8 @@
 
 	class AuthorWorker {
 		public function check($author_id) {
-			$g = AuthorsAggregator::getInstance();
-			$a = $g->get($author_id);
+			$authorsAggregator = AuthorsAggregator::getInstance();
+			$a = $authorsAggregator->get($author_id);
 			preg_match('/^[\/]*(.*?)[\/]*$/', $a['link'], $link);
 			$link = $link[1] . '/';
 			$t = getutime();
@@ -46,7 +47,7 @@
 			if ($fio != $a['fio'])
 				echo_log('author_updated');
 
-			$g->update(array('fio' => $fio, 'time' => time()), $author_id, true);
+			$authorsAggregator->update(array('fio' => $fio, 'time' => time()), $author_id, true);
 
 //			debug2($html);
 //			debug2($groups);
@@ -223,9 +224,9 @@
 					foreach ($d['data'] as $row) {
 						$data = $check[$link = $row['link']]; // recently parsed data about page at @link
 
-            // don't check this page later in this function (all pages
-            // that are contained in $check array, but not contained in
-            // database are assumed to be the "new" pages)
+						// don't check this page later in this function (all pages
+						// that are contained in $check array, but not contained in
+						// database are assumed to be the "new" pages)
 						unset($check[$link]); // page isn't "new"
 
 						$page_id = intval($row['id']);
@@ -370,7 +371,6 @@
 			$alink = $d['link'];
 			$q = QueueAggregator::getInstance();
 
-			$worker_stamp = md5(uniqid(rand(),1));
 			$update = $q->queue(array_keys($pages), 0); // returns intersection (already_queued - pages)
 			$idx = array_keys($pages);
 			if (count($update)) {
@@ -440,7 +440,8 @@
 
 							$utype = ($old_size <= 0) ? UPKIND_ADDED : (($size <= 0) ? UPKIND_DELETED : UPKIND_SIZE);
 							$ua->changed($page, $utype, $size - intval($row['size']));
-							echo " &nbsp;save to [/cache/pages/$page/$time.html]...<br />";
+							$saveDir = PageUtils::getPageStorage($page);
+							echo " &nbsp;save to [$saveDir/$time.html]...<br />";
 							echo ' &nbsp;updated (' . $size . 'KB).<br />';
 						}
 						$q->dbc->delete($q->TBL_DELETE, '`page` = ' . $page);

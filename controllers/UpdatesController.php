@@ -150,7 +150,6 @@
 				foreach ($this->data['data'] as &$row)
 					$idx[] = $row['id'];
 
-				$pa = $this->getAggregator(2);
 				$i = 0;
 				$pp1 = '<sup style="font-weight: normal;{%diff}">{%delta}KB</sup>';
 				foreach($this->data['data'] as &$row) {
@@ -169,7 +168,7 @@
 					} else
 						$row['delta'] = '';
 					$row['uptodate'] = Loc::lget('uptodate');
-					$row['mark'] = $pa->traceMark($uid, $row['trace'], $row['pageid'], $row['author']);
+					$row['mark'] = PageUtils::traceMark($uid, $row['trace'], $row['pageid'], $row['author']);
 					$row['untrace'] = Loc::lget($row['trace'] ? 'untrace' : 'trace');
 
 					$n[] = patternize($this->LIST_ITEM, $row);

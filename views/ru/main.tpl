@@ -43,6 +43,7 @@
 	$page = $page ? explode('/', $page) : array(0, 1);
 	$page = $page[1];
 
+	require_once 'core_pagecontroller_utils.php';
 	require_once 'core_page.php';
 	$p = PagesAggregator::getInstance();
 	require_once 'core_updates.php';
@@ -113,7 +114,7 @@
 				$row['title'] = patternize($p5, $row);
 				$pageid = intval($row['id']);
 				$trace = ($uid && isset($traces[$pageid])) ? $traces[$pageid] : -1;
-				$hint = $pageid ? $p->traceMark($uid, $trace, $pageid, $row['author']) : '';
+				$hint = $pageid ? PageUtils::traceMark($uid, $trace, $pageid, $row['author']) : '';
 				$hint = '<span style="position: absolute; margin-left: 10px;">' . $hint . '</span>';
 				$row['hint'] = $hint;
 				$change = 0; // don't move, UPKIND_SIZE/ADD/DELETE depends on this
