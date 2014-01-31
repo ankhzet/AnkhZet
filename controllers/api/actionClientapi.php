@@ -1,8 +1,16 @@
 <?php
 
+	require_once 'core_page.php';
+	require_once 'core_pagecontroller_utils.php';
+
 	class actionClientapi {
 		function execute($params) {
 			$action = strtolower(uri_frag($params, 'api-action', null, false));
+
+			if (preg_match_all('/-(\w)/i', $action, $m))
+				foreach ($m[1] as $part)
+					$action = str_replace("-{$part}", strtoupper($part), $action);
+
 			$method = 'method' . ucfirst($action);
 			if (method_exists($this, $method)) {
 				unset($params['action']);
@@ -166,7 +174,6 @@
 			if ($author)
 				$q['filter'] = "`author` = $author";
 
-			require_once 'core_page.php';
 			$aa = PagesAggregator::getInstance();
 			$d = $aa->fetch($q);
 
@@ -178,6 +185,157 @@
 
 			return array();
 		}
+
+		function methodPageView($params, &$error, &$message) {
+			$page = uri_frag($params, 'page');
+
+			if ($error = !$page) {
+				$message = 'Page ID not specified';
+				return;
+			}
+
+			$pa = PagesAggregator::getInstance();
+			$d = $pa->get($page, '`id`, `title`');
+
+			if ($error = !($d && (intval($d['id']) == $page))) {
+				$message = 'Page not found';
+				return;
+			}
+
+			$version = uri_frag($params, 'version', null, false);
+
+			$version = $version ? PageUtils::decodeVersion(explode('/', $version)) : null;
+
+			if ($error = !$version) {
+				$message = 'Can\'t parse version';
+				return;
+			}
+
+
+			$contents = PageUtils::getPageContents($page, $version);
+
+			$encoding = strtoupper(uri_frag($params, 'encoding', 'UTF-8', false));
+
+			if ($encoding != 'CP1251')
+				$encoding = 'UTF-8';
+
+			if ($encoding != 'CP1251')
+				$contents = mb_convert_encoding($contents, $encoding, 'CP1251');
+
+			$contents = "<html><head><title>{$d['title']}</title><style>body{font-size: 0.7em;}</style></head><body bgcolor=#EDEDED>\n$contents\n</body></html>";
+
+			return array('mime' => 'text/html', 'encoding' => $encoding, 'title' => $d['title'], 'contents' => $contents);
+		}
+
+		function methodPageVersions($params, &$error, &$message) {
+			$page = uri_frag($params, 'page');
+
+			if ($error = !$page) {
+				$message = 'Page ID not specified';
+				return;
+			}
+
+			$pa = PagesAggregator::getInstance();
+			$d = $pa->get($page, '`id`, `title`');
+
+			if ($error = !($d && (intval($d['id']) == $page))) {
+				$message = 'Page not found';
+				return;
+			}
+
+			$storage = PageUtils::getPageStorage($page);
+			$d = @dir($storage);
+			$v = array();
+			if ($d)
+				while (($entry = $d->read()) !== false)
+					if (($timestamp = intval($entry)) && is_file("$storage/$entry")) {
+						$v[] = array(
+							'timestamp' => $timestamp
+						, 'timestr' => date('d-m-Y/H-i-s', $timestamp)
+						, 'size' => filesize("$storage/$entry")
+						);
+					}
+
+
+			return $v;
+		}
+
+		function methodPageDiff($params, &$error, &$message) {
+			$page = uri_frag($params, 'page');
+			if ($error = !$page) {
+				$message = 'Page ID not specified';
+				return;
+			}
+			$pa = PagesAggregator::getInstance();
+			$d = $pa->get($page, '`id`, `title`');
+
+			if ($error = !($d && (intval($d['id']) == $page))) {
+				$message = 'Page not found';
+				return;
+			}
+			$version = uri_frag($params, 'version', null, false);
+			$version = $version ? PageUtils::decodeVersion(explode('/', $version), 0, true) : null;
+			if ($error = !$version) {
+				$message = 'Can\'t parse version';
+				return;
+			}
+
+			$cur = $version[0];
+			$old = $version[1];
+
+
+			if ($error = !($cur * $old)) {
+				$message = 'Old or current version not found';
+				return;
+			}
+
+			$t1 = PageUtils::getPageContents($page, $old);
+			$t2 = PageUtils::getPageContents($page, $cur);
+
+			if ($error = !$t1) {
+				$message = 'Old version not found';
+				return;
+			}
+			if ($error = !$t2) {
+				$message = 'Current version not found';
+				return;
+			}
+
+			require_once 'core_diff.php';
+			ob_start();
+			$io = new DiffIOClean(1024);
+			$io->show_new = true;
+			$db = new DiffBuilder($io);
+			$h = $db->diff($t1, $t2);
+			$contents = ob_get_contents();
+			ob_end_clean();
+
+			$encoding = strtoupper(uri_frag($params, 'encoding', 'UTF-8', false));
+			if ($encoding != 'UTF-8')
+				$encoding = 'CP1251';
+			if ($encoding != 'UTF-8')
+				$contents = mb_convert_encoding($contents, $encoding, 'UTF-8');
+
+			$contents = "
+<html>
+	<head>
+		<title>{$d['title']}</title>
+		<style>
+			body{font-size: 0.7em;}
+			ins, del{text-decoration: none;}
+			ins{color:green}
+			del(color:red}
+			.context{color:silver}
+		</style>
+	</head>
+<body bgcolor=#EDEDED>
+$contents
+</body>
+</html>";
+
+			return array('mime' => 'text/html', 'encoding' => $encoding, 'title' => $d['title'], 'contents' => $contents);
+		}
+
 	}
 
 	function unhtmlentities ($string) {
