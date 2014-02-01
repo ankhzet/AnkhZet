@@ -45,7 +45,7 @@
 		const VERSION_PATT = '
 		<div class="cnt-item">
 			<div class="title">
-				<span class="head" style="font-weight: normal;">{%timestamp} <span class="text"><span class="v-diff {%last}">&rarr; {%diff}: {%prev}</span></span></span>
+				<span class="head normal">{%timestamp} <span class="text"><span class="v-diff {%last}">&rarr; {%diff}: {%prev}</span></span></span>
 				<span class="link size right">{%size}</span>
 			</div>
 		</div>
@@ -53,7 +53,7 @@
 		const VERSION_PATT2 = '
 		<div class="cnt-item">
 			<div class="title">
-				<span class="head">{%timestamp}</span>
+				<span class="head normal">{%timestamp}</span>
 				<span class="link size right">{%size}</span>
 			</div>
 		</div>
@@ -671,7 +671,7 @@
 
 			require_once 'core_diff.php';
 			ob_start();
-			$io = new DiffIO(1024);
+			$io = new DiffIO(500);
 			$io->show_new = !$show_old;
 			$db = new DiffBuilder($io);
 			$h = $db->diff($t1, $t2);

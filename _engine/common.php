@@ -199,6 +199,7 @@
 	TimeLeech::initTimes();
 
 	function close_tags($content, $co = false) {
+		$content = preg_replace('#\<[^>]*$#', '', $content);
 		if ($co) {
 //      echo htmlspecialchars($content) . ' <br> <p>';
 
@@ -212,20 +213,23 @@
 			}
 //      echo htmlspecialchars($content);
 		}
+
 		$position = 0;
 		$open_tags = array();
 		//теги для игнорирования
 		$ignored_tags = array('br', 'hr', 'img', 'p');
 
+		$lastUnclosed = array();
+		$unclosedPositionOffset = array();
 		while (($position = @strpos($content, '<', $position)) !== FALSE) {
 			//забираем все теги из контента
 
 			if (preg_match('|^<(/?)([a-z\d]+)\b[^>]*>|i', substr($content, $position), $match, PREG_OFFSET_CAPTURE)) {
 				$tag = strtolower($match[2][0]);
 				//игнорируем все одиночные теги
-				if (in_array($tag, $ignored_tags) == FALSE) {
+				if ((in_array($tag, $ignored_tags) == FALSE) && isset($match[1][0])) {
 					//тег открыт
-					if (isset($match[1][0]) AND ($match[1][0] == '')) {
+					if ($match[1][0] == '') {
 						if (isset($open_tags[$tag])) {
 							if ($open_tags[$tag][0] == 0)
 								$open_tags[$tag][1] = $position;
@@ -234,11 +238,26 @@
 							$open_tags[$tag][0] = 1;
 							$open_tags[$tag][1] = $position;
 						}
+						array_unshift($lastUnclosed, $tag);
+						array_unshift($unclosedPositionOffset, strlen($match[0][0]));
 					}
 					//тег закрыт
-					if (isset($match[1][0]) AND ($match[1][0] == '/')) {
-						if (isset($open_tags[$tag]))
+					if ($match[1][0] == '/') {
+						if (isset($open_tags[$tag]) && ($open_tags[$tag][0] > 0)) {
 							$open_tags[$tag][0]--;
+							if (isset($lastUnclosed[0]) && ($lastUnclosed[0] == $tag)) {
+								array_shift($lastUnclosed);
+								array_shift($unclosedPositionOffset);
+							}
+						} else { // closed but not opened
+							$offset = isset($lastUnclosed[0]) ? $unclosedPositionOffset[0] : 0;
+							$unclosedPosition = $offset
+								? $open_tags[$lastUnclosed[0]][1] + $offset
+								: 0;
+							$insertTag = "<$tag>";
+							$content = substr_replace($content, $insertTag, $unclosedPosition, 0);
+							$position += $offset;
+						}
 					}
 				}
 				$position += strlen($match[0][0]);

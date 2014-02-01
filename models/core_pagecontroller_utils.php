@@ -26,6 +26,7 @@
 		public static function prepareForGrammar($c, $cleanup = false) {
 			if ($cleanup) {
 				$c = preg_replace('"<([^\/[:alpha:]])"i', '&lt;\1', $c);
+
 				$c = preg_replace('"<p([^>]*)?>(.*?)<dd>"i', '<p\1>\2<dd>', $c);
 				$c = preg_replace('"(</?(td|tr|table)[^>]*>)'.PHP_EOL.'"', '\1', $c);
 				$c = preg_replace('"'.PHP_EOL.'(</?(td|tr|table)[^>]*>)"', '\1', $c);
@@ -33,9 +34,10 @@
 				$c = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $c);
 				$c = preg_replace('"<p\s*>([^<]*)</p>"i', '<p/>\1', $c);
 				$c = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $c);
-				$c = preg_replace('"<(i|s|u)>(\s*)</\1>"', '\2', $c);
-				$c = preg_replace('"</(i|s|u)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
+				$c = preg_replace('"<(\w+)[^>]*>((\s|\&nbsp;)*)</\1>"', '\2', $c);
+				$c = preg_replace('"</(\w+)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
 				$c = preg_replace('"<(font|span)\s*(lang=\"?[^\"]+\"?)\s*>([^<]*)</\1>"i', '\3', $c);
+
 			} else
 				$c = str_replace('<br />', PHP_EOL, $c);
 

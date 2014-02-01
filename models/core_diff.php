@@ -50,7 +50,7 @@ class DiffIO {
 	public function same($text) {
 		$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
 		$l = strlen($text);
-		if ($this->context && ($l >= $this->context)) {
+		if ($this->context && ($l >= $this->context - 6)) {
 			$s1 = safeSubstr($text, $this->context / 2, 100);
 			$s2 = safeSubstrl($text, $this->context / 2, 100);
 			$text = "<span class=\"context\">{$s1}</span><br />~~~<br /><span class=\"context\">{$s2}</span>";
