@@ -102,7 +102,7 @@
 			$t = array();
 			$daysDelta = $now - $time;
 			$nearPast = $daysDelta <= 30;
-			$daysAgo = daysAgo($daysDelta) . ($nearPast ? ', ' . date('d.m.Y', $time * $day) : '');
+			$daysAgo = daysAgo($daysDelta) . ($nearPast ? ', ' . date('d.m.Y', $dayUpdates[0]['time']) : '');
 			$timestamp = $nearPast ? 'H:i' : 'd.m.Y H:i';
 			foreach ($dayUpdates as &$row) {
 				$c3++;
@@ -244,7 +244,7 @@
 
 	function daysAgo($delta) {
 		switch (true) {
-		case $delta ==  0: return 'сегодня';
+		case $delta <=  0: return 'сегодня';
 		case $delta ==  1: return 'вчера';
 		case $delta <= 30: return $delta . ' ' . aaxx($delta, 'д', array('ень', 'ня', 'ней')) . ' назад';
 		case $delta >  30: return 'больше месяца назад';

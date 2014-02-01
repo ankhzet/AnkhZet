@@ -1,10 +1,10 @@
 <?php
-/*	$r_default_context = stream_context_get_default(array(
+	$r_default_context = stream_context_get_default(array(
 		'http' => array(
 			'proxy' => 'http://localhost:8080',
 			'request_fulluri' => true
 		)
-	));*/
+	));/**/
 
 	define('CURL_TIMEOUT', 30);
 	define('CURL_BOT_UA', 'AnkhZet Cache Sync Bot v0.1');
@@ -23,7 +23,7 @@
 			curl_setopt($c, CURLOPT_USERAGENT, CURL_BOT_UA);
 			curl_setopt($c, CURLOPT_HTTPHEADER, array('X-Bot' => CURL_BOT_UA));
 			curl_setopt($c, CURLOPT_TIMEOUT, CURL_TIMEOUT);
-			/*/
+			/**/
 			curl_setopt($c, CURLOPT_PROXY, "http://localhost:8080");
 			curl_setopt($c, CURLOPT_PROXYPORT, 8080);
 			/**/

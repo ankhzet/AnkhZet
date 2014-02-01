@@ -114,6 +114,10 @@ label {
 	text-align: right!important;
 }
 
+.normal {
+	font-weight: normal;
+}
+
 #wrapper {
 	width: 100%;
 	margin: 0 auto;
