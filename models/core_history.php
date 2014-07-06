@@ -106,16 +106,17 @@
 			return $a;
 		}
 
-		function groupsToUpdate($force = 0) {
+		function groupsToUpdate($force = 0, $limit = 0) {
 			$a = array();
 			$dbc = msqlDB::o();
-			$t = time() - ($force ? 5 : 60 * 60); // 60 minutes
-			$a_ids = $this->authorsToUpdate(0, $force);
+			$t = time() - ($force ? 1 : 60 * 60); // 60 minutes
+			$a_ids = $this->authorsToUpdate(0, $force, $limit);
 			if (!$a_ids) return $a;
 			$filter = join(', ', $a_ids);
+			$limit = $limit ? $limit : GROUPS_UPDATE_PER_BATCH;
 			$s = $dbc->select('groups'
-			, 'author in ($filter) and `time` < ' . $t . ' and `link` <> "" and `link` not like "/%"'
-			. ' order by `time` limit ' . GROUPS_UPDATE_PER_BATCH
+			, "author in ($filter) and `time` < $t and `link` <> '' and `link` not like '/%'"
+			. ' order by `time` limit ' . $limit
 			, '`id` as `0`'
 			);
 			if ($s)

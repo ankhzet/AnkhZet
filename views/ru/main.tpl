@@ -24,6 +24,7 @@
 					<div class="title update dotted">
 						<span class="head">
 							{%inline}<a href="/pages?group={%group}" class="nowrap">{%group_title}</a>{%title}
+							{%moder}
 						</span>
 						<span class="head small break">
 							<span class="delta {%color}"><b>{%delta}</b></span>
@@ -36,6 +37,7 @@
 					</div>';
 	$p5 = ':
 							<a href="/pages/version/{%id}" class="nowrap">{%title}</a>{%hint}';
+	$p6 = '<span class="pull_right" style="float: right">[ <a href="/updates/delete/{%update}">{%delete}</a> ]</span>';
 
 	$updatelist = post('action') == 'updatelist';
 	$pagesize = $updatelist ? 100 : 20;
@@ -98,6 +100,7 @@
 //		debug($sizes);
 //		debug($timeslice);
 
+		$isModer = User::ACL() >= ACL::ACL_MODER;
 		foreach ($timeslice as $time => $dayUpdates) {
 			$t = array();
 			$daysDelta = $now - $time;
@@ -117,6 +120,7 @@
 				$hint = $pageid ? PageUtils::traceMark($uid, $trace, $pageid, $row['author']) : '';
 				$hint = '<span style="position: absolute; margin-left: 10px;">' . $hint . '</span>';
 				$row['hint'] = $hint;
+				$row['delete'] = Loc::lget('delete');
 				$change = 0; // don't move, UPKIND_SIZE/ADD/DELETE depends on this
 				switch ($row['kind']) {
 				case UPKIND_GROUP:
@@ -147,6 +151,8 @@
 					}
 				default:
 				}
+
+				$row['moder'] = $isModer ? patternize($p6, $row) : '';
 				$t[patternize($p4, $row)][] = patternize($p3, $row);
 			}
 			$e = array();

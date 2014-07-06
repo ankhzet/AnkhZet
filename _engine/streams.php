@@ -139,6 +139,6 @@
 
 	URIStream::register('root', SUB_DOMEN);
 	URIStream::register('views', SUB_DOMEN . '/views');
-	URIStream::register('logs', SUB_DOMEN . '/logs');
+	URIStream::register('logs', SUB_DOMEN . '/logs_dir');
 	URIStream::register('config', SUB_DOMEN . '/_engine');
 	URIStream::register('cache', SUB_DOMEN . '/cache');

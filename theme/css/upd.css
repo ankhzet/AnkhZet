@@ -188,6 +188,21 @@ tr:hover .act {
 }
 
 
+.text.reader {
+	background-image: url(/theme/img/borders.png);
+	background-position: center -16px;
+	background-repeat: no-repeat;
+}
+.text .terminator {
+	width: 100%;
+	height: 16px;
+	margin: 0;
+	padding: 0;
+	background-image: url(/theme/img/borders.png);
+	background-position: center 0;
+	background-repeat: repeat-y;
+}
+
 /* */
 
 .preview-mod {

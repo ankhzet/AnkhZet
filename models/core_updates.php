@@ -536,7 +536,7 @@
 					case UPKIND_INLINE: // group updates
 						$gid = intval($row['page']);
 						$aid = $g[$gid]['author'];
-						$r[] = array('id' => $gid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
+						$r[] = array('update' => $row['id'], 'id' => $gid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
 						, 'group' => $gid
 						, 'group_title' => $g[$gid]['title']
 						, 'author' => $aid
@@ -546,7 +546,7 @@
 					case UPKIND_DELETED_GROUP:
 						$gid = intval($row['page']);
 						$aid = intval($row['value']);
-						$r[] = array('id' => $gid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
+						$r[] = array('update' => $row['id'], 'id' => $gid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
 						, 'group' => $gid
 						, 'group_title' => "{@GROUP#$gid}"
 						, 'author' => $aid
@@ -558,7 +558,7 @@
 						$gid = $p[$pid]['group'];
 						$aid = $p[$pid]['author'];
 						$goid = intval($row['value']);
-						$r[] = array('id' => $pid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
+						$r[] = array('update' => $row['id'], 'id' => $pid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
 						, 'title' => $p[$pid]['title']
 						, 'group' => $gid
 						, 'group_title' => $g[$gid]['title']
@@ -572,10 +572,10 @@
 						$pid = intval($row['page']);
 						$aid = $p[$pid]['author'];
 						$gid = $p[$pid]['group'];
-						$r[] = array('id' => $pid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
+						$r[] = array('update' => $row['id'], 'id' => $pid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
 						, 'title' => $p[$pid]['title']
 						, 'group' => $gid
-						, 'group_title' => $g[$gid]['title']
+						, 'group_title' => isset($g[$gid]) ? $g[$gid]['title'] : "{@GROUP#$gid}"
 						, 'author' => $aid
 						, 'fio' => $a[$aid]
 						);

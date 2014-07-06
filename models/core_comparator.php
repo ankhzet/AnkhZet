@@ -32,8 +32,15 @@
 				$html2 = preg_replace('/(<!-+|--+>)/', '', $html2);
 
 				if ($html1 != $html2) {
-					file_put_contents($store, $html = gzcompress($html2));
-					file_put_contents($last, $html);
+					$save1 = file_put_contents($store, $html = gzcompress($html2));
+					$save2 = file_put_contents($last, $html);
+					@chmod($store, 0666);
+					@chmod($last, 0666);
+					if (!($save1 && $save2)) {
+						$failed = $save1 ? $last : ($save2 ? $store : "$store && $last");
+						error_handler(E_USER_ERROR, "Failed to save \"$failed\"", zend_get_executed_filename(ELS_C), zend_get_executed_lineno(ELS_C));
+						return false;
+					}
 				}
 
 				return array(strlen($html1), strlen($html2), $size);

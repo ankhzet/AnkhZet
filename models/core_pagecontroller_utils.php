@@ -36,6 +36,8 @@
 				$c = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $c);
 				$c = preg_replace('"<(\w+)[^>]*>((\s|\&nbsp;)*)</\1>"', '\2', $c);
 				$c = preg_replace('"</(\w+)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
+				$c = preg_replace('"<font([^<]*)color=\"?black\"?([^<]*)>"i', '<font\1\2>', $c);
+				$c = preg_replace('"<font\s*>(!?</font>)</font>"i', '\1', $c);
 				$c = preg_replace('"<(font|span)\s*(lang=\"?[^\"]+\"?)\s*>([^<]*)</\1>"i', '\3', $c);
 
 			} else

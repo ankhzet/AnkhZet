@@ -58,6 +58,7 @@
 //				$pageIDs = $h->fetchUpdates($uid, $pages);
 			}
 
+
 			$i = array();
 			if ($pageIDs) {
 				self::fetchData($pageIDs, $pageData, $authorData, $groupData);
@@ -79,7 +80,7 @@
 					, 'title' => $row['title']
 					, 'author' => $author ? $authorData[$author]['fio'] : '&lt;неизвестный автор&gt;'
 					, 'group' => $group ? $groupData[$group] : '&lt;неизвестная группа&gt;'
-					, 'link' => "{$data['link']}pages/version/{$pageId}/$old_version_date"
+					, 'link' => "/pages/version/{$pageId}/$old_version_date"
 					, 'samlib' => "$alink/$slink"
 					, 'pubDate' => date('r', $row['time'])
 					, 'guid' => md5($pageId . $row['time_old'] . $delta)
@@ -99,7 +100,7 @@
 					, 'diff' => $diff
 					, 'samlib' => "$alink/$link"
 					, 'link' => $i[$hID]['link']
-					, 'link2' => "{$data['link']}pages/id/{$pageId}"
+					, 'link2' => "/pages/id/{$pageId}"
 					, 'pubdate' => date('d.m.Y H:i:s', $row['time'])
 					, 'description' => &$d[$pageId]
 					);

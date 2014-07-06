@@ -83,23 +83,23 @@
 			assume_dir_exists($parent, $chmod);
 
 		if (!is_dir($dir))
-			@mkdir($dir, $chmod);
+			mkdir($dir, $chmod);
 	}
 
 	function cleanup_dir($dir) {
 		if (is_file($path = SUB_DOMEN . $dir))
-			return @unlink($path);
+			return unlink($path);
 		else {
-			$d = @dir($path);
+			$d = dir($path);
 			if ($d)
 				while ($entry = $d->read())
 					if (is_file($file = $path . '/' . $entry))
-						@unlink($file);
+						unlink($file);
 					else
 						if (($entry != '.') && ($entry != '..'))
 							cleanup_dir($dir . '/' . $entry);
 
-			return @rmdir($path);
+			return rmdir($path);
 		}
 	}
 
@@ -435,19 +435,27 @@
 		, E_WARNING => 'WARNING'
 		, E_NOTICE => 'NOTICE'
 		);
-		$severity = @$severity[$code] ? $severity[$code] : 'ERROR';
-		$date = date('d-m-Y');
+		$severity = isset($severity[$code]) ? $severity[$code] : 'ERROR';
 		$time = date('H:i:s');
 		$file = str_replace(array(SUB_DOMEN, '\\'), array('', '/'), $file);
 		$uri  = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '&gt;no uri&lt;';
 		$line = "\n[{$time}] {$severity} at {$file}({$line}): {$uri}\n\t\t\t\t\t\t\t{$msg}\n";
-		$log_file = "cms://logs/error-log-{$date}.php";
+		_error_log($line);
+	}
 
-		if (!is_file($log_file) || !filesize($log_file)) $line = "<?php \n\theader(\"Content-Type: text/html\");?><pre>\n{$line}";
+	function _error_log($line) {
+		$date = date('d-m-Y');
+		$log_file = "cms://logs/error-log-{$date}.php";
+		if (!(is_file($log_file) && filesize($log_file))) {
+			$line = "<?php \n\theader(\"Content-Type: text/html\");?><pre>\n{$line}";
+		}
 		if ($f = fopen($log_file, 'a')) {
 			fwrite($f, $line);
 			fclose($f);
-		}
+			$log_file = URIStream::real($log_file, &$log_file);
+			@chmod($log_file, 0662);
+		} else
+			echo $line;
 	}
 
 /* ---------- Pattern templates handling -----------------
