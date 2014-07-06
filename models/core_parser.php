@@ -13,17 +13,18 @@
 		static function getData($link, $method, $usecache = false) {
 			if ($link == '/') return false;
 			$url  = "http://samlib.ru/$link";
+			$timings = array();
 			if ($usecache) {
 				$hash = md5($url);
 				$file = "cms://root/cache/$hash";
 				if (is_file($file) && filesize($file))
 					$html = file_get_contents($file);
 				else {
-					$html = url_get_contents($url);
+					$html = url_get_contents($url, $timings);
 					file_put_contents($file, $html);
 				}
 			} else
-				$html = url_get_contents($url);
+				$html = url_get_contents($url, $timings);
 
 			msqlDB::o()->reconnect();
 
@@ -32,9 +33,11 @@
 
 			$html = mb_convert_encoding($html, 'UTF-8', 'CP1251');
 			$parser = self::get();//'SAMLIBPHPQueryParser');
-			if (method_exists($parser, $method = 'parse' . ucfirst($method)))
-				return $parser->{$method}($html);
-			else
+			if (method_exists($parser, $method = 'parse' . ucfirst($method))) {
+				$result = $parser->{$method}($html);
+				$result['timings'] = $timings ? $timings : null;
+				return $result;
+			} else
 				return null;
 		}
 

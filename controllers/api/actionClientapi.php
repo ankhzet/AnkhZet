@@ -66,6 +66,54 @@
 			return true;
 		}
 
+		function methodAuthor($params, &$error, &$message) {
+			require_once 'core_authors.php';
+			$id = uri_frag($params, 'id');
+			$a = AuthorsAggregator::getInstance();
+			return $a->get($id);
+		}
+		function methodAuthorsToUpdate($params, &$error, &$message) {
+			$force = !!uri_frag($params, 'force');
+			$all = !!uri_frag($params, 'all');
+
+			require_once 'core_history.php';
+			require_once 'core_updates.php';
+			require_once 'core_authors.php';
+
+			$u = new AuthorWorker();
+			$h = HistoryAggregator::getInstance();
+
+			$a = $h->authorsToUpdate(0, $force, $all);
+			return $a;
+		}
+		function methodAuthorUpdate($params, &$error, &$message) {
+			require_once 'core_history.php';
+			require_once 'core_updates.php';
+			require_once 'core_authors.php';
+			$id = uri_frag($params, 'id');
+			$u = new AuthorWorker();
+			$u = $u->check($id);
+			if ($error = $message = $u['error'])
+				return;
+
+			return $u;
+		}
+
+		function methodAuthorsToUpdates($params, &$error, &$message) {
+	$g = $h->groupsToUpdate(uri_frag($_REQUEST, 0));
+	if (!!$g) {
+		echo "Groups to update: " . (count($g)) . "<br />";
+		foreach ($g as $id)
+			$u->checkGroup($id);
+	}
+
+	if (!$a && !$g)
+		echo Loc::lget('nothing_to_update') . '<br />';
+
+	$h->calcCheckFreq();
+				return array('ok');
+		}
+
 		function methodUpdates($params, &$error, &$message) {
 			require_once 'core_updatesfetcher.php';
 			$fetch = UpdatesFetcher::aquireData($params, $title_opts);
