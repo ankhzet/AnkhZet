@@ -126,6 +126,23 @@
 			return $a;
 		}
 
+		function authorGroupsToUpdate($authorID, $force = 0, $limit = 0) {
+			$a = array();
+			$dbc = msqlDB::o();
+			$t = time() - ($force ? 1 : 60 * 60); // 60 minutes
+			$limit = $limit ? "limit $limit" : '';
+			$s = $dbc->select('groups'
+			, "author = $authorID and `time` < $t and `link` <> '' and `link` not like '/%'"
+			. ' order by `time` ' . $limit
+			, '`id` as `0`'
+			);
+			if ($s)
+				foreach($dbc->fetchrows($s) as $row)
+					$a[] = intval($row[0]);
+
+			return $a;
+		}
+
 		function tracePages($author, $page = 0) {
 			$s = $this->dbc->select('`pages`', (!$page) ? "`author` = $author" : "`id` = $page", '`id` as `0`');
 			$idx = array(); // author pages

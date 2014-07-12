@@ -92,26 +92,37 @@
 			require_once 'core_authors.php';
 			$id = uri_frag($params, 'id');
 			$u = new AuthorWorker();
-			$u = $u->check($id);
-			if ($error = $message = $u['error'])
+			$checked = $u->check($id);
+			if ($error = $message = $checked['error'])
 				return;
 
-			return $u;
+			$gu = array();
+			$h = HistoryAggregator::getInstance();
+			$ga = GroupsAggregator::getInstance();
+			$g = $h->authorGroupsToUpdate($id, true);
+			foreach ($g as $gid) {
+				$updatedGroup = $u->checkGroup($gid);
+				if (count($updatedGroup)) {
+					$d = $ga->get($gid, 'title');
+					$gu[] = array('group-id' => $gid, 'group-title' => $d['title'], 'updates' => $updatedGroup);
+				}
+			}
+			if (count($gu))
+				$checked['groups-updates'] = $gu;
+			return $checked;
 		}
+		function methodUpdatesCalcFreq($params, &$error, &$message) {
+			require_once 'core_history.php';
+			require_once 'core_authors.php';
+			$h = HistoryAggregator::getInstance();
+			$h->calcCheckFreq();
+		}
+		function methodLoadUpdates($params, &$error, &$message) {
+			require_once 'core_updates.php';
 
-		function methodAuthorsToUpdates($params, &$error, &$message) {
-	$g = $h->groupsToUpdate(uri_frag($_REQUEST, 0));
-	if (!!$g) {
-		echo "Groups to update: " . (count($g)) . "<br />";
-		foreach ($g as $id)
-			$u->checkGroup($id);
-	}
-
-	if (!$a && !$g)
-		echo Loc::lget('nothing_to_update') . '<br />';
-
-	$h->calcCheckFreq();
-				return array('ok');
+			$u = new AuthorWorker();
+			$left = $u->serveQueue(uri_frag($_REQUEST, 'left', 5));
+			return $left;
 		}
 
 		function methodUpdates($params, &$error, &$message) {

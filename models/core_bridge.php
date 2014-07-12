@@ -35,6 +35,7 @@
 			$len = fs($len);
 			$t = intval($t * 1000) / 1000;
 		} catch (Exception $e) {
+			return false;
 		}
 		if (1) {
 			$params['speed'] = $kbps;
