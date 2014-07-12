@@ -78,12 +78,19 @@
 			$this->link = '?' . join('&', $q);
 
 //			$va->dbc->debug = 1;
-			$s = $va->dbc->select($va->TBL_FETCH, join(' and ', $f) . ' group by `ip` order by `count`', 'count(`ip`) as `count`, `ip`');
+			$filter = join(' and ', $f);
+			$s = $va->dbc->select(
+					$va->TBL_FETCH
+				, $filter . ' group by `ip` order by `count`'
+				, 'count(`ip`) as `count`, `ip`, `ua`, `type`'
+				);
 			$e = array();
 			$cnts = array();
+			$ua = array();
 			$c = 0;
 			foreach ($va->dbc->fetchrows($s) as $row) {
 				$cnts[$rip = $row['ip']] = (isset($cnts[$rip]) ? $cnts[$rip] : 0) + intval($row['count']);
+				$ua[$rip] = array(intval($row['ua']), intval($row['type']));
 				$c += intval($row['count']);
 //				$row['ip'] = long2ip(intval($row['ip']));
 				$e[] = patternize('{%ip}: {%count} requests', $row);
@@ -97,10 +104,19 @@
 
 			$l = array();
 			foreach ($e as $count => $ips) {
-				$u = array();
-				foreach ($ips as $ip) $u[] = long2ip($ip);
-				$ic = count($ips);
-				$u = join(', ', $u);
+				$agents = count($ips);
+				if ($agents < 10) {
+					$u = array();
+					foreach ($ips as $ip) {
+						$row = array('type' => $ua[$ip][1], 'ua' => $ua[$ip][0]);
+						$this->userAgentBy($row);
+						$pattern = '<img style="margin: 3px 0 -3px" width=16 height=16 src="/theme/img/ua/{%ua_ico}" title="{%ua}" alt="{%ua}" />';
+						$u[] = patternize($pattern, $row) . ' ' . long2ip($ip);
+					}
+					$ic = $agents . ': ' . join(', ', $u);
+				} else
+					$ic = $agents;
+
 				$l[] = "<tr><td style='width: 100px;'>$count</td><td>$ic</td></tr>";
 			}
 			$e = join("\n", $l);
@@ -111,34 +127,7 @@
 		}
 
 		public function makeItem(&$aggregator, &$row) {
-			$uas = &$this->uas;
-			$bot = $row['type'] < 0;
-			$row['ua_ico'] = 'unknown.png';
-			switch ($bot) {
-			case true:
-				$row['type'] = 'bot';
-				$a = uri_frag($uas['robots'], $row['ua'], 0, 0);
-				if (uri_frag($a, 1, 0, 0)) {
-					$row['ua'] = $a[1];
-					$row['ua_ico'] = $a[6];
-				}
-				break;
-			case false:
-				$row['type'] = str_replace(' ', '-', strtolower($uas['browser_type'][$row['type']][0]));
-				$a = uri_frag($uas['browser'], $row['ua'], 0, 0);
-				if (uri_frag($a, 1, 0, 0)) {
-					$row['ua'] = $a[1];
-					$row['ua_ico'] = $a[5];
-				}
-				break;
-			}
-
-			$os = uri_frag($uas['os'], $row['os'], 0, 0);
-			if (uri_frag($os, 1, 0, 0)) {
-				$row['os'] = $os[1];
-				$row['os_ico'] = $os[5];
-			} else
-				$row['os_ico'] = 'unknown.png';
+			$this->userAgentBy($row);
 
 			$row['date'] = $row['time'];
 			$row['time'] = date('H:i:s', $row['utime']);
@@ -151,5 +140,36 @@
 			return patternize($this->ID_PATTERN, $row);
 		}
 
+		function userAgentBy(&$row) {
+			$uas = &$this->uas;
+			$type = intval($row['type']);
+			$ua = intval($row['ua']);
+			$bot = $type < 0;
+			$row['ua_ico'] = 'unknown.png';
+			switch ($bot) {
+			case true:
+				$row['type'] = 'bot';
+				$a = uri_frag($uas['robots'], $ua, 0, false);
+				if ($ua = uri_frag($a, 1, 0, false)) {
+					$row['ua'] = $ua;
+					$row['ua_ico'] = $a[6];
+				}
+				break;
+			case false:
+				$row['type'] = str_replace(' ', '-', strtolower($uas['browser_type'][$row['type']][0]));
+				$a = uri_frag($uas['browser'], $ua, 0, 0);
+				if ($ua = uri_frag($a, 1, 0, false)) {
+					$row['ua'] = $ua;
+					$row['ua_ico'] = $a[5];
+				}
+				break;
+			}
+
+			$os = uri_frag($uas['os'], $row['os'], 0, false);
+			if ($o = uri_frag($os, 1, 0, false)) {
+				$row['os'] = $o;
+				$row['os_ico'] = $os[5];
+			} else
+				$row['os_ico'] = 'unknown.png';
+		}
 	}
-?>
