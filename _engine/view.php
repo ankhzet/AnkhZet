@@ -124,8 +124,8 @@
 				case self::MSG_WARN : $title = Loc::lget('warning'); break;
 				case self::MSG_ERROR: $title = Loc::lget('error'); break;
 			}
-			echo '
-			<script>$(document).ready(function(){show_error("' . $title . '", "' . urlencode($message) . '")});</script>
+			echo $message . '
+			<script>$(function(){show_error("' . $title . '", "' . urlencode($message) . '")});</script>
 			';
 		}
 

@@ -53,7 +53,7 @@
 		, '&nbsp;'
 		), $cnt);
 		$cnt = preg_replace_callback('/<=quot=>(.*?)<=quot=>[\r\n]+/mDs', 'debug_pr', $cnt);
-		$cnt = str_replace(htmlspecialchars('<=quot=>'), '&quot;', $cnt);
+		$cnt = str_replace(array(htmlspecialchars('<=quot=>'), "\n"), array('&quot;', '<br />'), $cnt);
 		echo '<b>' . $msg . '</b>:<BR><br /><span style="white-space: pre-line; line-height: 12px; font-family: Consolas; font-size: 10px">' . $cnt . '</span><br>';
 	}
 

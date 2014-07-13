@@ -4,6 +4,8 @@
 	require_once 'core_authors.php';
 	require_once 'AggregatorController.php';
 
+	require_once 'core_pagecontroller_utils.php';
+
 	class UpdatesController extends AggregatorController {
 		protected $_name = 'updates';
 
@@ -378,9 +380,11 @@
 			require_once 'core_updates.php';
 			$u = new AuthorWorker();
 
+			$force = uri_frag($r, 0);
+			$limit = uri_frag($r, 1);
 //			msqlDB::o()->debug = 1;
 			$h = $this->getAggregator();
-			$a = $h->authorsToUpdate(0, uri_frag($r, 0));
+			$a = $h->authorsToUpdate(0, $force, $limit);
 			if (!!$a)
 				foreach ($a as $id)
 					if (!$u->check($id)) {
@@ -388,7 +392,7 @@
 						return;
 					}
 
-			$g = $h->groupsToUpdate(uri_frag($r, 0));
+			$g = $h->groupsToUpdate($force, $limit);
 			if (!!$g)
 				foreach ($g as $id)
 					if (!$u->checkGroup($id)) {
@@ -410,5 +414,32 @@
 //				locate_to("/updates/pages/$left");
 		}
 
+
+		function actionDelete($r) {
+			$id = uri_frag($r, 0);
+			if (!$id)
+				throw new Exception('Update UID not specified!');
+
+			$aggregator = $this->getAggregator(3);
+
+			$r = $aggregator->get($id);
+
+			$r['time'] -= 60 * 60;
+			$filter = "`id` != {%id} and `page` = {%page} and `kind` = {%kind} and `value` = {%value} and `time` > {%time}";
+			$d = $aggregator->fetch(array('filter' => patternize($filter, $r)));
+
+			if (!($d['total'] || ($r['kind'] != UPKIND_SIZE))) {
+				// not a duplicate
+				$pages = $this->getAggregator(2);
+				$page = $pages->get($pageId = intval($r['page']), '`size`');
+				$size = intval($page['size']);
+				$pages->update(array('size' => $size - $r['value']), $pageId);
+			}
+
+			if (!$aggregator->delete($id))
+				throw new Exception('Deletion failed!');
+
+			die('{"result": "ok"}');
+		}
 	}
 ?>

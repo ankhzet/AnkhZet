@@ -9,6 +9,7 @@
 		var $TBL_INSERT = '';
 		var $TBL_DELETE = '';
 		var $COL_ID     = '`id`';
+		var $COL_IDDEL  = '`id`';
 		var $collumns = array(
 			'`id` int auto_increment null'
 		, '`time` int not null'
@@ -36,7 +37,7 @@
 		}
 
 		public function delete($id) {
-			return $this->dbc->delete($this->TBL_DELETE, $this->COL_ID . (
+			return $this->dbc->delete($this->TBL_DELETE, $this->COL_IDDEL . (
 					!is_array($id)
 				? ' = ' . intval($id) . ' limit 1'
 				: ' in (' . join(',', $id) . ') limit ' . count($id)
@@ -53,12 +54,13 @@
 			$order = ($desc !== 0) ? " order by $order $desc" : '';
 			$nocalc = isset($params['nocalc']) ? $params['nocalc'] : 0;
 			$filter = isset($params['filter']) ? $params['filter'] : '';
+			$group = isset($params['group']) ? " group by {$params['group']}" : '';
 			$collumns = isset($params['collumns']) ? $params['collumns'] : '*';
 			$countrows = $numrows != 1 && !$nocalc;
 
 			$s = $this->dbc->select(
 					$this->TBL_FETCH
-				, "$filter{$order}$limit"
+				, "{$filter}{$group}{$order}{$limit}"
 				, $countrows ? "SQL_CALC_FOUND_ROWS $collumns" : $collumns
 			);
 

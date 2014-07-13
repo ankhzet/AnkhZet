@@ -409,14 +409,7 @@
 				return;
 			}
 
-			$_total = $d['total'];
-			$_from = ($page - 1) * $pagesize + 1;
-			$_to = min($_total, $_from + $pagesize - 1);
-
-			$c3 = $updatelist ? "$_from-$_to" : $c3;
-			$c3 = $c3 . '/<a href="?action=updatelist">' . $d['total'] . '</a>';
-			$u = join('', $u);
-			echo $u;
+			echo join('', $u);
 		}
 	}
 

@@ -8,7 +8,7 @@
 		public static function getPageContents($page, $version = 'last', $clean = true) {
 			$storage = self::getPageStorage($page);
 			$contents = @file_get_contents("$storage/$version.html");
-			if ($contents !== false) {
+			if (($contents !== false) && ($contents != '')) {
 				$contents1 = @gzuncompress/**/($contents);
 				if ($contents1 !== false)
 					$contents = $contents1;
@@ -26,6 +26,7 @@
 		public static function prepareForGrammar($c, $cleanup = false) {
 			if ($cleanup) {
 				$c = preg_replace('"<([^\/[:alpha:]])"i', '&lt;\1', $c);
+
 				$c = preg_replace('"<p([^>]*)?>(.*?)<dd>"i', '<p\1>\2<dd>', $c);
 				$c = preg_replace('"(</?(td|tr|table)[^>]*>)'.PHP_EOL.'"', '\1', $c);
 				$c = preg_replace('"'.PHP_EOL.'(</?(td|tr|table)[^>]*>)"', '\1', $c);
@@ -33,9 +34,12 @@
 				$c = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $c);
 				$c = preg_replace('"<p\s*>([^<]*)</p>"i', '<p/>\1', $c);
 				$c = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $c);
-				$c = preg_replace('"<(i|s|u)>(\s*)</\1>"', '\2', $c);
-				$c = preg_replace('"</(i|s|u)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
+				$c = preg_replace('"<(\w+)[^>]*>((\s|\&nbsp;)*)</\1>"', '\2', $c);
+				$c = preg_replace('"</(\w+)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
+				$c = preg_replace('"<font([^<]*)color=\"?black\"?([^<]*)>"i', '<font\1\2>', $c);
+				$c = preg_replace('"<font\s*>(!?</font>)</font>"i', '\1', $c);
 				$c = preg_replace('"<(font|span)\s*(lang=\"?[^\"]+\"?)\s*>([^<]*)</\1>"i', '\3', $c);
+
 			} else
 				$c = str_replace('<br />', PHP_EOL, $c);
 
@@ -133,6 +137,7 @@
 			$read = Loc::lget('view');
 			$row['diff'] = Loc::lget('diff');
 			$download = Loc::lget('download');
+			$delete = Loc::lget('delete');
 			$ccc = count($versions);
 			$daynames = '';
 			while ($versions && ($ccc-- > 0)) {
@@ -205,6 +210,8 @@
 					$daynames = "<tr class=\"day-name\">$w</tr>\r\n";
 				}
 
+				$moder = User::ACL() >= ACL::ACL_MODER;
+
 				while (($c-- > 0) && $d) {
 					$w = '';
 
@@ -239,20 +246,27 @@
 
 								$e = array();
 								foreach ($v as $version) {
-									$new = ($version > $lastseen) ? ' calendar-new' : '';
+									$new = ($version > $lastseen) ? ' c-n' : '';
 									$size = fs(@filesize("$storage/$version.html"));
 									$time = date('H:i:s', $version);
 									$version = date('d-m-Y/H-i-s', $version);
-									$e[] = "<li class=\"$new\">&raquo; $time, $size: <a href=\"/pages/version/$page/view/$version\">$read</a> | <a href=\"/pages/download/$page/$version\">$download</a></li>";
+									$dlt = (!$moder) ? '' : "| <a href=\"/pages/remove/$page/$version\">$delete</a>";
+									$e[] = "
+<li>
+	&raquo; <x class=\"$new\">$time, $size</x>:
+	<a href=\"/pages/version/$page/view/$version\">$read</a>
+	| <a href=\"/pages/download/$page/$version\">$download</a>
+	$dlt
+</li>";
 								}
 								$v = join('', $e);
-								$m = ' calendar-multiple';
+								$m = ' c-m';
 								$action = '';
 								$dayname2 = date('j-m-Y', $day);
 								$up_form = aaxx($cnt, $update_base, $updates);
-								$dayname = "<a>$dayname</a><div class=\"calendar-multi-versions\"><b>$dayname2</b>: $cnt $up_form<br /><ul>$v</ul></div>";
+								$dayname = "<a>$dayname</a><div class=\"c-m-v\"><b>$dayname2</b>: $cnt $up_form<br /><ul>$v</ul></div>";
 
-							$current = " class=\"calendar-version{$m}{$new}\"";
+							$current = " class=\"c-v{$m}{$new}\"";
 						}
 
 						$w = "<td{$current}>$dayname</td>" . $w;

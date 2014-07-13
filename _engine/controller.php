@@ -34,12 +34,17 @@
 						if (!(($i = intval($action)) || ($action == 'page'))) {
 							$lshort = Loc::lget($locuid1 = 'titles.' . $action);
 							$loc = ($lshort != $locuid1) ? $lshort : Loc::lget($locuid2 = 'titles.' . join('', $p) . $action);
-							if ($loc != $locuid1) {
+							if (($loc != $locuid1) && ((!isset($locuid2)) || ($loc != $locuid2))) {
 								$p[] = $action;
 								$l[] = $loc;
 								$a[] = '<a href="/' . join('/', $p) . '">' . $loc . '</a>';
-							} else
+							} else {
+								if ($loc == $locuid2) {
+									$l[] = '404 - Not Found';
+									$a[] = '404 - Not Found';
+								}
 								break;
+							}
 						} else {
 							if (($i == 404) && !count($p)) {
 								$l[] = '404 - Not Found';

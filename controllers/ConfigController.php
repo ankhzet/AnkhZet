@@ -62,9 +62,10 @@
 								$config->set(array($section, $param), stripslashes($value));
 
 //				debug($config);
-					$config->save();
-					locate_to('/config');
 				}
+
+				$config->save();
+				locate_to('/config');
 			}
 
 			$this->view->zones = $zones;

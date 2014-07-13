@@ -25,27 +25,33 @@
 
 	class AuthorWorker {
 		public function check($author_id) {
+			$result = array();
 			$authorsAggregator = AuthorsAggregator::getInstance();
 			$a = $authorsAggregator->get($author_id);
 			preg_match('/^[\/]*(.*?)[\/]*$/', $a['link'], $link);
 			$link = $link[1] . '/';
 			$t = getutime();
-			$data = SAMLIBParser::getData($link, 'author');
+			$data = SAMLIBParser::getData($link, 'author', true);
 			if ($data === false)
-				return echo_log('samlib_down');
+				return array('error' => Loc::lget('samlib_down'));
+///				return echo_log('samlib_down');
 			elseif ($data === null)
-				return echo_log('parse_method_unknown');;
+				return array('error' => Loc::lget('parse_method_unknown'));
+///				return echo_log('parse_method_unknown');;
 
+			$result['load-timings'] = $data['timings'];
 
 			$s = intval((getutime() - $t) * 1000) / 1000;
-			echo "<span style=\"font-size: 80%; color: grey;\">Parser cast for $s sec</span><br />";
+			$result['cast-for'] = $s;
+///			echo "<span style=\"font-size: 80%; color: grey;\">Parser cast for $s sec</span><br />";
 
 			$groups = $data[0];
 			$inline = $data[1];
 			$links = $data[2];
 			$fio = $data[3];
 			if ($fio != $a['fio'])
-				echo_log('author_updated');
+				$result['author-updated'] = true;
+///				echo_log('author_updated');
 
 			$authorsAggregator->update(array('fio' => $fio, 'time' => time()), $author_id, true);
 
@@ -101,7 +107,8 @@
 //			debug (array($old, $new), 'deleted + added');
 
 			if (count($new)) { // if groups on page differs from db
-				echo_log('groups_updated');
+				$result['groups-updated'] = true;
+///				echo_log('groups_updated');
 				foreach ($new as $idx => $title) { // add new group
 //					debug($groups[$idx], $title);
 					$link = isset($inline[$idx]) ? $inline[$idx] : '';
@@ -137,9 +144,10 @@
 				$ga->update($values, $g_id);
 
 			if (!!$old) { // there are deleted groups
-				echo_log('groups_to_delete');
+				$result['groups-deleted'] = true;
+///				echo_log('groups_to_delete');
 				$diff = array_diff(array_keys($gii), array_keys($gi));
-        $group_filter = join(',', $diff);
+				$group_filter = join(',', $diff);
 //				debug(array($old, $diff), 'groups to delete');
 				$pa = PagesAggregator::getInstance();
 				$d = $pa->fetch(array(
@@ -175,7 +183,8 @@
 								$page_data[3] = $data_link;
 								$candidates_to_move[$group][] = $page_data;
 							} else
-								echo_log('dont_know_where_to_go', ' (' . $page_data[1] . ')');
+								$result['dont-know-where-to-go'] = $page_data[1];
+///								echo_log('dont_know_where_to_go', ' (' . $page_data[1] . ')');
 						}
 					}
 
@@ -187,17 +196,21 @@
 								$pa->update(array('group' => $page_data[2]), $page_id);
 								$ua->changed($page_id, UPKIND_GROUP, $old_group);
 								$data = array('link' => $page_data[1]);
-								echo patternize(Loc::lget('page_changed_group'), $data) . '(ID#' . $page_data[2] . ')<br />';
+								$result['page-moved-to-group'][] = $page_data;
+///								echo patternize(Loc::lget('page_changed_group'), $data) . '(ID#' . $page_data[2] . ')<br />';
 							}
 					} else
-						echo_log('no_pages_to_move');
+						$result['no-pages-to-move'] = true;
+///						echo_log('no_pages_to_move');
 				} else
-					echo_log('pages_not_moved');
+						$result['pages-not-moved'] = true;
+///					echo_log('pages_not_moved');
 
 				foreach ($diff as $g_id) {
 					$ua->changed($g_id, UPKIND_DELETED_GROUP, $author_id);
 					$ga->delete($g_id);
-					echo patternize(Loc::lget('group_deleted'), $gii[$g_id][2]) . '<br />';
+					$result['group-deleted'][] = $gii[$g_id];
+///					echo patternize(Loc::lget('group_deleted'), $gii[$g_id][2]) . '<br />';
 				}
 			}
 
@@ -240,20 +253,24 @@
 							if ($new_group) {
 								$pa->update(array('group' => $new_group), $page_id);
 								$ua->changed($page_id, UPKIND_GROUP, $old_group);
-								echo patternize(Loc::lget('page_changed_group'), $row) . '(ID#' . $new_group . ')<br />';
+								$result['page-changed-group'][] = array_merge($row, array('new-group' => $new_group));
+///								echo patternize(Loc::lget('page_changed_group'), $row) . '(ID#' . $new_group . ')<br />';
 							} else {
 //								debug(array('old_i' => $old_group_i, 'new_i' => $data[0], 'old_id' => $old_group));
-								echo 'Cant move page! Target group not found %)<br />';
+								$result['page-changed-group'][] = array_merge($row, array('new-group' => 0));
+///								echo 'Cant move page! Target group not found %)<br />';
 							}
 						}
 					}
 				}
 
 				if (!!$diff) // updated pages
-					echo_log('pages_updated');
+					$result['pages-updated'] = true;
+///					echo_log('pages_updated');
 
 				if (!!$check) { // new pages
-					echo_log('pages_new');
+					$result['pages-new'] = true;
+///					echo_log('pages_new');
 					foreach ($check as $link => &$data) { // each new page
 						$idx = $data[0]; // group local id (IDX)
 						$gid = array_search($idx, $gi); // group global id (GUID)
@@ -270,19 +287,23 @@
 				}
 
 				if (!!$diff) { // there are updated or new pages
-					echo_log('pages_queue');
-					$this->queuePages($author_id, $diff); // queue this page for version check
+					$result['pages-queued'][] = $diff;
+///					echo_log('pages_queue');
+					$result['pages-queued-links'] = $this->queuePages($author_id, $diff); // queue this page for version check
 				} else
-					echo_log('no_updates');
+					$result['no-updates'] = true;
+///					echo_log('no_updates');
 			} else
-				echo_log('no_updates');
+				$result['no-updates'] = true;
+///			echo_log('no_updates');
 
 //			debug(array('g' => $g, 'gi' => $gi, 'gii' => $gii, 'gt' => $gt));
 
-			return true;
+			return $result;
 		}
 
 		function checkGroup($group_id) {
+			$result = array();
 			$ga = GroupsAggregator::getInstance();
 			$g = $ga->get($group_id, '`id`, `link`, `author`');
 			if (uri_frag($g, 'id') != $group_id) return false;
@@ -294,9 +315,11 @@
 			$link = $link[1] . '/' . $g['link'];
 			$data = SAMLIBParser::getData($link, 'group');
 			if ($data === false)
-				return echo_log('samlib_down');
+				return array('error' => Loc::lget('samlib_down'));
+//				return echo_log('samlib_down');
 			elseif ($data === null)
-				return echo_log('parse_method_unknown');
+				return array('error' => Loc::lget('parse_method_unknown'));
+//				return echo_log('parse_method_unknown');
 
 
 			$ga->update(array('time' => time()), $group_id, true);
@@ -309,7 +332,7 @@
 					$check[$link] = $data;
 
 			if (count($check)) { // ok, there are smth to check
-        $link_filter = join('", "', array_keys($check));
+				$link_filter = join('", "', array_keys($check));
 				$ua = UpdatesAggregator::getInstance();
 				$diff = array();
 				$pa = PagesAggregator::getInstance();
@@ -329,7 +352,8 @@
 
 						$old_group = intval($row['group']);
 						if ($group_id != $old_group) {
-							echo patternize(Loc::lget('page_changed_group'), $row) . '<br />';
+							$result['page-changed-group'][] = $row;
+///							echo patternize(Loc::lget('page_changed_group'), $row) . '<br />';
 							$pa->update(array('group' => $group_id), $page_id);
 							$ua->changed($page_id, UPKIND_GROUP, $old_group);
 						}
@@ -337,32 +361,37 @@
 				}
 
 				if (count($diff))
-					echo_log('pages_updated');
+				;
+//					$result['pages-updated'] = 1;
+///					echo_log('pages_updated');
 
 				if (count($check)) {
-					echo_log('pages_new');
+//					echo_log('pages_new');
 					foreach ($check as $link => &$data) { // new pages
 						$pid = $pa->add(array(
 							'author' => $author_id
 						, 'group' => $group_id
 						, 'link' => $link
-						, 'title' => addslashes(htmlspecialchars($data[0], ENT_QUOTES))
+						, 'title' => ($ptitle = addslashes(htmlspecialchars($data[0], ENT_QUOTES)))
 						, 'description' => addslashes(htmlspecialchars($data[2], ENT_QUOTES))
 						, 'size' => 0 // later it will be updated with diff checker
 						));
 						$diff[$pid] = $link;
+						$result['pages-new'][] = array('page-id' => $pid, 'link' => $link, 'title' => $ptitle);
 					}
 				}
 
 				if (count($diff)) {
-					echo_log('pages_queue');
-					$this->queuePages($author_id, $diff);
-				} else
-					echo_log('no_updates');
-			} else
-				echo_log('no_updates');
+//					echo_log('pages_queue');
+					$result['pages-queued'] = $this->queuePages($author_id, $diff);
+				} else;
+//					$result['pages-no-updates'] = 1;
+//					echo_log('no_updates');
+			} else;
+//				$result['pages-no-updates'] = 1;
+//				echo_log('no_updates');
 
-			return true;
+			return $result;
 		}
 
 		function queuePages($author, $pages) {
@@ -375,23 +404,27 @@
 			$idx = array_keys($pages);
 			if (count($update)) {
 				$diff = array_intersect($idx, $update);
-				echo_log('already_queued', ':');
+///				echo_log('already_queued', ':');
 				foreach ($diff as $page) {
 					$link = $pages[$page];
-					echo "<a href=\"http://samlib.ru/$alink/$link\">$link</a><br />";
+///					echo "<a href=\"http://samlib.ru/$alink/$link\">$link</a><br />";
 				}
-				echo '<br />';
+///				echo '<br />';
 
 				$idx = array_diff($idx, $update);
 			}
-			echo_log('queued_pages', ':');
+///			echo_log('queued_pages', ':');
+			$queue = array();
 			foreach ($idx as $page) {
 				$link = $pages[$page];
-				echo "<a href=\"http://samlib.ru/$alink/$link\">$link</a><br />";
+				$queue[] = array('page-id' => $page, 'link' => $link);
+///				echo "<a href=\"http://samlib.ru/$alink/$link\">$link</a><br />";
 			}
+			return $queue;
 		}
 
 		function serveQueue($limit = 1, $timeout = 0) {
+			$result = array();
 			$t = time();
 
 			$q = QueueAggregator::getInstance();
@@ -402,7 +435,7 @@
 			));
 
 			if ($d['total']) {
-				echo '> ' . $d['total'] . ' pages waits for update...<br />';
+///				echo '> ' . $d['total'] . ' pages waits for update...<br />';
 				foreach ($d['data'] as $row)
 					$u[intval($row[1])] = intval($row[0]);
 
@@ -427,7 +460,7 @@
 					, '`id` = ' . $q_id
 					);
 
-					echo "&gt; U@{$q_id}, ID#{$page}: {$row['link']}...<br />";
+//					echo "&gt; U@{$q_id}, ID#{$page}: {$row['link']}...<br />";
 					$size = $c->compare($page, "{$row['author']}/{$row['link']}", $time);
 
 					/* reconnect mysql DB (preventing "MySQL server has gone away") */
@@ -441,24 +474,30 @@
 							$utype = ($old_size <= 0) ? UPKIND_ADDED : (($size <= 0) ? UPKIND_DELETED : UPKIND_SIZE);
 							$ua->changed($page, $utype, $size - intval($row['size']));
 							$saveDir = PageUtils::getPageStorage($page);
-							echo " &nbsp;save to [$saveDir/$time.html]...<br />";
-							echo ' &nbsp;updated (' . $size . 'KB).<br />';
+							$result['diff'][] = array('page-id' => $page, 'link' => $row['link'], 'oldsize' => $old_size, 'newsize' => $size);
+//							echo " &nbsp;save to [$saveDir/$time.html]...<br />";
+//							echo ' &nbsp;updated (' . $size . 'KB).<br />';
 						}
 						$q->dbc->delete($q->TBL_DELETE, '`page` = ' . $page);
 					} else {
 						$q->dbc->update($q->TBL_INSERT, array('state' => 0, 'updated' => $time), '`id` = ' . $q_id);
-						echo_log('page_request_failed');
-						return $left - $done;
+						$result['fail'][] = array('page-id' => $page, 'link' => $row['link']);
+//						echo_log('page_request_failed');
+						$result['left'] = $left - $done;
+						return $result;
 					}
 					$done++;
-					if (($timeout > 0) && (time() - $t > $timeout))
-						return $left - $done;
+					if (($timeout > 0) && (time() - $t > $timeout)) {
+						$result['left'] = $left - $done;
+						return $result;
+					}
 				}
-				return 0;
-			} else
-				echo_log('nothing_to_update');
+				$result['left'] = 0;
+			} else;
+//				echo_log('nothing_to_update');
 
-			return 0;
+			$result['left'] = 0;
+			return $result;
 		}
 
 	}
@@ -536,7 +575,7 @@
 					case UPKIND_INLINE: // group updates
 						$gid = intval($row['page']);
 						$aid = $g[$gid]['author'];
-						$r[] = array('id' => $gid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
+						$r[] = array('update' => $row['id'], 'id' => $gid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
 						, 'group' => $gid
 						, 'group_title' => $g[$gid]['title']
 						, 'author' => $aid
@@ -546,7 +585,7 @@
 					case UPKIND_DELETED_GROUP:
 						$gid = intval($row['page']);
 						$aid = intval($row['value']);
-						$r[] = array('id' => $gid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
+						$r[] = array('update' => $row['id'], 'id' => $gid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
 						, 'group' => $gid
 						, 'group_title' => "{@GROUP#$gid}"
 						, 'author' => $aid
@@ -558,7 +597,7 @@
 						$gid = $p[$pid]['group'];
 						$aid = $p[$pid]['author'];
 						$goid = intval($row['value']);
-						$r[] = array('id' => $pid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
+						$r[] = array('update' => $row['id'], 'id' => $pid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
 						, 'title' => $p[$pid]['title']
 						, 'group' => $gid
 						, 'group_title' => $g[$gid]['title']
@@ -572,10 +611,10 @@
 						$pid = intval($row['page']);
 						$aid = $p[$pid]['author'];
 						$gid = $p[$pid]['group'];
-						$r[] = array('id' => $pid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
+						$r[] = array('update' => $row['id'], 'id' => $pid, 'kind' => $kind, 'value' => $row['value'], 'time' => $row['time']
 						, 'title' => $p[$pid]['title']
 						, 'group' => $gid
-						, 'group_title' => $g[$gid]['title']
+						, 'group_title' => isset($g[$gid]) ? $g[$gid]['title'] : "{@GROUP#$gid}"
 						, 'author' => $aid
 						, 'fio' => $a[$aid]
 						);
@@ -697,4 +736,3 @@
 			return array('data' => $r, 'total' => $d['total']);
 		}
 	}
-

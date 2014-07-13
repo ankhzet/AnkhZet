@@ -24,6 +24,7 @@
 					<div class="title update dotted">
 						<span class="head">
 							{%inline}<a href="/pages?group={%group}" class="nowrap">{%group_title}</a>{%title}
+							{%moder}
 						</span>
 						<span class="head small break">
 							<span class="delta {%color}"><b>{%delta}</b></span>
@@ -36,6 +37,7 @@
 					</div>';
 	$p5 = ':
 							<a href="/pages/version/{%id}" class="nowrap">{%title}</a>{%hint}';
+	$p6 = '<span class="pull_right" style="float: right">[ <a href="/updates/delete/{%update}">{%delete}</a> ]</span>';
 
 	$updatelist = post('action') == 'updatelist';
 	$pagesize = $updatelist ? 100 : 20;
@@ -98,11 +100,12 @@
 //		debug($sizes);
 //		debug($timeslice);
 
+		$isModer = User::ACL() >= ACL::ACL_MODER;
 		foreach ($timeslice as $time => $dayUpdates) {
 			$t = array();
 			$daysDelta = $now - $time;
 			$nearPast = $daysDelta <= 30;
-			$daysAgo = daysAgo($daysDelta) . ($nearPast ? ', ' . date('d.m.Y', $time * $day) : '');
+			$daysAgo = daysAgo($daysDelta) . ($nearPast ? ', ' . date('d.m.Y', $dayUpdates[0]['time']) : '');
 			$timestamp = $nearPast ? 'H:i' : 'd.m.Y H:i';
 			foreach ($dayUpdates as &$row) {
 				$c3++;
@@ -117,6 +120,7 @@
 				$hint = $pageid ? PageUtils::traceMark($uid, $trace, $pageid, $row['author']) : '';
 				$hint = '<span style="position: absolute; margin-left: 10px;">' . $hint . '</span>';
 				$row['hint'] = $hint;
+				$row['delete'] = Loc::lget('delete');
 				$change = 0; // don't move, UPKIND_SIZE/ADD/DELETE depends on this
 				switch ($row['kind']) {
 				case UPKIND_GROUP:
@@ -147,6 +151,8 @@
 					}
 				default:
 				}
+
+				$row['moder'] = $isModer ? patternize($p6, $row) : '';
 				$t[patternize($p4, $row)][] = patternize($p3, $row);
 			}
 			$e = array();
@@ -244,7 +250,7 @@
 
 	function daysAgo($delta) {
 		switch (true) {
-		case $delta ==  0: return 'сегодня';
+		case $delta <=  0: return 'сегодня';
 		case $delta ==  1: return 'вчера';
 		case $delta <= 30: return $delta . ' ' . aaxx($delta, 'д', array('ень', 'ня', 'ней')) . ' назад';
 		case $delta >  30: return 'больше месяца назад';

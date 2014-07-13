@@ -19,6 +19,18 @@
 		return $cast_to_int ? intval($frag) : $frag;
 	}
 
+	function fetch_field(&$array, $field, $index = null) {
+		$result = array();
+		if ($index)
+			foreach ($array as &$row)
+				$result[$row[$index]] = $row[$field];
+		else
+			foreach ($array as &$row)
+				$result[] = $row[$field];
+
+		return $result;
+	}
+
 	function mb_ucfirst($str, $utf8 = true) {
 		if ($utf8) $str = mb_convert_encoding($str, 'CP1251');
 		$str = ucfirst(strtolower($str));
@@ -83,23 +95,23 @@
 			assume_dir_exists($parent, $chmod);
 
 		if (!is_dir($dir))
-			@mkdir($dir, $chmod);
+			mkdir($dir, $chmod);
 	}
 
 	function cleanup_dir($dir) {
 		if (is_file($path = SUB_DOMEN . $dir))
-			return @unlink($path);
+			return unlink($path);
 		else {
-			$d = @dir($path);
+			$d = dir($path);
 			if ($d)
 				while ($entry = $d->read())
 					if (is_file($file = $path . '/' . $entry))
-						@unlink($file);
+						unlink($file);
 					else
 						if (($entry != '.') && ($entry != '..'))
 							cleanup_dir($dir . '/' . $entry);
 
-			return @rmdir($path);
+			return rmdir($path);
 		}
 	}
 
@@ -199,6 +211,7 @@
 	TimeLeech::initTimes();
 
 	function close_tags($content, $co = false) {
+		$content = preg_replace('#\<[^>]*$#', '', $content);
 		if ($co) {
 //      echo htmlspecialchars($content) . ' <br> <p>';
 
@@ -212,20 +225,23 @@
 			}
 //      echo htmlspecialchars($content);
 		}
+
 		$position = 0;
 		$open_tags = array();
 		//теги для игнорирования
 		$ignored_tags = array('br', 'hr', 'img', 'p');
 
+		$lastUnclosed = array();
+		$unclosedPositionOffset = array();
 		while (($position = @strpos($content, '<', $position)) !== FALSE) {
 			//забираем все теги из контента
 
 			if (preg_match('|^<(/?)([a-z\d]+)\b[^>]*>|i', substr($content, $position), $match, PREG_OFFSET_CAPTURE)) {
 				$tag = strtolower($match[2][0]);
 				//игнорируем все одиночные теги
-				if (in_array($tag, $ignored_tags) == FALSE) {
+				if ((in_array($tag, $ignored_tags) == FALSE) && isset($match[1][0])) {
 					//тег открыт
-					if (isset($match[1][0]) AND ($match[1][0] == '')) {
+					if ($match[1][0] == '') {
 						if (isset($open_tags[$tag])) {
 							if ($open_tags[$tag][0] == 0)
 								$open_tags[$tag][1] = $position;
@@ -234,11 +250,26 @@
 							$open_tags[$tag][0] = 1;
 							$open_tags[$tag][1] = $position;
 						}
+						array_unshift($lastUnclosed, $tag);
+						array_unshift($unclosedPositionOffset, strlen($match[0][0]));
 					}
 					//тег закрыт
-					if (isset($match[1][0]) AND ($match[1][0] == '/')) {
-						if (isset($open_tags[$tag]))
+					if ($match[1][0] == '/') {
+						if (isset($open_tags[$tag]) && ($open_tags[$tag][0] > 0)) {
 							$open_tags[$tag][0]--;
+							if (isset($lastUnclosed[0]) && ($lastUnclosed[0] == $tag)) {
+								array_shift($lastUnclosed);
+								array_shift($unclosedPositionOffset);
+							}
+						} else { // closed but not opened
+							$offset = isset($lastUnclosed[0]) ? $unclosedPositionOffset[0] : 0;
+							$unclosedPosition = $offset
+								? $open_tags[$lastUnclosed[0]][1] + $offset
+								: 0;
+							$insertTag = "<$tag>";
+							$content = substr_replace($content, $insertTag, $unclosedPosition, 0);
+							$position += $offset;
+						}
 					}
 				}
 				$position += strlen($match[0][0]);
@@ -416,19 +447,27 @@
 		, E_WARNING => 'WARNING'
 		, E_NOTICE => 'NOTICE'
 		);
-		$severity = @$severity[$code] ? $severity[$code] : 'ERROR';
-		$date = date('d-m-Y');
+		$severity = isset($severity[$code]) ? $severity[$code] : 'ERROR';
 		$time = date('H:i:s');
 		$file = str_replace(array(SUB_DOMEN, '\\'), array('', '/'), $file);
 		$uri  = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '&gt;no uri&lt;';
 		$line = "\n[{$time}] {$severity} at {$file}({$line}): {$uri}\n\t\t\t\t\t\t\t{$msg}\n";
-		$log_file = "cms://logs/error-log-{$date}.php";
+		_error_log($line);
+	}
 
-		if (!is_file($log_file) || !filesize($log_file)) $line = "<?php \n\theader(\"Content-Type: text/html\");?><pre>\n{$line}";
+	function _error_log($line) {
+		$date = date('d-m-Y');
+		$log_file = "cms://logs/error-log-{$date}.php";
+		if (!(is_file($log_file) && filesize($log_file))) {
+			$line = "<?php \n\theader(\"Content-Type: text/html\");?><pre>\n{$line}";
+		}
 		if ($f = fopen($log_file, 'a')) {
 			fwrite($f, $line);
 			fclose($f);
-		}
+			$log_file = URIStream::real($log_file, &$log_file);
+			@chmod($log_file, 0662);
+		} else
+			echo $line;
 	}
 
 /* ---------- Pattern templates handling -----------------
