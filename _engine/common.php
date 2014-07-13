@@ -19,6 +19,18 @@
 		return $cast_to_int ? intval($frag) : $frag;
 	}
 
+	function fetch_field(&$array, $field, $index = null) {
+		$result = array();
+		if ($index)
+			foreach ($array as &$row)
+				$result[$row[$index]] = $row[$field];
+		else
+			foreach ($array as &$row)
+				$result[] = $row[$field];
+
+		return $result;
+	}
+
 	function mb_ucfirst($str, $utf8 = true) {
 		if ($utf8) $str = mb_convert_encoding($str, 'CP1251');
 		$str = ucfirst(strtolower($str));

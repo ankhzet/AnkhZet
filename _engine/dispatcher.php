@@ -32,7 +32,7 @@ TimeLeech::addTimes('before dispatch');
 				$ctlroot = $front->getControllerRoot();
 				require_once 'user.php';
 //TimeLeech::addTimes('before acl');
-				$acl = User::get()->ACL();
+				$acl = User::ACL();
 //TimeLeech::addTimes('after acl');
 				do {
 					$act = $this->_req->shiftAction();
@@ -47,10 +47,10 @@ TimeLeech::addTimes('before dispatch');
 								$p[] = $key . '=' . $param;
 							$root .= '?' . join('&', $p);
 						}
-						if (!$acl) {
-							header('Location: http://' . $_SERVER['HTTP_HOST'] . '/user/login?url=' . urlencode($root));
-							die();
-						}
+
+						if (!$acl)
+							locate_to('/user/login?url=' . urlencode($root));
+
 						throw new Exception('err_acl');
 					}
 
@@ -85,4 +85,3 @@ TimeLeech::addTimes('after dispatch');
 			ob_end_clean();
 		}
 	}
-?>

@@ -52,13 +52,17 @@
 			return patternize($this->LIST_ITEM, $row);
 		}
 
+		public function noEntry(&$aggregator, $id) {
+			throw new Exception('Entry not found');
+		}
+
 		public function actionId($r) {
 			$id = uri_frag($r, 0);
 			if ($id) {
 				$aggregator = $this->getAggregator();
 				$entry = $aggregator->get($id);
 				if (!($entry && count($entry)))
-					throw new Exception('Entry not found');
+					$entry = $this->noEntry($aggregator, $id);
 
 				$entry['utime'] = ($utime = intval($entry['time']));
 				$entry['time'] = date('d.m.Y', $utime);

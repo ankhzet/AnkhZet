@@ -664,7 +664,7 @@
 			$old_d = date('d.m.Y', $old);
 			$cur_d = date('d.m.Y', $cur);
 			$diff_ver = date('d-m-Y/H-i-s', $cur) . '/' . date('d-m-Y/H-i-s', $old);
-			View::addKey('title', $alink . ' - ' . $plink . " <span style=\"font-size: 80%;\">[$old_d <a href=\"/pages/diff/$page/$diff_ver" . ($show_old ? '' : '?showold=true') . "\">" . $d[$show_old] . "</a> $cur_d]</span>");
+			View::addKey('title', $alink . ' - ' . $plink . " <span style=\"font-size: 80%;\">[$old_d <a nofollow noindex href=\"/pages/diff/$page/$diff_ver" . ($show_old ? '' : '?showold=true') . "\">" . $d[$show_old] . "</a> $cur_d]</span>");
 
 			$t1 = PageUtils::getPageContents($page, $old);
 			$t2 = PageUtils::getPageContents($page, $cur);
