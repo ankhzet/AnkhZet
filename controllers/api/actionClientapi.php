@@ -125,6 +125,140 @@
 			return $left;
 		}
 
+		/* ==================================================== */
+
+		function methodCompositionState($params, &$error, &$message) {
+			require_once 'core_page.php';
+			$pageID = uri_frag($params, 'page');
+
+			if ($error = !$pageID) {
+				return $message = 'Page ID not specified';
+			}
+
+			$pca = PagesCompositionAggregator::getInstance();
+			$composition = $pca->inComposition($pageID);
+
+			return $composition;
+		}
+
+		function methodCompositionRelated($params, &$error, &$message) {
+			require_once 'core_page.php';
+			$pid = uri_frag($params, 'page');
+
+			if ($error = !$pid) {
+				return $message = 'Page ID not specified';
+			}
+
+			$pa = PagesAggregator::getInstance();
+			$page = $pa->get($pid, '`id`, `author`');
+
+			if ($error = ($pid != intval($page['id'])))
+				return $message = "Page {@PAGE#$pid} not found";
+
+			$pages = $pa->fetch(array('nocalc' => true, 'desc' => 0
+				, 'filter' => "`author` = {$page['author']}"
+				, 'collumns' => '`id`'
+			));
+			$pages = fetch_field($pages['data'], 'id');
+
+			$pca = PagesCompositionAggregator::getInstance();
+			$compositions = array();
+
+			foreach ($pages as $id) {
+				$data = $pca->inComposition($id);
+				foreach ($data as $row) {
+					$cid = intval($row['composition']);
+					$compositions[$cid] = $row;
+				}
+			}
+//			$pages = $pca->fetchPages($id);
+
+			return $compositions;
+		}
+
+		function methodCompositionPages($params, &$error, &$message) {
+			require_once 'core_page.php';
+			$id = uri_frag($params, 'id');
+
+			if ($error = !$id) {
+				return $message = 'Composition ID not specified';
+			}
+
+			$pca = PagesCompositionAggregator::getInstance();
+			$pages = $pca->fetchPages($id);
+
+			return $pages;
+		}
+
+		function methodCompositionAdd($params, &$error, &$message) {
+			require_once 'core_page.php';
+			$pages = uri_frag($params, 'pages', array(), false);
+			$comID = uri_frag($params, 'composition');
+
+			if ($error = !count($pages)) {
+				return $message = 'Composition pages not specified';
+			}
+
+			$pca = PagesCompositionAggregator::getInstance();
+
+			if (!$comID) {
+				$title = uri_frag($params, 'title', null, false);
+				if ($error = !$title)
+					return $message = 'Composition pages not specified';
+
+				$comID = $pca->genComposition($pages);
+				$pca->update(array('title' => $title), $comID, true);
+			} else {
+				foreach ($pages as $pageID)
+					$pca->compose($comID, $pageID);
+			}
+
+			return $comID;
+		}
+
+		function methodCompositionRemove($params, &$error, &$message) {
+			require_once 'core_page.php';
+			$pages = uri_frag($params, 'pages', array(), false);
+			$comID = uri_frag($params, 'composition');
+
+			if ($error = !$comID) {
+				return $message = 'Composition ID not specified';
+			}
+
+			if ($error = !count($pages)) {
+				return $message = 'Composition pages not specified';
+			}
+
+			$pca = PagesCompositionAggregator::getInstance();
+			return $pca->remove($comID, $pages);
+		}
+
+		function methodCompositionOrder($params, &$error, &$message) {
+			require_once 'core_page.php';
+			$comID = uri_frag($params, 'composition');
+			$pageID = uri_frag($params, 'page');
+			$dir = uri_frag($params, 'direction');
+
+			if ($error = !$comID)
+				return $message = 'Composition ID not specified';
+
+			if ($error = !$pageID)
+				return $message = 'Page ID not specified';
+
+			if ($error = (abs($dir) != 1))
+				return $message = 'Wrond reordering direction';
+
+			$pca = PagesCompositionAggregator::getInstance();
+			$oldIdx = $pca->orderInComposition($comID, $pageID);
+			if ($error = ($oldIdx === false))
+				return $message = 'Page doesn\'t contained in specified composition';
+
+			$newIdx = $oldIdx + $dir;
+			return ($newIdx < 0) ? false : $pca->compose($comID, $pageID, $newIdx);
+		}
+
+		/* ==================================================== */
+
 		function methodUpdates($params, &$error, &$message) {
 			require_once 'core_updatesfetcher.php';
 			$fetch = UpdatesFetcher::aquireData($params, $title_opts);
