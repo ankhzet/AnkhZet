@@ -30,7 +30,7 @@
 				: '['.PHP_EOL . join(PHP_EOL.',', $e) . PHP_EOL.']';
 			break;
 		default:
-			$data = '"' . addslashes(str_replace("'", '&#39;', $data)) . '"';
+			$data = '"' . addslashes(str_replace(array("'", '"'), array('&#39;', '&quot;'), $data)) . '"';
 		}
 		return $name ? '"'.$name.'": '.$data : $data;
 	}

@@ -93,7 +93,7 @@
 			$id = uri_frag($params, 'id');
 			$u = new AuthorWorker();
 			$checked = $u->check($id);
-			if ($error = $message = $checked['error'])
+			if ($error = $message = (isset($checked['error']) ? $checked['error'] : false))
 				return;
 
 			$gu = array();

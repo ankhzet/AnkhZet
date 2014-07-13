@@ -1,3 +1,46 @@
+function has(arr, el) {
+	for (var i in arr)
+		if (arr[i] == el) return true;
+	return false;
+}
+
+function toJSON(obj, r) {
+	if (obj === null) return 'null';
+	if (r == undefined) r = [];
+
+	var type = typeof obj;
+	switch (type) {
+		case 'undefined':
+		case 'unknown'  : return type;
+		case 'function' : return /*obj.toString();//*/ '[' + type + ']';
+		case 'string'   : return '"' + obj.toString() + '"';
+		case 'number'   :
+		case 'boolean'  : return obj.toString();
+		default:
+			if (!(/^\[object object\]$/i.test(obj.toString()))) return obj.toString();
+
+			if (has(r, obj)) return '(* ' + obj.toString() + ')';
+			r.push(obj);
+
+			if (typeof obj.length !== 'undefined') {
+				var vals = [];
+				for (var prop in obj) {
+					var val = toJSON(obj[prop], r);
+					if (typeof val !== 'undefined')
+						 vals.push(val);
+				};
+				return '[' + vals.join(', ') + ']';
+			} else {
+				var vals = [];
+				for (var prop in obj) {
+					var val = toJSON(obj[prop], r);
+					if (typeof val !== 'undefined')
+						vals.push(prop + " = " + val);
+				};
+				return '{\n' + vals.join(';\n ') + '\n}';
+			}
+	}
+}
 
 $(function() {
 	$('.pin').click(function() {

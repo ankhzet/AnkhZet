@@ -165,7 +165,7 @@
 				break;
 			}
 
-			$os = uri_frag($uas['os'], $row['os'], 0, false);
+			$os = uri_frag($uas['os'], $os, 0, false);
 			if ($o = uri_frag($os, 1, 0, false)) {
 				$row['os'] = $o;
 				$row['os_ico'] = $os[5];
