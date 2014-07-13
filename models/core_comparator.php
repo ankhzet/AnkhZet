@@ -29,16 +29,19 @@
 				$i2 = strpos($html2, $p2, $i1);
 				$m = substr($html2, $i1, $i2 - $i1);
 				$html2 = preg_replace('/(<!-+[^>]+>)/', '', $m);
-				$html2 = preg_replace('/(<!-+|--+>)/', '', $html2);
+				$html2 = close_tags(preg_replace('/(<!-+|--+>)/', '', $html2));
 
-				if ($html1 != $html2) {
+				if (close_tags($html1) != $html2) {
 					$save1 = file_put_contents($store, $html = gzcompress($html2));
 					$save2 = file_put_contents($last, $html);
-					@chmod($store, 0666);
-					@chmod($last, 0666);
+					if (!@chmod($store, 0666))
+						error_handler(E_USER_WARNING, "Failed to chmod \"$store\"", "core_comparator.php", 37);
+					if (!@chmod($last, 0666))
+						error_handler(E_USER_WARNING, "Failed to chmod \"$last\"", "core_comparator.php", 39);
+
 					if (!($save1 && $save2)) {
 						$failed = $save1 ? $last : ($save2 ? $store : "$store && $last");
-						error_handler(E_USER_ERROR, "Failed to save \"$failed\"", zend_get_executed_filename(ELS_C), zend_get_executed_lineno(ELS_C));
+						error_handler(E_USER_ERROR, "Failed to save \"$failed\"", "core_comparator.php", 42);
 						return false;
 					}
 				}

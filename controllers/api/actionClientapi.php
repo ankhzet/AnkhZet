@@ -171,7 +171,6 @@
 					$compositions[$cid] = $row;
 				}
 			}
-//			$pages = $pca->fetchPages($id);
 
 			return $compositions;
 		}

@@ -22,7 +22,7 @@
 					<span class="link">{%date}: {%time}</span>
 					<span class="link samlib" style="float: none;"><a href="http://samlib.ru/{%autolink}/{%link}">/{%autolink}/{%link}</a></span>
 				</div>
-					<a href="/pages/versions/{%page}" name="anchor{%page}">{%title}</a> (<a href="#top">{%top}</a>)
+					<a href="/pages/version/{%page}" name="anchor{%page}">{%title}</a> (<a href="#top">{%top}</a>)
 				<div class="text reader">
 					{%content}
 					<div class="terminator"></div>
@@ -109,10 +109,10 @@
 		}
 
 		public function makeItem(&$aggregator, &$row) {
-			html_escape($row, array('link'));
-
-			$aa = $this->getAggregator(self::AGGR_AUTHO);
+			$composition = intval($row['composition']);
 			$author = intval($row['author']);
+			$row = array_merge($row, $this->noEntry($aggregator, $row['composition']));
+			$aa = $this->getAggregator(self::AGGR_AUTHO);
 			if ($author) {
 				if (!isset($this->authors[$author])) {
 					$a = $aa->get($author, '`id`, `fio`, `link`');
@@ -123,17 +123,16 @@
 				$row['autolink'] = $a['link'];
 			}
 
-			$ga = $this->getAggregator(self::AGGR_GROUP);
-			$composition = intval($row['composition']);
 			$all = $aggregator->fetch(array(
 					'nocalc' => true
 				, 'filter' => "`composition` = $composition"
-				, 'collumns' => 'page, title, `group`, `size`, `order`, `description`'
+				, 'collumns' => 'page, p.title, p.`group`, `size`, `order`, p.`description`'
 				, 'order' => '`order`'
 			));
 			$pages = array();
 			$descriptions = array();
 			$size = 0;
+			$ga = $this->getAggregator(self::AGGR_GROUP);
 			foreach ($all['data'] as $pageRow) {
 				$pageRow['root'] = 'pages';
 				$join = patternize('<a href="/{%root}/id/{%page}">{%title}</a>', $pageRow);
@@ -152,7 +151,6 @@
 			}
 			$row['size'] = $size;
 			$c = array('id' => $composition);
-			$row['title'] = patternize(Loc::lget('composition'), $c);
 			$row['composited'] = join($pages, '<br/>');
 
 
@@ -200,7 +198,7 @@
 					$this->author_link = $a['link'];
 				}
 
-				$contents = PageUtils::getPageContents(intval($pageRow['page']));
+				$contents = close_tags(PageUtils::getPageContents(intval($pageRow['page'])));
 				$contents = mb_convert_encoding($contents, 'UTF-8', 'CP1251');
 				$pageRow['content'] = $contents;
 				$pageRow['autolink'] = $this->author_link;

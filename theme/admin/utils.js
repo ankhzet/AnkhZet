@@ -542,7 +542,7 @@ var
 		this.attachedTo = function (target, header, pageID, data, modifier) {
 			var target = this.$('.work-area .composition-modificants-' + target);
 			target.empty();
-			if (data.length) {
+			if (data && data.length) {
 				var pattern = '\
 					<li class="composition-attachment-{%composition}">\
 						<ul>\

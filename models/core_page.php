@@ -42,6 +42,7 @@
 		, '`page` int not null'
 		, '`composition` int not null'
 		, '`order` int not null'
+		, '`title` varchar(255) null'
 		, '`time` int not null'
 		, 'primary key (`id`)'
 		);
