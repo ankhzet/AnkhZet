@@ -1,0 +1,8 @@
+tinymce
+*cache*
+!.htaccess
+*-log-*
+*.lnk
+*.ico
+project.npp
+timeleech.ini
