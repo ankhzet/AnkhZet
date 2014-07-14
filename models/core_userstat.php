@@ -5,23 +5,22 @@
 
 	require_once 'core_visitors.php';
 
-	$t = 60 * 60 * 24;
+	$dayLength = 60 * 60 * 24;
 	$time = time();
-	$l = ($days = post('days')) ? $t * post('days') : $time;
+	$days = post('days');
+	$l = $days ? $dayLength * $days : $time;
 
-	$f = array('1');
+	$f = array();
 
 	if ($ip = post('ip'))
 		$f[] = "inet_ntoa(`ip`) like '%$ip%'";
 
 	$dbc = msqlDB::o();
 
-	$f = array('1');
+	if ($after = $time - $l)
+		$f[] = "`time` >= $after";
 
-	if ($days = $time - $l)
-		$f[] = "`time` >= $days";
-
-	switch ($bots = post('bots')) {
+	switch ($bots = uri_frag($_REQUEST, 'bots', 1)) {
 	case 0: break;
 	case 1: $f[] = "`type` >= 0"; break;
 	case 2: $f[] = "`type` < 0"; break;
@@ -29,96 +28,65 @@
 
 	$q = join(' and ', $f);
 
-	$s = $dbc->select('visitors', $q, '`ip`, `type`, `ua`, `os`, `time`');
-	$f = $dbc->fetchrows($s);
-	$i = array();
-	$t = array();
-	$u = array();
-	foreach ($f as &$row) {
-		$i[$ip = intval($row['ip'])] = $row;
-		$time = intval($row['time']);
-		$u[$time] = isset($u[$time])
-			? array($u[$time][0] + 1, array_unique(array_merge($u[$time][1], array($ip))))
-			: array(1, array($ip));
-		if (!isset($t[$ip])) $t[$ip] = array($time, $time);
-		$t[$ip][0] = min($t[$ip][0], $time);
-		$t[$ip][1] = max($t[$ip][1], $time);
+	$s = $dbc->select('visitors', $q, '`ip`, `time`');
+	$f = array();
+	$rc = mysql_num_rows($s);
+	for ($r = 0; $r < $rc; $r++)
+		$f[$r] = mysql_fetch_row($s);
+
+	$latest = time();
+	$newest = 0;
+	foreach ($f as $row) {
+		$time = intval($row[1]);
+		$latest = min($latest, $time);
+		$newest = max($newest, $time);
 	}
 
+	$fromLatestToNewest = (($newest - $latest) > 0) ? $newest - $latest : 1;
 
-	ksort($u);
-	$k = array_keys($u);
-	$lot = count($k) ? $k[0] : 0;
-	$hit = count($k) ? $k[count($k) - 1] : $lot;
-/*	$m = 0;
-	foreach ($k as $time) {
-		$c = 0;
-		foreach ($t as $ip => $times)
-			if ($times[0] <= $time && $times[1] >= $time)
-				$c++;
-		$m = max($m, $c);
-	}*/
+	$days = uri_frag($_REQUEST, 'days', $fromLatestToNewest / $dayLength);
 
-	$tt = ($hit - $lot) ? $hit - $lot : 1;
+	$parts = 32;
+	if ($days <= 365) $parts = $days / 16;
+	if ($days <= 180) $parts = $days / 8;
+	if ($days <= 90) $parts = $days / 4;
+	if ($days <= 31) $parts = $days;
+	if ($days <= 7 ) $parts = $days * 4;
+	if ($days == 1 ) $parts = 24;
+	$parts = intval($parts);
 
-	$days = uri_frag($_REQUEST, 'days', 1);
-	$parts = ($days <= 1) ? 24 : 4 * $days;
-	if ($parts > 100) $parts = 100;
+	$secondsPerPart = max(1, $fromLatestToNewest / $parts);
 
-	$o = $tt / $parts;
-	if ($o < 1) $o = 1;
-	$y = array();
-
-	foreach ($u as $time => $v) {
-		$_ = intval(($time - $lot) / $o);
-		if (!isset($y[$_]))
-			$y[$_] = array(1, $v[0], $v[1]);
-		else {
-			$y[$_][0]++;
-			$y[$_][1]+= $v[0];
-			$y[$_][2] = array_unique(array_merge($y[$_][2], $v[1]));
-		}
+	$statistics = array();
+	foreach ($f as $row) {
+		$ip = intval($row[0]);
+		$slice = intval((intval($row[1]) - $latest) / $secondsPerPart);
+		$chunk = &$statistics[$slice];
+		if (isset($statistics[$slice])) {
+			$chunk[0]++;
+			if (array_search($ip, $chunk[1]) === false)
+				$chunk[1][] = $ip;
+		} else
+			$chunk = array(1, array($ip));
 	}
 
-//	debug2($y);
-	$m = 0;
+	foreach ($statistics as &$chunk)
+		$chunk[1] = count($chunk[1]);
+
+	ksort($statistics);
+
+	$maxHits = 0;
 	$ipmax = 0;
-	$ips = array();
-	foreach ($y as $slice => $v) {
-		$ips[$slice] = count($v[2]);
-		$y[$slice] = $v[1];//ceil($v[1] / $v[0]);
-		$m = max($m, $y[$slice]);
-		$ipmax = max($ipmax, $ips[$slice]);
+	$uniques = array();
+	$pagehits = array();
+	foreach ($statistics as $slice => &$hitData) {
+		$pagehits[$slice] = $hitData[0];
+		$uniques[$slice] = $hitData[1];
+		$maxHits = max($maxHits, $hitData[0]);
+		$ipmax = max($ipmax, $hitData[1]);
 	}
-//	debug2($y);
-//	debug2($ips);
 
-	$k = array_keys($y);
-	$lo = $y[0];
-	$hi = count($y) ? $y[$k[count($y) - 1]] : $lo;
-	$t = ($hi - $lo) ? $hi - $lo : 1;
-
-	$k = array_keys($y);
-	$c = count($k) - 1;
-	$i = 0;
-	$e = array();
-/** /	$tmp = $y;
-	foreach ($tmp as $slice => $visitors) {
-		$p1 = $i - 1; $prev1 = ($p1 < 0) ? $tmp[$k[0]]  : $tmp[$k[$p1]];
-		$n1 = $i + 1; $next1 = ($n1 >$c) ? $tmp[$k[$c]] : $tmp[$k[$n1]];
-		$p1 = $i - 2; $prev1 = ($p1 < 0) ? $tmp[$k[0]]  : $tmp[$k[$p1]];
-		$n1 = $i + 2; $next1 = ($n1 >$c) ? $tmp[$k[$c]] : $tmp[$k[$n1]];
-
-		$y[$slice] = ($prev2 + $prev1 + $visitors + $next1 + $next2) / 5.0;
-//		$e[$slice] = array($prev, $visitors, $next, $y[$slice]);
-	}/**/
-//		debug2($e);
-
-//	debug2($y);
-//	debug2($i);
-//	debug2($u);
-//	debug2(array($lo, $hi));
-
+	/* ========== Render =========== */
 
 	$img_denom = 6;
 	$heat_denom = 3;
@@ -167,16 +135,16 @@
 //	imageantialias($img, true);
 	$ff = ROOT . "/_engine/comic.ttf";
 
-	global $cx, $cw, $dot1, $dot2, $img, $img_denom, $heat_denom, $tt;
-	function graph(&$pts, &$pairs, $parts, $line, $ty, $ch, $m, $draw = true) {
-		global $cx, $cw, $dot1, $dot2, $img, $img_denom, $heat_denom, $tt;
+	global $cx, $cw, $dot1, $dot2, $img, $img_denom, $heat_denom, $fromLatestToNewest, $secondsPerPart;
+	function graph(&$pts, &$pairs, $line, $ty, $ch, $max, $draw = true) {
+		global $cx, $cw, $dot1, $dot2, $img, $img_denom, $heat_denom, $fromLatestToNewest, $secondsPerPart;
 		$px = 0;
 		$py = -1;
 		foreach ($pts as $slice => $visitors) {
-			$time = $tt * $slice / $parts;
-			$tap = intval($ch * $visitors / $m);
+			$time = $secondsPerPart * $slice;
+			$tap = intval($ch * $visitors / $max);
 			if ($py < 0) $py = $tap;
-			$hit = intval($cw * (float)$time / $tt);
+			$hit = intval($cw * (float)$time / $fromLatestToNewest);
 			$pairs[$slice] = array($cx + $px, $ty - $py, $cx + $hit, $ty - $tap, $time, $visitors);
 			$py = $tap;
 			$px = $hit;
@@ -235,25 +203,25 @@
 
 	$pairs = array();
 	$nty = $ty - $ch * 0.3;
-	graph($y, $pairs, $parts, $line, $nty, $ch * 0.7, $m, false);
+	graph($pagehits, $pairs, $line, $nty, $ch * 0.7, $maxHits, false);
 
 
 	foreach ($pairs as $c) {
 		$label = $c[3] + $font;
-		$time = $c[4] + $lot;
+		$time = $c[4] + $latest;
 		imagettftext ($img, $font, 0, $cx + $cw + 5 * $img_denom, $label - $font / 2, $black, $ff, $c[5]);
 	}
 
 
 	$pairs = array();
-	graph($ips, $pairs, $parts, $red, $ty + $font * 2, $ch * 0.3, $ipmax);
+	graph($uniques, $pairs, $red, $ty + $font * 2, $ch * 0.3, $ipmax);
 	foreach ($pairs as $c) {
 		$label = $c[3] + $font;
-		$time = $c[4] + $lot;
+		$time = $c[4] + $latest;
 		imagettftext ($img, $font, 0, $cx + $cw + 5 * $img_denom, $label - $font / 2, $black, $ff, $c[5]);
 	}
 
-	$text = ($days <= 1) ? date('H:i:s', $lot) : date('d.m.Y', $lot);
+	$text = ($days <= 1) ? date('H:i:s', $latest) : date('d.m.Y', $latest);
 	$data = imageftbbox ($font, 0, $ff, $text);
 	$tw = $data[2] - $data[0] + 5 * $img_denom;
 	$_parts = $parts;
@@ -269,7 +237,7 @@
 
 	while ($_parts-- > 0) {
 		$i = ($parts - $_parts);
-		$time = $lot + $i * ($tt / $parts);
+		$time = $latest + $i * $secondsPerPart;
 		$tx = $cx + $i * $interval;
 		$label = $ty + $font + $legend;
 		$_hit = $tx - $tw + $img_denom * 10;
@@ -289,4 +257,3 @@
 	imagecopyresampled ($img2, $img, 0, 0, 0, 0, $w / $img_denom, $h / $img_denom, $w, $h);
 	imagetruecolortopalette($img2, true, 128);
 	imagepng($img2);
-?>

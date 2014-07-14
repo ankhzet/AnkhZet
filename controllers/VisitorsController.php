@@ -44,12 +44,13 @@
 			$uas->SetCacheDir(ROOT . "/cache/");
 			$this->uas = $uas->_loadData();
 
+			$days = post('days');
 			$t = 60 * 60 * 24;
 			$time = time();
-			$l = ($days = post('days')) ? $t * post('days') : $time;
+			$l = $days ? $t * $days : $time;
 			$va = $this->getAggregator();
 
-			$f = array('1');
+			$f = array();
 			$q = array();
 
 			if ($ip = post('ip')) {
@@ -165,7 +166,7 @@
 				break;
 			}
 
-			$os = uri_frag($uas['os'], $os, 0, false);
+			$os = uri_frag($uas['os'], $row['os'], 0, false);
 			if ($o = uri_frag($os, 1, 0, false)) {
 				$row['os'] = $o;
 				$row['os_ico'] = $os[5];
