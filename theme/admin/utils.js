@@ -488,3 +488,201 @@ var
 			this.$('.error-div').html('');
 		}
 	}
+
+	/* ============================================= */
+
+	compositerServant = new function() {
+		var AJAX_MAX_RETRIES = 10;
+		var PATT_DETOUCHER = '<a href="javascript:void(0)" data-id="{%composition}" class="composition-detouch">X</a>';
+		var PATT_ATTOUCHER = '<a href="javascript:void(0)" data-id="{%composition}" class="composition-attach">&rarr;</a>';
+		var PATT_ORDERDOWN = '<a com-id="{%composition}" page-id="{%page}" class="composition-page-up">&darr;</a>';
+		var PATT_ORDERUP   = '<a com-id="{%composition}" page-id="{%page}" class="composition-page-down">&uarr;</a>';
+		var PATT_PAGE      = '<li>[{%order}: {%up} {%down}] <a href="/pages?group={%group}">{%group:title}</a> - <a href="/pages/version/{%page}">{%title}</a></li>';
+		var summoner = null;
+		$(function() {
+			$('.composite-summoner').click(function(event){compositerServant.show($(this));event.stopPropagation();return false;});
+			$(':not(.composite-summoner)').click(function(){if ($(this).parents('.composite-summoner').length) return; compositerServant.hide();});
+			$('.composite-summoner>div *').click(function(event){event.stopPropagation();return true;});
+			$('.composition-create').click(function() {compositerServant.createComposition($(this));});
+		});
+
+		this.show = function(source) {
+			summoner = source;
+
+			this.$('>div').show();
+			this.fetchRelated(parseInt(summoner.attr('data-id')));
+		}
+		this.hide = function(source) {
+			$('.composite-summoner>div').hide();
+		}
+		this.fetchRelated = function(pageID) {
+			this.json('composition-related', {'page': pageID
+			, 'success': function (data) {
+					compositerServant.attachedTo('can-be-in', 'Can be added to', pageID, data, PATT_ATTOUCHER);
+					compositerServant.fetchContained(pageID);
+				}
+			, 'error': function (e, v) {
+				compositerServant.error(e, v);
+				compositerServant.fetchRelated(pageID);
+			}
+			});
+		}
+		this.fetchContained = function(pageID) {
+			this.json('composition-state', {'page': pageID
+			, 'success': function (data) {
+					compositerServant.attachedTo('is-in', 'Remove from', pageID, data, PATT_DETOUCHER);
+				}
+			, 'error': function (e, v) {
+				compositerServant.error(e, v);
+				compositerServant.fetchContained(pageID);
+			}
+			});
+		}
+
+		this.attachedTo = function (target, header, pageID, data, modifier) {
+			var target = this.$('.work-area .composition-modificants-' + target);
+			target.empty();
+			if (data && data.length) {
+				var pattern = '\
+					<li class="composition-attachment-{%composition}">\
+						<ul>\
+							<li>[{%modifier}]\
+								<a href="/pages?author={%author}">{%fio}</a> - <a href="/composition/id/{%composition}">{%title}</a>\
+							</li>\
+							<li><ul class="composition-pages"></ul></li>\
+						</ul>\
+					</li>';
+
+				for (var i in data) {
+					data[i]['modifier'] = patternize(modifier, data[i]);
+					var compositionID = parseInt(data[i].composition);
+					this.$('.composition-attachment-' + compositionID).remove();
+					var innerDIV = $(patternize(pattern, data[i]));
+					target.prepend(innerDIV);
+					innerDIV.find('.composition-detouch').click(function() {compositerServant.detouchFrom($(this));});
+					innerDIV.find('.composition-attach').click(function(event) {compositerServant.attachTo($(this));});
+					var innerUL = innerDIV.find('.composition-pages');
+
+					(function(innerUL, compositionID){
+					this.json('composition-pages', {'id': compositionID
+						, 'success': function (data) {
+								for (var i in data) {
+									var idx = parseInt(i), first = !idx, last = idx == data.length - 1;
+									data[i]['composition'] = compositionID;
+									data[i]['up'] = first ? '&nbsp; &nbsp;' : patternize(PATT_ORDERUP, data[i]);
+									data[i]['down'] = last ? '&nbsp; &nbsp;' : patternize(PATT_ORDERDOWN, data[i]);
+									data[i]['order'] = idx + 1;
+									var page = $(patternize(PATT_PAGE, data[i]));
+									innerUL.append(page);
+
+									page.find('.composition-page-up').click(function(){compositerServant.reorder($(this), 1)});
+									page.find('.composition-page-down').click(function(){compositerServant.reorder($(this), -1)});
+								}
+
+							}
+						}
+					);
+					}).call(this, innerUL, compositionID);
+				}
+				target.prepend($('<li>' + header + ':</li>'));
+			}
+		}
+
+		this.reorder = function (source, direction) {
+			var pageID = parseInt(source.attr('page-id'));
+			var compositionID = parseInt(source.attr('com-id'));
+
+			this.json('composition-order', {'composition': compositionID, 'page': pageID, 'direction': direction
+				, 'success': function (data) {
+						compositerServant.show(summoner);
+					}
+				}
+			);
+		}
+
+		this.detouchFrom = function (source) {
+			summoner = source.parents('.composite-summoner');
+			var pageID = parseInt(summoner.attr('data-id'));
+			var compositionID = parseInt(source.attr('data-id'));
+
+			this.json('composition-remove', {'composition': compositionID, 'pages': [pageID]
+				, 'success': function (data) {
+						compositerServant.show(summoner);
+					}
+				}
+			);
+		}
+
+		this.attachTo = function (source) {
+			summoner = source.parents('.composite-summoner');
+			var pageID = parseInt(summoner.attr('data-id'));
+			var compositionID = parseInt(source.attr('data-id'));
+
+			this.json('composition-add', {'composition': compositionID, 'pages': [pageID]
+				, 'success': function (data) {
+						compositerServant.show(summoner);
+					}
+				}
+			);
+		}
+		this.createComposition = function (source) {
+			summoner = source.parents('.composite-summoner');
+			var id = parseInt(summoner.attr('data-id'));
+			var title = this.$('[type="text"]').val().trim();
+			if (title == "") return;
+
+			this.json('composition-add', {'composition': 0, 'pages': [id], 'title': title
+				, 'success': function (data) {
+						compositerServant.show(summoner);
+					}
+				}
+			);
+		}
+
+
+		this.json = function(action, params, depth) {
+			var original = params;
+			var callbacks = {'success': params.success || function(x){}};
+			var error = params.error || this.error;
+			callbacks.error = (!params.retry) ? function(e,v){compositerServant.error(e,v);} : function (response, verbose) {
+				depth = depth ? depth + 1 : 1;
+				if (depth > AJAX_MAX_RETRIES)
+					return error(response, verbose);
+				compositerServant.json(action, original, depth);
+			};
+
+			delete(params.success);
+			delete(params.error);
+			delete(params.retry);
+			$.getJSON('/clientapi.json?api-action=' + action, params)
+			.success(function(response) {
+				if (response.result != 'ok') {
+					callbacks.error(response.data, true);
+					return;
+				}
+				callbacks.success(response.data);
+			})
+			.error(function(response){
+				callbacks.error(response.responseText);
+			});
+		}
+
+		this.$ = function(css) {
+			return summoner.find(css);
+		}
+		var errorTimeout = 0;
+		this.error = function(message, verbose) {
+			this.clearError();
+			if (verbose)
+				this.$('.error-div').html(message);
+			else
+				this.$('.error-div').html("Network error:\n" + message);
+
+			errorTimeout = setTimeout(function(){compositerServant.clearError();}, 5000);
+		}
+		this.clearError = function() {
+			if (errorTimeout)
+				clearTimeout(errorTimeout);
+			this.$('.error-div').html('');
+		}
+	}

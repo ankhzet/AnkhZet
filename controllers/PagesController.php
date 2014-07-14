@@ -10,7 +10,26 @@
 		protected $_name = 'pages';
 
 		var $USE_UL_WRAPPER = false;
-		var $MODER_EDIT   = '<span class="pull_right">[<a href="/{%root}/delete/{%id}">{%delete}</a>]</span>';
+		var $MODER_EDIT   = '
+		<div data-id="{%id}" class="composite-summoner">
+			<a>{%composite}</a>
+			<div>
+				<div class="work-area">
+					<ul class="composition-modificants-can-be-in">
+					</ul>
+					<ul class="composition-modificants-is-in">
+					</ul>
+					<ul>
+						<li>Create new:<br/>
+							<input type=text />
+							<a href="javascript:void(0)" class="composition-create">Create</a>
+						</li>
+					</ul>
+				</div>
+				<div style="color: red;" class="error-div"></div>
+				</div>
+			</div>
+		<span class="pull_right">[<a href="/{%root}/delete/{%id}">{%delete}</a>]</span>';
 		var $ADD_MODER    = 0;
 		var $EDIT_STRINGS = array();
 		var $EDIT_FILES   = array();
@@ -124,6 +143,7 @@
 		public function makeItem(&$aggregator, &$row) {
 			html_escape($row, array('link'));
 
+			$row['composite'] = Loc::lget('composite');
 			$row['versions'] = Loc::lget('versions');
 			$row['trace'] = Loc::lget('trace');
 
@@ -191,8 +211,10 @@
 			html_escape($row, array('author', 'link'));
 			$row['date'] = Loc::lget('date');
 			$row['original'] = Loc::lget('original');
+			$row['composite'] = Loc::lget('composite');
 			$row['fio'] = $this->author_fio;
 			$row['autolink'] = $this->author_link;
+			View::addKey('moder', patternize(View::getKey('moder'), $row));
 
 
 			$content = PageUtils::getPageContents($page);
@@ -280,11 +302,13 @@
 			}
 
 			View::addKey('hint', PageUtils::traceMark($uid, $trace, $page, $author));
+
 			$action = post('action');
 			if (!$action)
 				$action = uri_frag($r, 1, null, false);
 
-			View::addKey('title', "$alink - $plink");
+			$row = array('root' => $this->_name, 'page' => $page, 'id' => $page, 'composite' => Loc::lget('composite'), 'delete' => Loc::lget('delete'));
+			View::addKey('title', "$alink - $plink" .  patternize($this->MODER_EDIT, $row));
 
 			$cur_version = '';
 			switch ($action) {
@@ -324,7 +348,6 @@
 					$diffopen = ($v = post_int('version')) ? $v : $lastseen;
 
 					$p1 = '';
-					$row = array('root' => $this->_name, 'page' => $page);
 
 					$ldate = date('d.m.Y', $newest);
 					$full = Loc::lget('full_last_version');

@@ -264,3 +264,31 @@ tr:hover .act {
 	text-shadow: 0 1px 0 #888;
 }
 
+.composite-summoner {
+	display: inline-block;
+	position: relative;
+	font-size: 10px;
+}
+
+.composite-summoner>div {
+	display: none;
+	position: absolute;
+	background-color: #ccc;
+	border: 1px solid gray;
+	border-radius: 5px;
+	padding: 5px;
+	width: 400px;
+	z-index: 9999;
+}
+
+.composite-summoner .work-area {
+}
+
+.composite-summoner input {
+	width: 60%;
+}
+
+.composite-summoner .work-area li ul {
+	margin-left: 10px;
+}
+

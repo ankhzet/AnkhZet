@@ -85,4 +85,3 @@ TimeLeech::addTimes('after dispatch');
 			ob_end_clean();
 		}
 	}
-?>
