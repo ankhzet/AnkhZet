@@ -229,7 +229,7 @@
 		$position = 0;
 		$open_tags = array();
 		//теги для игнорирования
-		$ignored_tags = array('br', 'hr', 'img', 'p');
+		$ignored_tags = array('br', 'hr', 'img', 'p', 'dd');
 
 		$lastUnclosed = array();
 		$unclosedPositionOffset = array();
@@ -307,8 +307,8 @@
 	}
 
 	function safeSubstr($str, $maxlen, $lines = 0) {
-		if (($len = mb_strlen($str)) > $maxlen) {
-			$str = str_replace(array(PHP_EOL, '<br />'), array('', PHP_EOL), $str);
+		if (($len = strlen($str)) > $maxlen) {
+//			$str = str_replace(array(PHP_EOL, '<br />'), array('', PHP_EOL), $str);
 			$s = $str;
 			$d = intval($maxlen * 0.1);
 			do {
@@ -316,7 +316,7 @@
 					$str = $s;
 					break;
 				}
-				$str = rtrim(mb_substr($s, 0, $maxlen - 3));
+				$str = rtrim(substr($s, 0, $maxlen - 3));
 				$maxlen += $d;
 
 				if ($lines) {
@@ -326,20 +326,21 @@
 				}
 				preg_match('/(.*[\.!\?]+)[^\.!\?]*$/is', $str, $matches);
 				if (!!$matches) {
-					preg_match('/^(.+)([\.!\?]+)\P{L}*$/isu', rtrim(@$matches[1]), $matches);
+					preg_match('/^(.+)([\.!\?]+)\P{L}*$/is', rtrim(@$matches[1]), $matches);
 					$str = rtrim(@$matches[1]) . @$matches[2] . '..';
 				} else
 					break;
-			} while (mb_strlen($matches[1]) <= 0);
-			$str = str_replace(PHP_EOL, PHP_EOL . '<br />', close_tags($str));
+
+			} while (strlen($matches[1]) <= 0);
+			$str = /*str_replace(PHP_EOL, PHP_EOL . '<br />',*/ close_tags($str)/*)*/;
 		}
 
 		return $str;
 	}
 
 	function safeSubstrl($str, $maxlen, $lines = 0) {
-		if (($len = mb_strlen($str)) > $maxlen) {
-			$str = str_replace(array(PHP_EOL, '<br />'), array('', PHP_EOL), $str);
+		if (($len = strlen($str)) > $maxlen) {
+//			$str = str_replace(array(PHP_EOL, '<br />'), array('', PHP_EOL), $str);
 			$s = $str;
 			$d = intval($maxlen * 0.1);
 			do {
@@ -347,7 +348,7 @@
 					$str = $s;
 					break;
 				}
-				$str = rtrim(mb_substr($s, - ($maxlen - 3)));
+				$str = rtrim(substr($s, - ($maxlen - 3)));
 				$maxlen += $d;
 
 				if ($lines) {
@@ -357,12 +358,13 @@
 				}
 				preg_match('/^[^\.!\?]*([\.!\?]+.*)/is', $str, $matches);
 				if (!!$matches) {
-					preg_match('/\P{L}*([\.!\?]+)(.+)$/isu', rtrim($matches[1]), $matches);
+					preg_match('/\P{L}*([\.!\?]+)(.+)$/is', rtrim($matches[1]), $matches);
 					$str = $matches[1] . '..' . rtrim($matches[2]);
 				} else
 					break;
-			} while (mb_strlen($matches[1]) <= 0);
-			$str = str_replace(PHP_EOL, PHP_EOL . '<br />', close_tags($str));
+
+			} while (strlen($matches[1]) <= 0);
+			$str = /*str_replace(PHP_EOL, PHP_EOL . '<br />',*/ close_tags($str)/*)*/;
 		}
 
 		return $str;

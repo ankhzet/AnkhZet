@@ -196,7 +196,7 @@ tr:hover .act {
 .text .terminator {
 	width: 100%;
 	height: 16px;
-	margin: 0;
+	margin: 40px 0 0 0;
 	padding: 0;
 	background-image: url(/theme/img/borders.png);
 	background-position: center 0;

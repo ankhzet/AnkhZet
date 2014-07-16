@@ -29,9 +29,10 @@
 				$i2 = strpos($html2, $p2, $i1);
 				$m = substr($html2, $i1, $i2 - $i1);
 				$html2 = preg_replace('/(<!-+[^>]+>)/', '', $m);
-				$html2 = close_tags(preg_replace('/(<!-+|--+>)/', '', $html2));
+				$html2 = preg_replace('/(<!-+|--+>)/', '', $html2);
+//				$html2 = close_tags(PageUtils::prepareForGrammar($html2, true));
 
-				if (close_tags($html1) != $html2) {
+				if ($html1 != $html2) {
 					$save1 = file_put_contents($store, $html = gzcompress($html2));
 					$save2 = file_put_contents($last, $html);
 					if (!@chmod($store, 0666))

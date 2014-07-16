@@ -22,6 +22,7 @@ function textsplit($text, $splitgroup) {
 class DiffIO {
 	var $show_new = true;
 	var $context = 100;
+	var $output = array();
 	public function __construct($context) {
 		$this->context = $context ? $context : $this->context;
 	}
@@ -30,25 +31,25 @@ class DiffIO {
 	}
 
 	public function out($text) {
-		echo $text;
+		$this->output[] = $text;
 	}
 
 	public function left($text) {
-		$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
+//		$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
 		if ($this->show_new)
 			$this->out("<del>$text</del> ");
 		else
 			$this->out("<ins>$text</ins> ");
 	}
 	public function right($text) {
-		$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
+//		$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
 		if ($this->show_new)
 			$this->out("<ins>$text</ins> ");
 		else
 			$this->out("<del>$text</del> ");
 	}
 	public function same($text) {
-		$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
+//		$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
 		$l = strlen($text);
 		if ($this->context && ($l >= $this->context - 6)) {
 			$s1 = safeSubstr($text, $this->context / 2, 100);
@@ -59,8 +60,8 @@ class DiffIO {
 	}
 
 	public function replace($diff, $old, $new) {
-		$old = mb_convert_encoding($old, 'UTF8', 'cp1251');
-		$new = mb_convert_encoding($new, 'UTF8', 'cp1251');
+//		$old = mb_convert_encoding($old, 'UTF8', 'cp1251');
+//		$new = mb_convert_encoding($new, 'UTF8', 'cp1251');
 		$diff->repl[] = array($old, $new);
 		if ($this->show_new)
 			if (trim($new))

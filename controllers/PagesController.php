@@ -15,19 +15,11 @@
 			<a>{%composite}</a>
 			<div>
 				<div class="work-area">
-					<ul class="composition-modificants-can-be-in">
-					</ul>
-					<ul class="composition-modificants-is-in">
-					</ul>
-					<ul>
-						<li>Create new:<br/>
-							<input type=text />
-							<a href="javascript:void(0)" class="composition-create">Create</a>
-						</li>
-					</ul>
+					<ul class="composition-modificants-can-be-in"></ul>
+					<ul class="composition-modificants-is-in"></ul>
+					<ul><li>Create new:<br/><input type=text /><a href="javascript:void(0)" class="composition-create">Create</a></li></ul>
 				</div>
 				<div style="color: red;" class="error-div"></div>
-				</div>
 			</div>
 		<span class="pull_right">[<a href="/{%root}/delete/{%id}">{%delete}</a>]</span>';
 		var $ADD_MODER    = 0;
@@ -215,7 +207,6 @@
 			$row['fio'] = $this->author_fio;
 			$row['autolink'] = $this->author_link;
 			View::addKey('moder', patternize(View::getKey('moder'), $row));
-
 
 			$content = PageUtils::getPageContents($page);
 			$row['content'] = mb_convert_encoding($content, 'UTF-8', 'CP1251');
@@ -692,21 +683,30 @@
 			$t1 = PageUtils::getPageContents($page, $old);
 			$t2 = PageUtils::getPageContents($page, $cur);
 
+			$t1 = str_replace(array('&nbsp;', PHP_EOL), array(' ', ''), $t1);
+			$t2 = str_replace(array('&nbsp;', PHP_EOL), array(' ', ''), $t2);
+			$t1 = str_replace(array('&nbsp;', '<br />'), array(' ', PHP_EOL), $t1);
+			$t2 = str_replace(array('&nbsp;', '<br />'), array(' ', PHP_EOL), $t2);
+			$t1 = preg_replace('/ {3,}/', ' ', $t1);
+			$t2 = preg_replace('/ {3,}/', ' ', $t2);
 			require_once 'core_diff.php';
-			ob_start();
 			$io = new DiffIO(500);
 			$io->show_new = !$show_old;
 			$db = new DiffBuilder($io);
 			$h = $db->diff($t1, $t2);
-			$c = ob_get_contents();
-			ob_end_clean();
+			$c = join($io->output, '');
+			$c = mb_convert_encoding($c, 'UTF8', 'cp1251');
 
-			$old = count($h[0]) ? str_replace(array(PHP_EOL, '\n'), '<br />', join('", "', $h[0])) : '';
-			$new = count($h[1]) ? str_replace(array(PHP_EOL, '\n'), '<br />', join('", "', $h[1])) : '';
+			$old = array();
+			foreach ($h[0] as $oldText)
+				$old[] = str_replace(array(PHP_EOL, '\n'), '<br />', $oldText);
+			$old = mb_convert_encoding(join($old, '", "'), 'UTF8', 'cp1251');;
+
+//			$new = count($h[1]) ? str_replace(array(PHP_EOL, '\n'), '<br />', join('", "', $h[1])) : '';
 //			View::addKey('grammar', $this->fetchGrammarSuggestions($page));
-			View::addKey('preview', $c);
+			View::addKey('preview', "<div class=\"pre\">$c</div>");
 			View::addKey('h_old', $old);
-			View::addKey('h_new', $new);
+			View::addKey('h_new', '');//$new);
 			$this->view->renderTPL('pages/view');
 
 			$this->updateTrace($page, $cur);

@@ -305,11 +305,17 @@ label {
 .cnt-item .title .link.size.u2 {
 	width: 160px;
 }
+
 .text.reader {
-	padding: 60px 10px;
+	padding: 40px 10px 0 10px;
 	font-size: 16px;
 	font-family: Tahoma;
 	color: #000;
+	text-align: justify;
+}
+
+.text.reader .pre {
+	white-space: pre-wrap;
 }
 
 .pages {
