@@ -32,7 +32,7 @@
 				$c = preg_replace('"(</?(td|tr|table)[^>]*>)'.PHP_EOL.'"', '\1', $c);
 				$c = preg_replace('"'.PHP_EOL.'(</?(td|tr|table)[^>]*>)"', '\1', $c);
 				$c = str_replace(array("\r", "\n", '</dd>'), '', $c);
-				$c = str_replace(array('<dd>', '<br>', '<br />'), PHP_EOL, $c);
+				$c = str_replace(array('<dd>', '<br>', '<br/>', '<br />'), PHP_EOL, $c);
 				$c = preg_replace('"<p\s*>([^<]*)</p>"i', '<p/>\1', $c);
 				$c = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $c);
 				$c = preg_replace('"<(\w+)[^>]*>((\s|\&nbsp;)*)</\1>"', '\2', $c);
@@ -68,7 +68,7 @@
 				$c = substr_replace($c, $u, $p, strlen($m[1][0]));
 				$p += strlen($u) + intval($m[3][1]) - intval($m[1][1]) - 5;
 			}
-			return /*$cleanup ? $c : */str_replace(PHP_EOL, PHP_EOL . '<br />', $c);
+			return /*$cleanup ? $c : */str_replace(PHP_EOL, PHP_EOL . '<br/>', $c);
 		}
 
 		public static function traceMark($uid, $trace, $page, $author) {

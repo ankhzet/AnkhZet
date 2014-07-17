@@ -54,7 +54,7 @@ class DiffIO {
 		if ($this->context && ($l >= $this->context - 6)) {
 			$s1 = safeSubstr($text, $this->context / 2, 100);
 			$s2 = safeSubstrl($text, $this->context / 2, 100);
-			$text = "<span class=\"context\">{$s1}</span><br />~~~<br /><span class=\"context\">{$s2}</span>";
+			$text = "<span class=\"context\">{$s1}</span>\n~~~\n<span class=\"context\">{$s2}</span>";
 		}
 		$this->out($text);
 	}
@@ -134,7 +134,7 @@ class DiffSubsplitter {
 		$u = array();
 		// building hash
 		foreach ($l1 as $j => $line) {
-			if (trim($line) == '' && !$e) {
+			if (($line) == '' && !$e) {
 				$e = $idx = $i++;
 				$h[$e] = '';
 				continue;

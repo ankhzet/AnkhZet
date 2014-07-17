@@ -11,7 +11,7 @@
 
 		var $USE_UL_WRAPPER = false;
 		var $MODER_EDIT   = '
-		<div data-id="{%id}" class="composite-summoner">
+		<div data-id="{%id}" class="composite-summoner" style="float: right">
 			<a>{%composite}</a>
 			<div>
 				<div class="work-area">
@@ -21,7 +21,9 @@
 				</div>
 				<div style="color: red;" class="error-div"></div>
 			</div>
-		<span class="pull_right">[<a href="/{%root}/delete/{%id}">{%delete}</a>]</span>';
+			<span class="pull_right">[<a href="/{%root}/delete/{%id}">{%delete}</a>]</span>
+		</div>
+		';
 		var $ADD_MODER    = 0;
 		var $EDIT_STRINGS = array();
 		var $EDIT_FILES   = array();
@@ -253,7 +255,7 @@
 				</div>
 				";
 
-				View::addKey('hint', $hint);
+			View::addKey('hint', $hint);
 		}
 
 		function actionVersion($r) {
@@ -298,8 +300,10 @@
 			if (!$action)
 				$action = uri_frag($r, 1, null, false);
 
+			View::addKey('title', "$alink - $plink");
 			$row = array('root' => $this->_name, 'page' => $page, 'id' => $page, 'composite' => Loc::lget('composite'), 'delete' => Loc::lget('delete'));
-			View::addKey('title', "$alink - $plink" .  patternize($this->MODER_EDIT, $row));
+			View::addKey('grip-moder', $this->userModer ? patternize($this->MODER_EDIT, $row) : '');
+			View::addKey('moder', '');
 
 			$cur_version = '';
 			switch ($action) {
@@ -343,7 +347,7 @@
 					$ldate = date('d.m.Y', $newest);
 					$full = Loc::lget('full_last_version');
 					$last = $newest ? "<br /><span class=\"pull_right\">[$full: <a href=\"/pages/id/{$page}\">{$ldate}</a>]</span>" : '';
-					View::addKey('moder', $last);
+					View::addKey('moder', View::getKey('moder') . $last);
 					$_ldiff = Loc::lget('diff');
 					$_lview = Loc::lget('view');
 					$_ldownload = Loc::lget('download');
@@ -388,7 +392,6 @@
 					}
 				} else {
 					echo Loc::lget('pages_noversions');
-					View::addKey('moder', '');
 				}
 			}
 			$this->makeDetailHint(PageUtils::traceMark($uid, $trace, $page, $author) . $cur_version, $data['description'], $adata['link'], $data['link']);
@@ -683,10 +686,10 @@
 			$t1 = PageUtils::getPageContents($page, $old);
 			$t2 = PageUtils::getPageContents($page, $cur);
 
-			$t1 = str_replace(array('&nbsp;', PHP_EOL), array(' ', ''), $t1);
-			$t2 = str_replace(array('&nbsp;', PHP_EOL), array(' ', ''), $t2);
-			$t1 = str_replace(array('&nbsp;', '<br />'), array(' ', PHP_EOL), $t1);
-			$t2 = str_replace(array('&nbsp;', '<br />'), array(' ', PHP_EOL), $t2);
+			$t1 = str_replace(array('&nbsp;', PHP_EOL), array("\t", ''), $t1);
+			$t2 = str_replace(array('&nbsp;', PHP_EOL), array("\t", ''), $t2);
+			$t1 = str_replace(array('<br />', '<br/>'), PHP_EOL, $t1);
+			$t2 = str_replace(array('<br />', '<br/>'), PHP_EOL, $t2);
 			$t1 = preg_replace('/ {3,}/', ' ', $t1);
 			$t2 = preg_replace('/ {3,}/', ' ', $t2);
 			require_once 'core_diff.php';
@@ -695,11 +698,12 @@
 			$db = new DiffBuilder($io);
 			$h = $db->diff($t1, $t2);
 			$c = join($io->output, '');
+			$c = str_replace("\t", '  ', $c);
 			$c = mb_convert_encoding($c, 'UTF8', 'cp1251');
 
 			$old = array();
 			foreach ($h[0] as $oldText)
-				$old[] = str_replace(array(PHP_EOL, '\n'), '<br />', $oldText);
+				$old[] = str_replace(array(PHP_EOL, '\n'), '<br/>', $oldText);
 			$old = mb_convert_encoding(join($old, '", "'), 'UTF8', 'cp1251');;
 
 //			$new = count($h[1]) ? str_replace(array(PHP_EOL, '\n'), '<br />', join('", "', $h[1])) : '';

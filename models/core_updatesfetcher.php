@@ -58,7 +58,6 @@
 //				$pageIDs = $h->fetchUpdates($uid, $pages);
 			}
 
-
 			$i = array();
 			if ($pageIDs) {
 				self::fetchData($pageIDs, $pageData, $authorData, $groupData);
@@ -188,13 +187,4 @@
 			return array_unique($pageIDs);
 		}
 
-	}
-
-
-	function fetch_field($arr, $field) {
-		$f = array();
-		foreach ($arr as $row)
-			$f[] = $row[$field];
-
-		return $f;
 	}
