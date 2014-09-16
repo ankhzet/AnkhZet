@@ -292,3 +292,65 @@ tr:hover .act {
 	margin-left: 10px;
 }
 
+/* ==================== */
+
+.page-update {
+	clear: both;
+}
+
+.page-update li {
+	padding-left: 10px;
+}
+
+.page-update.renamed:before {
+	content: '[RENAMED] ';
+}
+
+.page-update.renamed {
+	color: teal;
+}
+
+.page-update.added:before {
+	content: '[NEW] ';
+}
+
+.page-update.added {
+	color: blue;
+}
+
+.page-update.diff:before {
+	content: '[UPDATED] ';
+}
+
+.page-update.diff {
+	color: green;
+}
+
+.page-update.removed:before {
+	content: '[REMOVED] ';
+}
+
+.page-update.removed {
+	color: red;
+}
+
+.page-update.moved:before {
+	content: '[MOVED] ';
+}
+
+.page-update.moved {
+	color: blue;
+}
+
+.page-update span {
+	color: black;
+}
+
+.page-update.folded ul,.page-update.renamed ul,.page-update.moved ul {
+	display: none;
+}
+
+.page-update.unfolded ul,.page-update:hover ul {
+	display: inline;
+}
+

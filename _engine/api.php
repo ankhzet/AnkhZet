@@ -41,6 +41,8 @@
 			, 'nop'
 			, 'heartbeat' => 0
 			, 'clientapi' => 0
+			, 'adminapi' => ACL::ACL_ADMINS
+			, 'ergo' => 0
 			);
 		}
 

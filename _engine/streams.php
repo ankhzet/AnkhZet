@@ -22,7 +22,7 @@
 			return !!$this->fp;
 		}
 
-		static function real($path, &$real) {
+		static function real($path, &$real = null) {
 			$url = parse_url($path);
 			$host = $url["host"];
 			$real = str_ireplace("cms://$host", self::$handlers[$host], $path);
@@ -142,3 +142,4 @@
 	URIStream::register('logs', SUB_DOMEN . '/logs_dir');
 	URIStream::register('config', SUB_DOMEN . '/_engine');
 	URIStream::register('cache', SUB_DOMEN . '/cache');
+	URIStream::register('temp', SUB_DOMEN . '/data/tmp');

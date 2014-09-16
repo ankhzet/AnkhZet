@@ -13,7 +13,9 @@
 	function format ($data, $name = null) {
 		switch (true) {
 		case is_bool($data):
+			break;
 		case is_numeric($data):
+			$data = intval($data);
 			break;
 		case is_array($data):
 			$e = array();

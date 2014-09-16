@@ -94,17 +94,13 @@ label {
 	text-align: left;
 }
 
-.red {
-	color: red;
-}
-
-.green {
-	color: green;
-}
-
-.blue {
-	color: blue;
-}
+.red { color: red; }
+.green { color: green; }
+.blue { color: blue; }
+.teal { color: teal; }
+.maroon { color: maroon; }
+.navy { color: navy; }
+.olive { color: olive; }
 
 .nowrap {
 	white-space: nowrap;

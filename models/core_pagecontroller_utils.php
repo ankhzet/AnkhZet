@@ -7,7 +7,8 @@
 
 		public static function getPageContents($page, $version = 'last', $clean = true) {
 			$storage = self::getPageStorage($page);
-			$contents = @file_get_contents("$storage/$version.html");
+			$file = "$storage/$version.html";
+			$contents = file_exists($file) ? @file_get_contents($file) : false;
 			if (($contents !== false) && ($contents != '')) {
 				$contents1 = @gzuncompress/**/($contents);
 				if ($contents1 !== false)
@@ -31,17 +32,21 @@
 				$c = preg_replace('"<p([^>]*)?>(.*?)<dd>"i', '<p\1>\2<dd>', $c);
 				$c = preg_replace('"(</?(td|tr|table)[^>]*>)'.PHP_EOL.'"', '\1', $c);
 				$c = preg_replace('"'.PHP_EOL.'(</?(td|tr|table)[^>]*>)"', '\1', $c);
-				$c = str_replace(array("\r", "\n", '</dd>'), '', $c);
+				$c = str_replace(array(PHP_EOL, "\r", "\n", '</dd>'), '', $c);
 				$c = str_replace(array('<dd>', '<br>', '<br/>', '<br />'), PHP_EOL, $c);
 				$c = preg_replace('"<p\s*>([^<]*)</p>"i', '<p/>\1', $c);
 				$c = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $c);
 				$c = preg_replace('"<(\w+)[^>]*>((\s|\&nbsp;)*)</\1>"', '\2', $c);
 				$c = preg_replace('"</(\w+)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
 				$c = preg_replace('"<font([^<]*)color=\"?black\"?([^<]*)>"i', '<font\1\2>', $c);
-				$c = preg_replace('"<font\s*>(!?</font>)</font>"i', '\1', $c);
 				$c = preg_replace('"<(font|span)\s*(lang=\"?[^\"]+\"?)\s*>([^<]*)</\1>"i', '\3', $c);
+				$c = preg_replace('"<font\s*>(?>((?>(?!</?font).)+)|(?R))*</font>"sxi', '\1', $c);
+				$c = preg_replace('"<p\s*>(?>((?>(?!</?p).)+)|(?R))*</p>"sxi', '<p/>\1', $c);
+//				$c = preg_replace('"<(b|i|font)[^>]*></\1>"i', '', $c);
+				$c = preg_replace('"</(b|i)><\1>"i', '', $c);
+				$c = preg_replace('"([^ ])&nbsp;([^ ])"', '\1 \2', $c);
 
-//				$c = preg_replace('/ {3,}/', '  ', $c);
+				$c = preg_replace('/ {3,}/', '  ', $c);
 
 			} else
 				$c = str_replace('<br />', PHP_EOL, $c);
@@ -68,7 +73,7 @@
 				$c = substr_replace($c, $u, $p, strlen($m[1][0]));
 				$p += strlen($u) + intval($m[3][1]) - intval($m[1][1]) - 5;
 			}
-			return /*$cleanup ? $c : */str_replace(PHP_EOL, PHP_EOL . '<br/>', $c);
+			return /*$cleanup ? $c : */str_replace(PHP_EOL, PHP_EOL . '<dd/>', $c);
 		}
 
 		public static function traceMark($uid, $trace, $page, $author) {

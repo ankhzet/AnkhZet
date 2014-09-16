@@ -1,262 +1,16 @@
 <?php
 
 	require_once 'core_page.php';
+	require_once 'core_authors.php';
 	require_once 'core_pagecontroller_utils.php';
 
-	class actionClientapi {
-		function execute($params) {
-			$action = strtolower(uri_frag($params, 'api-action', null, false));
+	require_once 'APIServant.php';
 
-			if (preg_match_all('/-(\w)/i', $action, $m))
-				foreach ($m[1] as $part)
-					$action = str_replace("-{$part}", strtoupper($part), $action);
-
-			$method = 'method' . ucfirst($action);
-			if (method_exists($this, $method)) {
-				unset($params['action']);
-				$error = false;
-				$message = '';
-				$result = $this->{$method}($params, $error, $message);
-
-				$failed = $error ? JSON_Fail : JSON_Ok;
-
-				$content_type = post('response_type') ? post('response_type') : 'xml';
-				$file = "$action.$content_type";
-
-				switch ($content_type) {
-				case 'api':
-					$result = Config_Result($action, $failed, $error ? $message : $result, false);
-					$content_type = "text/ankh-api-response";
-					break;
-				case 'json':
-					require_once 'json.php';
-					$result = JSON_Result($failed, $error ? $message : $result, false);
-					break;
-				default:
-					require_once 'core_rss.php';
-					$xml = XMLWorker::get();
-
-					$data = array(
-						'result' => $failed
-					, 'data' => $error ? array() : $result
-					, 'message' => $message
-					);
-
-					$result = $xml->format($data);
-					$content_type = "rss+xml";
-				}
-			} else
-				$this->_404('Action not found');
-
-			$gzip = !post_int('nogzip');
-			$debug = post_int('debug');
-			if ($gzip) header('Content-Encoding: gzip');
-
-
-//			if (!$debug) header("Content-Type: application/$content_type; charset=UTF-8");
-			if (!$gzip) header('Content-Length: ' . strlen($result));
-//			if (!$debug) header("Content-Disposition: inline; filename=$file");
-
-			header('Cache-Control: no-store; no-cache');
-
-			if ($gzip) $result = gzencode($result);
-
-			die($result);
-
-			return true;
-		}
+	class actionClientapi extends APIServant {
 
 		function methodAuthor($params, &$error, &$message) {
-			require_once 'core_authors.php';
-			$id = uri_frag($params, 'id');
-			$a = AuthorsAggregator::getInstance();
-			return $a->get($id);
+			return AuthorsAggregator::getInstance()->get(uri_frag($params, 'id'));
 		}
-		function methodAuthorsToUpdate($params, &$error, &$message) {
-			$force = !!uri_frag($params, 'force');
-			$all = !!uri_frag($params, 'all');
-
-			require_once 'core_history.php';
-			require_once 'core_updates.php';
-			require_once 'core_authors.php';
-
-			$u = new AuthorWorker();
-			$h = HistoryAggregator::getInstance();
-
-			$a = $h->authorsToUpdate(0, $force, $all);
-			return $a;
-		}
-		function methodAuthorUpdate($params, &$error, &$message) {
-			require_once 'core_history.php';
-			require_once 'core_updates.php';
-			require_once 'core_authors.php';
-			$id = uri_frag($params, 'id');
-			$u = new AuthorWorker();
-			$checked = $u->check($id);
-			if ($error = $message = (isset($checked['error']) ? $checked['error'] : false))
-				return;
-
-			$gu = array();
-			$h = HistoryAggregator::getInstance();
-			$ga = GroupsAggregator::getInstance();
-			$g = $h->authorGroupsToUpdate($id, true);
-			foreach ($g as $gid) {
-				$updatedGroup = $u->checkGroup($gid);
-				if (count($updatedGroup)) {
-					$d = $ga->get($gid, 'title');
-					$gu[] = array('group-id' => $gid, 'group-title' => $d['title'], 'updates' => $updatedGroup);
-				}
-			}
-			if (count($gu))
-				$checked['groups-updates'] = $gu;
-			return $checked;
-		}
-		function methodUpdatesCalcFreq($params, &$error, &$message) {
-			require_once 'core_history.php';
-			require_once 'core_authors.php';
-			$h = HistoryAggregator::getInstance();
-			$h->calcCheckFreq();
-		}
-		function methodLoadUpdates($params, &$error, &$message) {
-			require_once 'core_updates.php';
-
-			$u = new AuthorWorker();
-			$left = $u->serveQueue(uri_frag($_REQUEST, 'left', 5));
-			return $left;
-		}
-
-		/* ==================================================== */
-
-		function methodCompositionState($params, &$error, &$message) {
-			require_once 'core_page.php';
-			$pageID = uri_frag($params, 'page');
-
-			if ($error = !$pageID) {
-				return $message = 'Page ID not specified';
-			}
-
-			$pca = PagesCompositionAggregator::getInstance();
-			$composition = $pca->inComposition($pageID);
-
-			return $composition;
-		}
-
-		function methodCompositionRelated($params, &$error, &$message) {
-			require_once 'core_page.php';
-			$pid = uri_frag($params, 'page');
-
-			if ($error = !$pid) {
-				return $message = 'Page ID not specified';
-			}
-
-			$pa = PagesAggregator::getInstance();
-			$page = $pa->get($pid, '`id`, `author`');
-
-			if ($error = ($pid != intval($page['id'])))
-				return $message = "Page {@PAGE#$pid} not found";
-
-			$pages = $pa->fetch(array('nocalc' => true, 'desc' => 0
-				, 'filter' => "`author` = {$page['author']}"
-				, 'collumns' => '`id`'
-			));
-			$pages = fetch_field($pages['data'], 'id');
-
-			$pca = PagesCompositionAggregator::getInstance();
-			$compositions = array();
-
-			foreach ($pages as $id) {
-				$data = $pca->inComposition($id);
-				foreach ($data as $row) {
-					$cid = intval($row['composition']);
-					$compositions[$cid] = $row;
-				}
-			}
-
-			return $compositions;
-		}
-
-		function methodCompositionPages($params, &$error, &$message) {
-			require_once 'core_page.php';
-			$id = uri_frag($params, 'id');
-
-			if ($error = !$id) {
-				return $message = 'Composition ID not specified';
-			}
-
-			$pca = PagesCompositionAggregator::getInstance();
-			$pages = $pca->fetchPages($id);
-
-			return $pages;
-		}
-
-		function methodCompositionAdd($params, &$error, &$message) {
-			require_once 'core_page.php';
-			$pages = uri_frag($params, 'pages', array(), false);
-			$comID = uri_frag($params, 'composition');
-
-			if ($error = !count($pages)) {
-				return $message = 'Composition pages not specified';
-			}
-
-			$pca = PagesCompositionAggregator::getInstance();
-
-			if (!$comID) {
-				$title = uri_frag($params, 'title', null, false);
-				if ($error = !$title)
-					return $message = 'Composition pages not specified';
-
-				$comID = $pca->genComposition($pages);
-				$pca->update(array('title' => $title), $comID, true);
-			} else {
-				foreach ($pages as $pageID)
-					$pca->compose($comID, $pageID);
-			}
-
-			return $comID;
-		}
-
-		function methodCompositionRemove($params, &$error, &$message) {
-			require_once 'core_page.php';
-			$pages = uri_frag($params, 'pages', array(), false);
-			$comID = uri_frag($params, 'composition');
-
-			if ($error = !$comID) {
-				return $message = 'Composition ID not specified';
-			}
-
-			if ($error = !count($pages)) {
-				return $message = 'Composition pages not specified';
-			}
-
-			$pca = PagesCompositionAggregator::getInstance();
-			return $pca->remove($comID, $pages);
-		}
-
-		function methodCompositionOrder($params, &$error, &$message) {
-			require_once 'core_page.php';
-			$comID = uri_frag($params, 'composition');
-			$pageID = uri_frag($params, 'page');
-			$dir = uri_frag($params, 'direction');
-
-			if ($error = !$comID)
-				return $message = 'Composition ID not specified';
-
-			if ($error = !$pageID)
-				return $message = 'Page ID not specified';
-
-			if ($error = (abs($dir) != 1))
-				return $message = 'Wrond reordering direction';
-
-			$pca = PagesCompositionAggregator::getInstance();
-			$oldIdx = $pca->orderInComposition($comID, $pageID);
-			if ($error = ($oldIdx === false))
-				return $message = 'Page doesn\'t contained in specified composition';
-
-			$newIdx = $oldIdx + $dir;
-			return ($newIdx < 0) ? false : $pca->compose($comID, $pageID, $newIdx);
-		}
-
-		/* ==================================================== */
 
 		function methodUpdates($params, &$error, &$message) {
 			require_once 'core_updatesfetcher.php';
@@ -281,35 +35,12 @@
 			return $fetch;
 		}
 
-		function _404($text) {
-			header('HTTP/1.0 404 Not Found');
-			die($text);
-		}
-
-		function methodUser($params, &$error, &$message) {
-			$uid = uri_frag($params, 'uid');
-			$u = array();
-			$fields = array(
-				User::COL_LOGIN,
-				User::COL_ACL,
-				User::COL_LANG,
-				User::COL_NAME
-			);
-
-			$error = !($uid && ($data = User::get($uid)) && ($data->ID()));
-			if (!$error) {
-				foreach ($fields as $field)
-					$u[$field] = $data->_get($field);
-
-
-				$u[User::COL_LANG] = Loc::$LOC_ALL[$u[User::COL_LANG]];
-
-				return $u;
-			} else
-				$message = 'User with specified ID not found';
-		}
-
 		function methodAuthors($params, &$error, &$message) {
+			$ids = uri_frag($params, 'id', null, false);
+			$ids = $ids ? explode(',', $ids) : array();
+			foreach ($ids as &$id)
+				$id = intval($id);
+
 			$c = uri_frag($params, 'collumns', null, false);
 			$c = $c ? explode(',', $c) : null;
 			foreach ($c as &$collumn)
@@ -317,9 +48,11 @@
 
 			$collumns = $c ? '`' . join('`,`', $c) . '`' : '*';
 
-			require_once 'core_authors.php';
 			$aa = AuthorsAggregator::getInstance();
-			$d = $aa->fetch(array('nocalc' => true, 'pagesize' => 10000, 'collumns' => $collumns));
+			$f = array('nocalc' => true, 'pagesize' => 10000, 'collumns' => $collumns);
+			if (count($ids))
+				$f['filter'] = '`id` in (' . join(',', $ids) . ')';
+			$d = $aa->fetch($f);
 
 			$error = !$d['result'];
 			if (!$error)
@@ -341,7 +74,6 @@
 			if ($author)
 				$q['filter'] = "`author` = $author";
 
-			require_once 'core_authors.php';
 			$aa = GroupsAggregator::getInstance();
 			$d = $aa->fetch($q);
 
@@ -528,10 +260,4 @@ $contents
 			return array('mime' => 'text/html', 'encoding' => $encoding, 'title' => $d['title'], 'contents' => $contents);
 		}
 
-	}
-
-	function unhtmlentities ($string) {
-		$trans_tbl = get_html_translation_table (HTML_ENTITIES);
-		$trans_tbl = array_flip ($trans_tbl);
-		return strtr ($string, $trans_tbl);
 	}

@@ -199,7 +199,7 @@ var
 			delete(params.success);
 			delete(params.error);
 			delete(params.retry);
-			$.getJSON('/clientapi.json?api-action=' + action, params)
+			$.getJSON('/api/admin/' + action, params)
 			.success(function(response) {
 				if (response.result != 'ok') {
 					callbacks.error(response.data, true);
@@ -207,8 +207,8 @@ var
 				}
 				callbacks.success(response.data);
 			})
-			.error(function(response){
-				error(response.responseText);
+			.error(function(response, status, err){
+				error(status + ': ' + err, true);
 			});
 		}
 		this.init = function() {
@@ -218,7 +218,7 @@ var
 			this.toggleUI('.update-btn', true);
 			this.toggleUI('.load-btn', false);
 			this.$('.update-btn').click(function(){updatesService.checkUpdates();});
-			this.$('.load-btn').click(function(){updatesService.loadUpdates();});
+			this.$('.load-btn').click(function(){updatesService.loadUpdates(true);});
 
 			this.serveTimers();
 			displayTimer = setInterval(function(){updatesService.updateTimers();}, 100);
@@ -259,7 +259,7 @@ var
 			this.serveTimers(true);
 			this.toggleUI('.update-btn', true);
 			var force = !authorsID.length;
-			this.json('authorsToUpdate', {'force': 0/*force ? 1 : 0*/, 'all': 1/*first_time*/
+			this.json('authors-to-update', {'force': 0/*force ? 1 : 0*/, 'all': 1/*first_time*/
 			, 'success': function (data) {
 					updatesService.first_time = 0;
 					updatesService.serveAuthors(data);
@@ -271,8 +271,8 @@ var
 			});
 		}
 
-		this.loadUpdates = function() {
-			if (!waits) {
+		this.loadUpdates = function(force) {
+			if (!(force || waits)) {
 				this.$('.author').each(function(){
 					var id = parseInt($(this).attr('data-id'));
 					updatesService.authorState(id, AS_WAIT);
@@ -283,12 +283,13 @@ var
 
 			this.toggleUI('.update-btn', false);
 			this.toggleUI('.load-btn', false);
-			this.json('loadUpdates', {
+			this.json('load-updates', {
 				'success': function(data) {
 					updatesService.toggleUI('.load-btn', true);
 					var left = parseInt(data.left);
-					updatesService.dropUpdates(left);
-					updatesService.loadUpdates();
+					var loaded = data.diff ? data.diff.length : 0;
+					updatesService.dropUpdates(loaded, left);
+					setTimeout(function(){updatesService.loadUpdates();}, 200);
 				}
 			, 'error': function (response, verbose) {
 					updatesService.toggleUI('.load-btn', true);
@@ -297,9 +298,8 @@ var
 				}
 			});
 		}
-		this.dropUpdates = function(left) {
-			if ((waits - left) > 0)
-				this.error('Loaded ' + (waits - left) + ' updates', true);
+		this.dropUpdates = function(loaded, left) {
+			this.error('Loaded ' + loaded + '/' + (loaded + left) + ' updates', true);
 			waits = left;
 		}
 
@@ -312,8 +312,32 @@ var
 			queue2 = authors;
 			authorsID = authors;
 			authorData = [];
+			var toAquire = [];
+
 			for (var i in authors)
-				this.formAuthorPlate(authors[i]);
+				if (!authorData[parseInt(authors[i])])
+					toAquire.push(authors[i]);
+
+			if (toAquire.length)
+				this.json('authors', {'id': toAquire.join(',')
+				, 'success': function (data) {
+						for (var i in data) {
+							var author = data[i];
+							updatesService.regAuthorData(author.id, author);
+							updatesService.authorDataAquired(author.id);
+						}
+					}
+				, 'error': function (data) {
+						for (var i in authors) {
+							var id = authors[i];
+							updatesService.error('Network error (auid: ' + id + ')', true);
+							updatesService.authorDataAquired(id);
+						}
+					}
+				});
+			else
+				for (var i in authors)
+					this.authorDataAquired(authors[i]);
 		}
 		this.readyForService = function() {
 			var authors = queue2;
@@ -325,7 +349,7 @@ var
 			this.serveAuthor();
 		}
 		this.authorsServed = function() {
-			this.json('updatesCalcFreq', {
+			this.json('updates-calc-freq', {
 				'success': function() {
 					updatesService.toggleUI('.update-btn', true);
 					updatesService.toggleUI('.load-btn', true);
@@ -347,7 +371,7 @@ var
 			this.$('.temp').append(plate);
 			this.$('.authors').prepend(plate);
 
-			this.json('authorUpdate', {'id': id
+			this.json('author-update', {'id': id
 			, 'success': function(data) {
 					updatesService.authorServed(id, data);
 					updatesService.serveAuthor();
@@ -367,14 +391,17 @@ var
 			var authorDIV = $('<div><a href="/authors/id/' + id + '">' + authorData[id].fio + '</a></div>');
 			authorDIV.append('<DIV></DIV>').append(updates);
 
-			if (data['load-timings']) {
-				plate.find('.timings').html(patternize("{%speed}<br/>({%length}/{%time})", data['load-timings']));
-			}
-
+//			alert(toJSON(data));
 			var cast = parseFloat(data['cast-for']);
+			if ((cast != 0) && (data['load-timings'] && (data['load-timings'] != ''))) {
+				plate.find('.timings').html(patternize("{%speed}<br/>({%length}/{%time})", data['load-timings']));
+			} else
+				plate.find('.timings').html('***');
+
 			var mainUpdated = !!data['pages-updated'];
 			var groupsUpdated = !!data['groups-updates'];
 
+			var changes = 0;
 			if (groupsUpdated) {
 				for (var i in data['groups-updates']) {
 					var group = data['groups-updates'][i];
@@ -382,39 +409,90 @@ var
 					updates.append(patternize('<div><a href="/pages?group={%group-id}">{%group-title}</a>:</div>', group))
 					.append(groupUL);
 
-					for (var j in group['updates']['pages-queued']) {
-						var queued = group['updates']['pages-queued'][j];
-						if (!parseInt(queued['page-id'])) continue;
-						waits ++;
-						groupUL.append(patternize('<li><a href="/pages/version/{%page-id}">{%link}</a></li>', queued));
-					}
+					var u = this.showUpdates(updates, group['updates']);
+					changes+= u[0];
 				}
 			}
 
-			if (mainUpdated) {
-				var all = data['pages-queued'][0];
-				var links = data['pages-queued-links'];
-				for (var i in links) {
-					var queued = links[i];
-					var page = parseInt(queued['page-id']);
-					if (!page) continue;
-					var link = queued.link;
-					all = drop(all, link);
-					waits ++;
-					updates.append(patternize('<li><a href="/pages/version/{%page-id}">{%link}</a></li>', queued));
-				}
-				if (all.length)
-					updatesService.error('Already queued: ' + all, true);
+			var u = this.showUpdates(updates, data);
+			changes+= u[0];
 
-				this.authorState(id, AS_UPD);
-			}
+			this.authorState(id, AS_UPD);
 
-			if (!(mainUpdated || groupsUpdated)) {
+			if (!changes) {
 				this.$('.temp').append(plate);
 				this.$('.authors').append(plate);
 			} else {
 				updatesDIV.prepend(authorDIV);
 			}
+		}
+
+		this.showUpdates = function (container, data) {
+			var links = data['pages-queued-links'] || [];
+			var queuedPages = data['pages-queued'] || [];
+			var newPages = data['pages-new'] || [];
+			var renamedPages = data['pages-changed-title'] || [];
+
+			var changes = 0;
+			var typed = {'added': newPages, 'diff': queuedPages};
+			var blocks = {'diff': [], 'added': [], 'renamed': [], 'moved': [], 'removed': []};
+			for (var type in typed) {
+				pages = typed[type];
+				for (var i in pages) {
+					var page = pages[i];
+					var pageID = parseInt(page['page-id']) || parseInt(page['id']);
+					if (!pageID) continue;
+
+					var link = page.link;
+					links = drop(links, link);
+					if (page.title == '') page.title = '&lt;no title&gt;';
+
+					blocks[type].push(this.appendUpdate(
+						'&laquo;<a href="/pages/version/{%page-id}?r={%random}">{%title}</a>&raquo;'
+					, page));
+
+					waits++;
+					changes++;
+				}
+			}
+
+			for (var i in renamedPages) {
+				var page = renamedPages[i];
+				var pageID = parseInt(page['page-id']) || parseInt(page['id']);
+				if (!pageID) continue;
+
+				var link = page.link;
+				links = drop(links, link);
+				if (page.title == '') page.title = '&lt;no title&gt;';
+
+				blocks['renamed'].push(this.appendUpdate(
+					'&laquo;<a href="/pages/version/{%id}?r={%random}">{%title}</a>&raquo; &rarr; &laquo;<a href="/pages/version/{%id}?r={%random}">{%new-title}</a>&raquo;'
+				, page));
+				changes++;
+			}
+
+			if (links.length)
+				updatesService.error('Already queued: ' + links, true);
+
+			for (var type in blocks) {
+				if (!blocks[type].length) continue;
+				var outer = $(patternize('<span class="page-update {%type}"></span>', {'type': type}));
+				outer.append('<ul>' + blocks[type].join('\n') + '</ul>');
+				container.append($('<div>').append(outer));
+			}
+
+			return [changes, links];
+		}
+
+		this.appendUpdate = function (pattern, data) {
+			var time = (new Date()).toUTCString();
+			time = time.match(/((\d+)\:[^ ]+)/);
+
+			data['random'] = Math.round(111111 + Math.random() * 888889);
+			return patternize(
+				'<li>{%time}: <span>{%update}</span></li>'
+			, {'time': time[1], 'update': patternize(pattern, data)}
+			);
 		}
 
 		this.hasQueuedForAquire = function() {
@@ -434,21 +512,6 @@ var
 			this.authorState(id, state);
 		}
 
-		this.formAuthorPlate = function(id) {
-			if (authorData[parseInt(id)])
-				return this.authorDataAquired(id);
-
-			this.json('author', {'id': id
-			, 'success': function (data) {
-					updatesService.regAuthorData(id, data);
-					updatesService.authorDataAquired(id);
-				}
-			, 'error': function (data) {
-					updatesService.error('Network error (auid: ' + id + ')', true);
-					updatesService.formAuthorPlate(id);
-				}
-			});
-		}
 		this.authorDataAquired = function(id) {
 			var data = authorData[parseInt(id)];
 			this.$('#author-plate-' + id).remove();
@@ -654,7 +717,7 @@ var
 			delete(params.success);
 			delete(params.error);
 			delete(params.retry);
-			$.getJSON('/clientapi.json?api-action=' + action, params)
+			$.getJSON('/api/admin/' + action, params)
 			.success(function(response) {
 				if (response.result != 'ok') {
 					callbacks.error(response.data, true);

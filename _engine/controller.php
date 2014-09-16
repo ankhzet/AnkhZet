@@ -16,6 +16,7 @@
 				View::addKey('site', $title);
 				View::addKey('title', $title);
 				View::addKey('moder', '');
+				View::addKey('grip-moder', '');
 			}
 			$view->ctl      = $this;
 		}

@@ -17,6 +17,7 @@
 	define('UPKIND_DELETED_GROUP', 4); // group-related
 	define('UPKIND_ADDED', 5); // page-related
 	define('UPKIND_DELETED', 6); // page-related
+	define('UPKIND_RENAMED', 7); // page-related
 
 	function echo_log($text, $postfix = '') {
 		echo Loc::lget($text) . $postfix . '<br />' . PHP_EOL;
@@ -31,7 +32,7 @@
 			preg_match('/^[\/]*(.*?)[\/]*$/', $a['link'], $link);
 			$link = $link[1] . '/';
 			$t = getutime();
-			$data = SAMLIBParser::getData($link, 'author', true);
+			$data = SAMLIBParser::getData($link, 'author');
 			if ($data === false)
 				return array('error' => Loc::lget('samlib_down'));
 ///				return echo_log('samlib_down');
@@ -183,7 +184,7 @@
 								$page_data[3] = $data_link;
 								$candidates_to_move[$group][] = $page_data;
 							} else
-								$result['dont-know-where-to-go'] = $page_data[1];
+								$result['dont-knows-where-to-go'][] = $page_data[1];
 ///								echo_log('dont_know_where_to_go', ' (' . $page_data[1] . ')');
 						}
 					}
@@ -196,7 +197,7 @@
 								$pa->update(array('group' => $page_data[2]), $page_id);
 								$ua->changed($page_id, UPKIND_GROUP, $old_group);
 								$data = array('link' => $page_data[1]);
-								$result['page-moved-to-group'][] = $page_data;
+								$result['pages-moved-to-group'][] = $page_data;
 ///								echo patternize(Loc::lget('page_changed_group'), $data) . '(ID#' . $page_data[2] . ')<br />';
 							}
 					} else
@@ -209,7 +210,7 @@
 				foreach ($diff as $g_id) {
 					$ua->changed($g_id, UPKIND_DELETED_GROUP, $author_id);
 					$ga->delete($g_id);
-					$result['group-deleted'][] = $gii[$g_id];
+					$result['groups-deleted'][] = $gii[$g_id];
 ///					echo patternize(Loc::lget('group_deleted'), $gii[$g_id][2]) . '<br />';
 				}
 			}
@@ -218,20 +219,23 @@
 //			debug($gi, 'gi');
 
 			$check = array();
+			$page_titles = array();
 			// is there anything to check?
 			foreach ($links as $idx => &$block)
-				foreach ($block as $link => &$data) //            0      1     2         3
-					if ($data[2] > 0) // size > 0 ?   // link => {group, title, size, description}
+				foreach ($block as $link => &$data) { //            0      1     2         3
+					if ($data[2] > 0) // size > 0 ?     // link => {group, title, size, description}
 						$check[$link] = $data;
+					$page_titles[$link] = $data[1];
+				}
 
 			if (count($check)) { // ok, there are smth to check
 				$diff = array();
-        $link_filter = join('", "', array_keys($check));
+				$link_filter = join('", "', array_keys($check));
 				$pa = PagesAggregator::getInstance();
 				$d = $pa->fetch(array(
 					'filter' => "`author` = $author_id and (`link` in (\"$link_filter\"))"
 				, 'nocalc' => 1, 'desc' => 0
-				, 'collumns' => '`id`, `link`, `size`, `group`'
+				, 'collumns' => '`id`, `link`, `size`, `group`, `title`'
 				));
 				if ($d['total']) { // there are smth in db, check it if size diff
 					foreach ($d['data'] as $row) {
@@ -243,6 +247,13 @@
 						unset($check[$link]); // page isn't "new"
 
 						$page_id = intval($row['id']);
+
+						if ($row['title'] <> addslashes(htmlspecialchars($data[1], ENT_QUOTES))) {
+							$pa->update(array('title' => $data[1]), $page_id);
+							$ua->changed($page_id, UPKIND_RENAMED, 0);
+							$result['pages-changed-title'][] = array_merge($row, array('new-title' => $data[1]));
+						}
+
 						if (intval($row['size']) <> $data[2])
 							$diff[$page_id] = $link; // size changed, check it later for version change
 
@@ -253,11 +264,11 @@
 							if ($new_group) {
 								$pa->update(array('group' => $new_group), $page_id);
 								$ua->changed($page_id, UPKIND_GROUP, $old_group);
-								$result['page-changed-group'][] = array_merge($row, array('new-group' => $new_group));
+								$result['pages-changed-group'][] = array_merge($row, array('new-group' => $new_group));
 ///								echo patternize(Loc::lget('page_changed_group'), $row) . '(ID#' . $new_group . ')<br />';
 							} else {
 //								debug(array('old_i' => $old_group_i, 'new_i' => $data[0], 'old_id' => $old_group));
-								$result['page-changed-group'][] = array_merge($row, array('new-group' => 0));
+								$result['pages-changed-group'][] = array_merge($row, array('new-group' => 0));
 ///								echo 'Cant move page! Target group not found %)<br />';
 							}
 						}
@@ -269,27 +280,34 @@
 ///					echo_log('pages_updated');
 
 				if (!!$check) { // new pages
-					$result['pages-new'] = true;
+					$result['pages-new'] = array();
 ///					echo_log('pages_new');
 					foreach ($check as $link => &$data) { // each new page
 						$idx = $data[0]; // group local id (IDX)
 						$gid = array_search($idx, $gi); // group global id (GUID)
+						$title = addslashes(htmlspecialchars($data[1], ENT_QUOTES));
 						$pid = $pa->add(array(
 							'author' => $author_id
 						, 'group' => $gid
 						, 'link' => $link
-						, 'title' => addslashes(htmlspecialchars($data[1], ENT_QUOTES))
+						, 'title' => $title
 						, 'description' => addslashes(htmlspecialchars($data[3], ENT_QUOTES))
 						, 'size' => 0 // later it will be updated with version checker
 						));
 						$diff[$pid] = $link; // check its version
+						$result['pages-new'][] = array('page-id' => $pid, 'link' => $link, 'title' => $title);
 					}
 				}
 
 				if (!!$diff) { // there are updated or new pages
-					$result['pages-queued'][] = $diff;
 ///					echo_log('pages_queue');
-					$result['pages-queued-links'] = $this->queuePages($author_id, $diff); // queue this page for version check
+					$result['pages-queued-links'] = $diff;
+					$fdiff = $this->queuePages($author_id, $diff); // queue this page for version check
+
+					foreach ($fdiff as &$diff_data)
+						$diff_data['title'] = $page_titles[$diff_data['link']];
+
+					$result['pages-queued'] = $fdiff;
 				} else
 					$result['no-updates'] = true;
 ///					echo_log('no_updates');
@@ -326,10 +344,13 @@
 
 			$links = &$data['links'];
 			$check = array();
+			$page_titles = array();
 			// is there anything to check?
-			foreach ($links as $link => &$data) //            0      1        2
-				if ($data[1] > 0) // size > 0 ?   // link => {title, size, description}
+			foreach ($links as $link => &$data) { //            0      1        2
+				$page_titles[$link] = $data[0];
+				if ($data[1] > 0) // size > 0 ?     // link => {title, size, description}
 					$check[$link] = $data;
+			}
 
 			if (count($check)) { // ok, there are smth to check
 				$link_filter = join('", "', array_keys($check));
@@ -339,7 +360,7 @@
 				$d = $pa->fetch(array(
 					'filter' => "`author` = $author_id and (`link` in (\"$link_filter\"))"
 				, 'nocalc' => 1, 'desc' => 0
-				, 'collumns' => '`id`, `link`, `size`, `group`'
+				, 'collumns' => '`id`, `link`, `size`, `group`, `title`'
 				));
 				if ($d['total']) { // there are smth in db, check it if size diff
 					foreach ($d['data'] as $row) {
@@ -347,12 +368,19 @@
 						unset($check[$link]); // don't check it later in this function
 
 						$page_id = $row['id'];
+
+						if ($row['title'] <> addslashes(htmlspecialchars($data[0], ENT_QUOTES))) {
+							$pa->update(array('title' => $data[0]), $page_id);
+							$ua->changed($page_id, UPKIND_RENAMED, 0);
+							$result['pages-changed-title'][] = array_merge($row, array('new-title' => $data[0]));
+						}
+
 						if (intval($row['size']) <> $data[1])
 							$diff[$page_id] = $link; // check it
 
 						$old_group = intval($row['group']);
 						if ($group_id != $old_group) {
-							$result['page-changed-group'][] = $row;
+							$result['pages-changed-group'][] = array_merge($row, array('new-group' => $group_id));
 ///							echo patternize(Loc::lget('page_changed_group'), $row) . '<br />';
 							$pa->update(array('group' => $group_id), $page_id);
 							$ua->changed($page_id, UPKIND_GROUP, $old_group);
@@ -383,7 +411,13 @@
 
 				if (count($diff)) {
 //					echo_log('pages_queue');
-					$result['pages-queued'] = $this->queuePages($author_id, $diff);
+					$result['pages-queued-links'] = $diff;
+					$fdiff = $this->queuePages($author_id, $diff); // queue this page for version check
+
+					foreach ($fdiff as &$diff_data)
+						$diff_data['title'] = $page_titles[$diff_data['link']];
+
+					$result['pages-queued'] = $fdiff;
 				} else;
 //					$result['pages-no-updates'] = 1;
 //					echo_log('no_updates');
@@ -428,13 +462,15 @@
 			$t = time();
 
 			$q = QueueAggregator::getInstance();
-      // fetch not processed yet pages, or those, which process time elapsed (due to hung-up or time-break)
+//			$q->dbc->debug = 1;
+			// fetch not processed yet pages, or those, which process time elapsed (due to hung-up or time-break)
 			$d = $q->fetch(array('desc' => 0
-			, 'filter' => '(`state` = 0) or (`state` <> 0 and `updated` < ' . ($t - QUEUE_FAILTIME) . ') limit ' . $limit
-			, 'collumns' => '`id` as `0`, `page` as `1`'
+			, 'filter' => '(`state` = 0) or (`state` <> 0 and `updated` < ' . ($t - QUEUE_FAILTIME) . ')  limit ' . $limit
+			, 'collumns' => '`id` as `0`, `page` as `1`'//, `state` as `2`, `updated` as `3`'
 			));
 
-			if ($d['total']) {
+			$done = 0;
+			if ($left = $d['total']) {
 ///				echo '> ' . $d['total'] . ' pages waits for update...<br />';
 				foreach ($d['data'] as $row)
 					$u[intval($row[1])] = intval($row[0]);
@@ -443,8 +479,21 @@
 				, 'p.`id` in (' . join(',', array_keys($u)) . ') and p.`author` = a.`id`'
 				, 'p.`id`, p.`link`, p.`size`, a.`link` as `author`, p.`time`');
 				$pages = $q->dbc->fetchrows($s);
-				$left = count($pages);
-				$done = 0;
+
+//				debug2(array($left, count($pages)));
+				if (count($u) > count($pages)) {
+					$pids = fetch_field($pages, 'id');
+					$pids = array_flip($pids);
+					$drop = array();
+					foreach ($u as $page => $queueID)
+						if (!isset($pids[$page]))
+							$drop[] = $queueID;
+
+					$q->delete($drop);
+//					debug2(array($u, $pids, $drop));
+					$left -= count($drop);
+					$left = ($left < 0) ? 0 : $left;
+				}
 
 				$c = new PageComparator();
 				$pa = PagesAggregator::getInstance();
@@ -479,24 +528,28 @@
 //							echo ' &nbsp;updated (' . $size . 'KB).<br />';
 						}
 						$q->dbc->delete($q->TBL_DELETE, '`page` = ' . $page);
+						$done++;
 					} else {
-						$q->dbc->update($q->TBL_INSERT, array('state' => 0, 'updated' => $time), '`id` = ' . $q_id);
-						$result['fail'][] = array('page-id' => $page, 'link' => $row['link']);
+						$deleted = isset($time[404]);
+						if ($deleted)
+							$q->dbc->delete($q->TBL_DELETE, '`page` = ' . $page);
+						else
+							$q->dbc->update($q->TBL_INSERT, array('state' => QUEUE_PROCESS, 'updated' => time()), '`id` = ' . $q_id);
+						$result[$deleted ? 'deleted' : 'fail'][] = array('page-id' => $page, 'link' => $row['link']);
 //						echo_log('page_request_failed');
-						$result['left'] = $left - $done;
-						return $result;
+						$done++;
+//						return $result;
 					}
-					$done++;
 					if (($timeout > 0) && (time() - $t > $timeout)) {
 						$result['left'] = $left - $done;
 						return $result;
 					}
 				}
-				$result['left'] = 0;
+				$result['left'] = $left - $done;
 			} else;
 //				echo_log('nothing_to_update');
 
-			$result['left'] = 0;
+			$result['left'] = $left - $done;
 			return $result;
 		}
 

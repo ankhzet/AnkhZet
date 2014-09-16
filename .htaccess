@@ -2,11 +2,14 @@
 	Options +FollowSymlinks
 	RewriteEngine On
 
+
 	RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
 	RewriteRule ^(.*)$ http://%1/$1 [R=301,L]
 
 	RewriteRule \.(?:js|html?)$ compress.php
 	RewriteRule ([^\.]+)\.((?:xml|json|api))$ api.php?action=$1&response_type=$2
+
+	RewriteRule ^api/([^/\?]+)/([^$\?]+)$ api.php?action=$1api&api-action=$2&response_type=json
 
 	RewriteCond %{REQUEST_URI} !/theme
 	RewriteCond %{REQUEST_URI} !/thumbnails

@@ -73,7 +73,8 @@
 					$delta = intval($row['size']) - intval($row['size_old']);
 					$old_version_date = date('d-m-Y/H-i-s', $row['time_old']);
 					$i[$hID] = array(
-						'authorID' => $author
+						'uid' => $row[0]
+					, 'authorID' => $author
 					, 'groupID' => $group
 					, 'pageID' => $pageId
 					, 'title' => $row['title']

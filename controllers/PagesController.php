@@ -363,7 +363,7 @@
 							$row['prew'] = ($idx < $l) ? intval($p[$idx + 1]) : 0;
 							$row['timestamp'] = date('d, H:i', $version);
 							$row['size'] = fs(filesize("$storage/$version.html"));
-							$t = '<a href="/{%root}/diff/{%page}/{%version}/{%prev}" {%oldest}>{%time}</a>';
+							$t = '<a href="/{%root}/diff/{%page}/{%version}/{%prev}" noindex nofollow {%oldest}>{%time}</a>';
 							$u1 = array();
 							foreach ($p as $v2)
 								if ($v2 < $version) {
@@ -688,8 +688,8 @@
 
 			$t1 = str_replace(array('&nbsp;', PHP_EOL), array("\t", ''), $t1);
 			$t2 = str_replace(array('&nbsp;', PHP_EOL), array("\t", ''), $t2);
-			$t1 = str_replace(array('<br />', '<br/>'), PHP_EOL, $t1);
-			$t2 = str_replace(array('<br />', '<br/>'), PHP_EOL, $t2);
+			$t1 = str_replace(array('<dd/>', '<br />', '<br/>'), PHP_EOL, $t1);
+			$t2 = str_replace(array('<dd/>', '<br />', '<br/>'), PHP_EOL, $t2);
 			$t1 = preg_replace('/ {3,}/', ' ', $t1);
 			$t2 = preg_replace('/ {3,}/', ' ', $t2);
 			require_once 'core_diff.php';

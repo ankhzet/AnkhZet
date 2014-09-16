@@ -387,6 +387,10 @@
 								$row['color'] = $added ? 'green' : 'red';
 								$row['delta'] = ($added ? '+' : '-') . fs(abs($val * 1024));
 							}
+							break;
+						case UPKIND_RENAMED:
+							$row['color'] = 'teal';
+							$row['delta'] = 'переименовано';
 						default:
 						}
 						$t[] = patternize($p1, $row);
