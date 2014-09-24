@@ -29,8 +29,8 @@
 			return $s ? intval(@mysql_result($s, 0)) : 0;
 		}
 
-		public function update(array $data, $id, $low = false) {
-			if (!isset($data['time']))
+		public function update(array $data, $id, $low = false, $timeupdate = true) {
+			if ($timeupdate && !isset($data['time']))
 				$data['time'] = time();
 			$s = $this->dbc->update($this->TBL_INSERT, $data, array('id' => $id), $low);
 			return $s ? $id : 0;
@@ -44,8 +44,13 @@
 			));
 		}
 
-		public function fetch(array $params) {
+		function clear() {
+			return $this->dbc->query('delete from ' . $this->TBL_INSERT);
+		}
+
+		public function fetch(array $params, $count = false) {
 			//$page, $pagesize, $collumns = null, $desc = true, $filter = ''
+			$table = isset($params['table']) ? $params['table'] : $this->TBL_FETCH;
 			$numrows = isset($params['pagesize']) ? $params['pagesize'] : 0;
 			$page = isset($params['page']) ? intval($params['page']) : 0;
 			$limit = ($numrows > 1) ? ' limit ' . ($page * $numrows)  . ', ' . $numrows : ($numrows == 1 ? ' limit 1' : '');
@@ -59,7 +64,7 @@
 			$countrows = $numrows != 1 && !$nocalc;
 
 			$s = $this->dbc->select(
-					$this->TBL_FETCH
+					$table
 				, "{$filter}{$group}{$order}{$limit}"
 				, $countrows ? "SQL_CALC_FOUND_ROWS $collumns" : $collumns
 			);
@@ -71,18 +76,34 @@
 			} else
 				$total = $s ? $this->dbc->rows($s) : 0;
 
+			if ($count)
+				return $total;
 			$this->data = array('result' => $s, 'data' => $this->dbc->fetchrows($s), 'total' => intval($total));
 			$link = &$this->data;
 			return $link;
 		}
 
-		public function get($id, $cols = '*') {
-			$s = $this->dbc->select($this->TBL_FETCH, $this->COL_ID . (
+		public function get($id, $cols = '*', $selector = '`id`') {
+			$s = $this->dbc->select($this->TBL_FETCH, $selector . (
 					!is_array($id)
 				? ' = ' . intval($id) . ' limit 1'
 				: ' in (' . join(',', $id) . ') limit ' . count($id)
 			), $cols);
 			return $s ? (is_array($id) ? $this->dbc->fetchrows($s) : @mysql_fetch_assoc($s)) : array();
+		}
+
+		public function idsOf($query = '1', $single = true) {
+			$s = $this->dbc->select($this->TBL_FETCH, $query . ($single ? ' limit 1' : ''), '`id` as `0`');
+			if ($single)
+				return $s ? intval(@mysql_result($s, 0)) : 0;
+
+			$ids = array();
+			$row = 0;
+			if ($s)
+				while ($id = intval(@mysql_result($s, $row++)))
+					$ids[] = $id;
+
+			return $ids;
 		}
 
 		public function generatePageList($page, $last, $root = '', $params = '') {
@@ -110,5 +131,3 @@
 		}
 
 	}
-
-?>

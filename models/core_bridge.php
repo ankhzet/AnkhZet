@@ -1,5 +1,5 @@
 <?php
-	/** /$r_default_context = stream_context_get_default(array(
+	/**/$r_default_context = stream_context_get_default(array(
 		'http' => array(
 			'proxy' => 'http://localhost:8080',
 			'request_fulluri' => true
@@ -26,7 +26,7 @@
 			if ($params && isset($params['referer']))
 				curl_setopt($c, CURLOPT_HTTPHEADER, array('Referer' => $params['referer']));
 			curl_setopt($c, CURLOPT_TIMEOUT, CURL_TIMEOUT);
-			/** /
+			/**/
 			curl_setopt($c, CURLOPT_PROXY, "http://localhost:8080");
 			curl_setopt($c, CURLOPT_PROXYPORT, 8080);
 			/**/

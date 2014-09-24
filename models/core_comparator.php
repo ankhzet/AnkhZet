@@ -4,7 +4,7 @@
 
 	class PageComparator {
 
-		function compare($page, $link, $time) {
+		function compare($page, $link, &$time) {
 			$path = PageUtils::getPageStorage($page);
 			$last = "{$path}/last.html";
 			$store = "{$path}/{$time}.html";
@@ -12,7 +12,7 @@
 			assume_dir_exists($path);
 			$html1 = PageUtils::getPageContents($page, 'last', false);
 
-			$html2 = url_get_contents("http://samlib.ru/{$link}");
+			$html2 = url_get_contents("http://samlib.ru/{$link}", $time);
 			$c = null;
 			if ($html2 !== false) {
 				$p1 = '<!----------- Собственно произведение --------------->';

@@ -228,6 +228,9 @@
 					$page_titles[$link] = $data[1];
 				}
 
+			$trans_tbl = get_html_translation_table (HTML_ENTITIES);
+			$trans_tbl = array_flip ($trans_tbl);
+
 			if (count($check)) { // ok, there are smth to check
 				$diff = array();
 				$link_filter = join('", "', array_keys($check));
@@ -248,10 +251,12 @@
 
 						$page_id = intval($row['id']);
 
-						if ($row['title'] <> addslashes(htmlspecialchars($data[1], ENT_QUOTES))) {
-							$pa->update(array('title' => $data[1]), $page_id);
+						$quoted = addslashes(htmlspecialchars(strtr(str_replace('&#039;', '\'', $row['title']), $trans_tbl), ENT_QUOTES));
+						$new_quoted = htmlspecialchars($data[1], ENT_QUOTES);
+						if ($quoted <> $new_quoted) {
+							$pa->update(array('title' => $new_quoted), $page_id);
 							$ua->changed($page_id, UPKIND_RENAMED, 0);
-							$result['pages-changed-title'][] = array_merge($row, array('new-title' => $data[1]));
+							$result['pages-changed-title'][] = array_merge($row, array('new-title' => $new_quoted));
 						}
 
 						if (intval($row['size']) <> $data[2])
@@ -352,6 +357,8 @@
 					$check[$link] = $data;
 			}
 
+			$trans_tbl = get_html_translation_table (HTML_ENTITIES);
+			$trans_tbl = array_flip ($trans_tbl);
 			if (count($check)) { // ok, there are smth to check
 				$link_filter = join('", "', array_keys($check));
 				$ua = UpdatesAggregator::getInstance();
@@ -369,10 +376,12 @@
 
 						$page_id = $row['id'];
 
-						if ($row['title'] <> addslashes(htmlspecialchars($data[0], ENT_QUOTES))) {
-							$pa->update(array('title' => $data[0]), $page_id);
+						$quoted = addslashes(htmlspecialchars(strtr(str_replace('&#039;', '\'', $row['title']), $trans_tbl), ENT_QUOTES));
+						$new_quoted = htmlspecialchars($data[0], ENT_QUOTES);
+						if ($quoted <> $new_quoted) {
+							$pa->update(array('title' => $new_quoted), $page_id);
 							$ua->changed($page_id, UPKIND_RENAMED, 0);
-							$result['pages-changed-title'][] = array_merge($row, array('new-title' => $data[0]));
+							$result['pages-changed-title'][] = array_merge($row, array('new-title' => $new_quoted));
 						}
 
 						if (intval($row['size']) <> $data[1])
@@ -477,7 +486,7 @@
 
 				$s = $q->dbc->select('`pages` p, `authors` a'
 				, 'p.`id` in (' . join(',', array_keys($u)) . ') and p.`author` = a.`id`'
-				, 'p.`id`, p.`link`, p.`size`, a.`link` as `author`, p.`time`');
+				, 'p.`id`, p.`link`, p.`size`, a.`link` as `author`, p.`author` as `author-id`, p.`time`');
 				$pages = $q->dbc->fetchrows($s);
 
 //				debug2(array($left, count($pages)));
@@ -510,7 +519,8 @@
 					);
 
 //					echo "&gt; U@{$q_id}, ID#{$page}: {$row['link']}...<br />";
-					$size = $c->compare($page, "{$row['author']}/{$row['link']}", $time);
+					$timings = array();
+					$size = $c->compare($page, "{$row['author']}/{$row['link']}", $timings);
 
 					/* reconnect mysql DB (preventing "MySQL server has gone away") */
 					$pa->dbc->reconnect();
@@ -522,20 +532,22 @@
 
 							$utype = ($old_size <= 0) ? UPKIND_ADDED : (($size <= 0) ? UPKIND_DELETED : UPKIND_SIZE);
 							$ua->changed($page, $utype, $size - intval($row['size']));
-							$saveDir = PageUtils::getPageStorage($page);
-							$result['diff'][] = array('page-id' => $page, 'link' => $row['link'], 'oldsize' => $old_size, 'newsize' => $size);
+//							$saveDir = PageUtils::getPageStorage($page);
+							$result['diff'][] = array('page-id' => $page, 'link' => $row['link'], 'author' => $row['author-id'], 'oldsize' => $old_size, 'newsize' => $size);
 //							echo " &nbsp;save to [$saveDir/$time.html]...<br />";
 //							echo ' &nbsp;updated (' . $size . 'KB).<br />';
+						} else {
+							$result['no-diff'][] = array('page-id' => $page, 'author' => $row['author-id']);
 						}
 						$q->dbc->delete($q->TBL_DELETE, '`page` = ' . $page);
 						$done++;
 					} else {
-						$deleted = isset($time[404]);
+						$deleted = isset($timings[404]);
 						if ($deleted)
-							$q->dbc->delete($q->TBL_DELETE, '`page` = ' . $page);
+							$q->dbc->delete($q->TBL_DELETE, '`id` = ' . $q_id);
 						else
 							$q->dbc->update($q->TBL_INSERT, array('state' => QUEUE_PROCESS, 'updated' => time()), '`id` = ' . $q_id);
-						$result[$deleted ? 'deleted' : 'fail'][] = array('page-id' => $page, 'link' => $row['link']);
+						$result[$deleted ? 'deleted' : 'fail'][] = array('page-id' => $page, 'link' => $row['link'], 'author' => $row['author-id']);
 //						echo_log('page_request_failed');
 						$done++;
 //						return $result;

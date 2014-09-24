@@ -1,5 +1,5 @@
 function patternize(pattern, data) {
-	return pattern.replace(/\{\%([^\}]+)\}/g, function(a, b) { return data[b]; });
+	return pattern.replace(/\{\%([^\}]+)\}/g, function(a, b) { return (data && (typeof data[b] !== 'undefined')) ? data[b] : "{" + b + "}"; });
 }
 function urldecode(str) {
 	return decodeURIComponent((str+'').replace(/\+/g, '%20'));
@@ -168,12 +168,12 @@ var
 		var div = '\
 		<div class="author" id="author-plate-{%id}" data-id="{%id}" style="display: inline-block; width: 100%; border: 1px solid gray; border-radius: 4px;">\
 			<div>\
-				<div class="state" style="width: 100px; text-align: center; padding: 0 5px; display: inline-block;"></div>\
+				<div class="state" style="width: 140px; text-align: center; padding: 0 5px; display: inline-block;"></div>\
 				<a href="/authors/id/{%id}">{%fio}</a>\
 			</div>\
-			<div>\
-				<div class="timings" style="font-size: 8px; color: #999; text-align: center; width: 100px; padding: 0 5px; display: inline-block;"></div>\
-				<div class="updates"></div>\
+			<div style="font-size: 8px; color: #999;">\
+				<div class="timings" style="float: left; text-align: center; width: 140px; padding: 0 5px; display: inline-block;">&nbsp;</div>\
+				<div class="updates" style="float: left; padding: 0 5px;"><span class="loaded">0</span>/<span class="total">0</span></div>\
 			</div>\
 		</div>';
 		var globalTimer = 0;
@@ -266,7 +266,7 @@ var
 				}
 			, 'error': function(response, verbose) {
 					updatesService.error(response, verbose);
-					updatesService.checkUpdates();
+					setTimeout(function(){updatesService.checkUpdates();}, 500);
 				}
 			});
 		}
@@ -281,15 +281,15 @@ var
 				return;
 			}
 
+			if (!this.doLoadUpdates())
+				return;
+
 			this.toggleUI('.update-btn', false);
 			this.toggleUI('.load-btn', false);
 			this.json('load-updates', {
 				'success': function(data) {
 					updatesService.toggleUI('.load-btn', true);
-					var left = parseInt(data.left);
-					var loaded = data.diff ? data.diff.length : 0;
-					updatesService.dropUpdates(loaded, left);
-					setTimeout(function(){updatesService.loadUpdates();}, 200);
+					updatesService.processLoaded(data);
 				}
 			, 'error': function (response, verbose) {
 					updatesService.toggleUI('.load-btn', true);
@@ -298,9 +298,53 @@ var
 				}
 			});
 		}
+
+		this.processLoaded = function(data) {
+
+			var updated = 0;
+			var colors = {'deleted': 'maroon', 'fail': 'red', 'no-diff': 'silver'};
+			var fails = ['deleted', 'fail', 'no-diff'];
+			for (var j in fails) {
+				var type = fails[j];
+				var pages = data[type] || [];
+				for (var i in pages) {
+					var page = pages[i];
+					var pageID = parseInt(page['page-id']);
+					var authorID = parseInt(page['author']);
+
+					var p = this.$('#versions-' + pageID);
+					p.css('color', colors[type]).attr('id', null);
+
+					this.authorNewUpdates(authorID, 0, -1);
+				}
+			}
+
+			if (data.diff)
+				for (var i in data.diff) {
+					var page = data.diff[i];
+					var pageID = parseInt(page['page-id']);
+					var authorID = parseInt(page['author']);
+
+					var p = this.$('#versions-' + pageID);
+					p.css('color', 'navy');
+					p.attr('href', p.attr('a-href'));
+					p.mousedown(function(){$(this).css('color', 'green').attr('id', null)});
+
+					updated++;
+					this.authorNewUpdates(authorID, 1, 0);
+				}
+
+			this.dropUpdates(updated, parseInt(data.left));
+			setTimeout(function(){updatesService.loadUpdates();}, 200);
+		}
+
 		this.dropUpdates = function(loaded, left) {
 			this.error('Loaded ' + loaded + '/' + (loaded + left) + ' updates', true);
 			waits = left;
+		}
+
+		this.doLoadUpdates = function() {
+			return this.$('#do-load-check').is(':checked');
 		}
 
 		this.serveAuthors = function(authors) {
@@ -357,7 +401,8 @@ var
 				}
 			, 'error': function(response, verbose) {
 					updatesService.error(response, verbose);
-					updatesService.authorsServed();
+					updatesService.loadUpdates();
+//					updatesService.authorsServed();
 				}
 			});
 		}
@@ -394,7 +439,7 @@ var
 //			alert(toJSON(data));
 			var cast = parseFloat(data['cast-for']);
 			if ((cast != 0) && (data['load-timings'] && (data['load-timings'] != ''))) {
-				plate.find('.timings').html(patternize("{%speed}<br/>({%length}/{%time})", data['load-timings']));
+				plate.find('.timings').html(patternize("{%speed} ({%length}/{%time})", data['load-timings']));
 			} else
 				plate.find('.timings').html('***');
 
@@ -409,13 +454,13 @@ var
 					updates.append(patternize('<div><a href="/pages?group={%group-id}">{%group-title}</a>:</div>', group))
 					.append(groupUL);
 
-					var u = this.showUpdates(updates, group['updates']);
+					var u = this.showUpdates(id, updates, group['updates']);
 					changes+= u[0];
 				}
 			}
 
-			var u = this.showUpdates(updates, data);
-			changes+= u[0];
+			var u = this.showUpdates(id, updates, data);
+			changes += u[0];
 
 			this.authorState(id, AS_UPD);
 
@@ -427,32 +472,37 @@ var
 			}
 		}
 
-		this.showUpdates = function (container, data) {
+		this.showUpdates = function (authorID, container, data) {
 			var links = data['pages-queued-links'] || [];
 			var queuedPages = data['pages-queued'] || [];
 			var newPages = data['pages-new'] || [];
 			var renamedPages = data['pages-changed-title'] || [];
 
-			var changes = 0;
+			var changes = 0, updates = 0;
 			var typed = {'added': newPages, 'diff': queuedPages};
 			var blocks = {'diff': [], 'added': [], 'renamed': [], 'moved': [], 'removed': []};
+			var used = {};
 			for (var type in typed) {
 				pages = typed[type];
 				for (var i in pages) {
 					var page = pages[i];
 					var pageID = parseInt(page['page-id']) || parseInt(page['id']);
-					if (!pageID) continue;
+					if (!(pageID && !used['p' + pageID])) continue;
+					used['p' + pageID] = true;
 
 					var link = page.link;
 					links = drop(links, link);
 					if (page.title == '') page.title = '&lt;no title&gt;';
+					page['id'] = pageID;
+					page['page-id'] = pageID;
 
 					blocks[type].push(this.appendUpdate(
-						'&laquo;<a href="/pages/version/{%page-id}?r={%random}">{%title}</a>&raquo;'
+						'&laquo;<a style="color: gray" target="_blank" id="versions-{%page-id}" a-href="/pages/version/{%page-id}?r={%random}">{%title}</a>&raquo;'
 					, page));
 
 					waits++;
 					changes++;
+					updates++;
 				}
 			}
 
@@ -464,6 +514,8 @@ var
 				var link = page.link;
 				links = drop(links, link);
 				if (page.title == '') page.title = '&lt;no title&gt;';
+				page['id'] = pageID;
+				page['page-id'] = pageID;
 
 				blocks['renamed'].push(this.appendUpdate(
 					'&laquo;<a href="/pages/version/{%id}?r={%random}">{%title}</a>&raquo; &rarr; &laquo;<a href="/pages/version/{%id}?r={%random}">{%new-title}</a>&raquo;'
@@ -480,6 +532,7 @@ var
 				outer.append('<ul>' + blocks[type].join('\n') + '</ul>');
 				container.append($('<div>').append(outer));
 			}
+			this.authorNewUpdates(authorID, 0, updates);
 
 			return [changes, links];
 		}
@@ -533,6 +586,18 @@ var
 			var stateDIV = this.$('#author-plate-' + id + ' .state');
 			stateDIV.html(label[state]);
 			stateDIV.css({'color': color[state]});
+		}
+
+		this.authorNewUpdates = function(id, loaded, total) {
+			var color = ['silver', 'lime'];
+			var updatesDIV = this.$('#author-plate-' + id + ' .updates');
+			var lDIV = updatesDIV.find('.loaded');
+			var tDIV = updatesDIV.find('.total');
+			var prevLoaded = parseInt(lDIV.text()) + loaded;
+			var prevTotal = parseInt(tDIV.text()) + total;
+			lDIV.text(prevLoaded);
+			tDIV.text(prevTotal);
+			updatesDIV.css({'color': color[(prevLoaded + prevTotal) > 0]});
 		}
 
 		var errorTimeout = 0;

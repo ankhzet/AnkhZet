@@ -8,7 +8,7 @@
 
 	define('AUTHOR_CHECK_MININTERVAL', 30); // check not oftener, than once per 30 minutes
 	define('AUTHOR_CHECK_MAXINTERVAL', 60 * 6); // check at least once per 6 hours
-	define('USEFUL_INTERVAL', 60 * 60 * 24 * 7); // one week
+	define('USEFUL_INTERVAL', 60 * 60 * 24 * 61); // two month
 
 	class HistoryAggregator extends Aggregator {
 		static $instance = null;
@@ -187,39 +187,65 @@
 
 		function calcCheckFreq() {
 			$a = AuthorsAggregator::getInstance();
-			$d = $a->fetch(array('pagesize'=>0,'nocalc'=>true,'collumns'=>'id'));
-			$d = $d['total'] ? grabList($d['data'], 'id'): array();
+			$ids = $a->idsOf('1', false);
 
-			$at1 = $a->get($d, 'id, time');
-			$at = array();
-			foreach ($at1 as $row)
-				$at[intval($row['id'])] = $row['time'];
-
-			if (!!$d) {
+			if (!!$ids) {
 				$u = array();
 				$now = time();
-				foreach ($d as $author_id) {
+				$useful = $now - USEFUL_INTERVAL;
+				foreach ($ids as $author_id) {
 					$s = $this->dbc->query("
-						select t.time from (select u.id, u.time from updates u, groups g where u.kind = 3 and g.id = u.page and g.author = $author_id
-							union select u.id, u.time from updates u, pages p where u.kind not in (3, 4) and p.id = u.page and p.author = $author_id
-							union select u.id, u.time from updates u where u.kind = 4 and u.value = $author_id) t
-							order by t.time desc
+						select max(t1.time) as `time`, count(t1.id) as `total` from (
+							select t.time, t.id from (
+										select u.id, u.time, (-u.page) as `page` from updates u, groups g
+										where u.time >= $useful and (u.kind = 3 and g.id = u.page and g.author = $author_id)
+							union select u.id, u.time, u.page from updates u, pages p
+										where u.time >= $useful and (u.kind not in (3, 4) and p.id = u.page and p.author = $author_id)
+							union select u.id, u.time, (-u.page) as `page` from updates u
+										where u.time >= $useful and (u.kind = 4 and u.value = $author_id)) t
+							group by `page`, `time`
+							) t1
 					");
-					$f = grabList($this->dbc->fetchrows($s), 'time');
-					$f = array_unique($f);
-					$r = array();
-					if ($f) {
-						$last_update = $f[0];
-						$week_updates = $last_update - USEFUL_INTERVAL;
-						foreach ($f as $timestamp)
-							if ($timestamp > $week_updates)
-								$r[] = $timestamp;
-							else
-								break; // array is sorted
-					}
-					$update_freq = ($now - $last_update > USEFUL_INTERVAL) ? ($now - $last_update) / USEFUL_INTERVAL : 1;
-					$u[$author_id] = array(0 => count($r) / $update_freq, 1 => $author_id, 2 => $at[$author_id]);
+					$row = @mysql_fetch_assoc($s);
+					$last_update = intval($row['time']);
+					$updates = min(1000, intval($row['total']));
+
+					$since_last_update = $now - $last_update;
+					$update_freq = ($since_last_update > USEFUL_INTERVAL) ? $since_last_update / USEFUL_INTERVAL : 1;
+					$u[$author_id] = array(0 => $updates / $update_freq, 1 => $author_id, 2 => $updates, 3 => $update_freq);
 				}
+
+				$updated_authors = 0;
+				foreach ($u as &$data) {
+					$updates = intval($data[2]);
+					if ($updates) $updated_authors++;
+				}
+
+				$max = 0;
+				do {
+					$sum = 0;
+					$avg = 0;
+					$mold = $max;
+					$max = 0;
+					foreach ($u as &$data) {
+						$updates = intval($data[2]);
+						$sum += $updates;
+						if ($max < $updates) $max = $updates;
+					}
+					$avg = max(1, $sum / $updated_authors);
+
+					$border = $avg + ($max - $avg) / 2;
+					$mod = false;
+					foreach ($u as &$data) {
+						if ($data[2] > $border) {
+							$mod = true;
+							$data[2] = $border + ($data[2] - $border) / 2;
+						}
+					}
+				} while ($mold != $max);
+
+				foreach ($u as &$data)
+					$data[0] = $data[2] / $data[3];
 
 				usort ($u, "array_comparator");
 				$last = count($u) - 1;
@@ -227,10 +253,11 @@
 				$c_min = $u[$last][0];
 				$time_denom = (AUTHOR_CHECK_MAXINTERVAL - AUTHOR_CHECK_MININTERVAL) / ($c_max - $c_min);
 				foreach ($u as &$author)
-					$author[3] = intval(($c_max + $c_min - $author[0]) * $time_denom) + AUTHOR_CHECK_MININTERVAL;
+					$author[2] = intval(($c_max + $c_min - $author[0]) * $time_denom) + AUTHOR_CHECK_MININTERVAL;
 
+//				debug2(array(fetch_field($u, 0), $u));
 				foreach ($u as $update_data)
-					$a->update(array('time' => $update_data[2], 'update_freq' => $update_data[3]), $update_data[1], true);
+					$a->update(array('update_freq' => $update_data[2]), $update_data[1], true, false);
 
 //				debug2(array(AUTHOR_CHECK_MAXINTERVAL, AUTHOR_CHECK_MININTERVAL, $time_denom, $u));
 			}
@@ -241,11 +268,4 @@
 	function array_comparator($a1, $a2) {
 		if ($a1[0] == $a2[0]) return 0;
 		return ($a1[0] > $a2[0]) ? -1 : 1;
-	}
-
-	function grabList($rows, $field) {
-		$r = array();
-		foreach ($rows as &$row)
-			$r[] = intval($row[$field]);
-		return $r;
 	}
