@@ -51,11 +51,14 @@ class DiffIO {
 	public function same($text) {
 //		$text = mb_convert_encoding($text, 'UTF8', 'cp1251');
 		$l = strlen($text);
+//		debug2($l);
 		if ($this->context && ($l >= $this->context - 6)) {
-			$s1 = safeSubstr($text, $this->context / 2, 100);
-			$s2 = safeSubstrl($text, $this->context / 2, 100);
-			$text = "<span class=\"context\">{$s1}</span>\n~~~\n<span class=\"context\">{$s2}</span>";
+			$s1 = sb_safeSubstr($text, $this->context / 2);
+			$s2 = sb_safeSubstrl($text, $this->context / 2);
+			$text = "<span class=\"context\">{$s1}<hr class=\"context-sep\"/>    {$s2}</span>";
 		}
+
+//		debug2($text);die();
 		$this->out($text);
 	}
 
@@ -76,8 +79,6 @@ class DiffIO {
 }
 class DiffIOClean extends DiffIO {
 	public function replace($diff, $old, $new) {
-		$old = mb_convert_encoding($old, 'UTF8', 'cp1251');
-		$new = mb_convert_encoding($new, 'UTF8', 'cp1251');
 		$diff->repl[] = array($old, $new);
 		if ($this->show_new)
 			if (trim($new))
@@ -98,34 +99,32 @@ class DiffSubsplitter {
 		$this->DIFF_TEXT_SPLITTERS = array (
 //			array('/(' . PHP_EOL . '[' . PHP_EOL . '\s]*' . PHP_EOL . ')/', '/' . PHP_EOL . '[' . PHP_EOL . '\s]*' . PHP_EOL . '/')
 			array('/(' . PHP_EOL . ')/', '/' . PHP_EOL . '/')
-		, array('/([\.\!\?]+)/', '/[\.\!\?]+/')
-//		, array('/([\>\s]+)/', '/[\>\s]+/')
+		, array('/([\.\!\?]+)/S', '/[\.\!\?]+/S')
+		, array('/([\>\s]+)/', '/[\>\s]+/')
 		);
 	}
 
 	function split($t1, $t2, $stage = 0) {
+		$splitter = isset($this->DIFF_TEXT_SPLITTERS[$stage]) ? $this->DIFF_TEXT_SPLITTERS[$stage] : null;
+		$split = $splitter ? array(textsplit($t1, $splitter), textsplit($t2, $splitter)) : false;
+
 		switch ($stage) {
 		case 0:
-			$split = $this->sequentialMerge($t1, $t2);
+			$split = $this->sequentialMerge($split[0], $split[1]);
 			break;
 		default:
-			$splitter = isset($this->DIFF_TEXT_SPLITTERS[$stage]) ? $this->DIFF_TEXT_SPLITTERS[$stage] : null;
-			$split = $splitter ? array(textsplit($t1, $splitter), textsplit($t2, $splitter)) : false;
+			if (is_array($split))
+				$split = array(array($split[0], null), array($split[1], null));
 		}
 //		debug($split);
 		return $split;
 	}
 
-	function sequentialMerge($t1, $t2) {
+	function sequentialMerge($l1, $l2) {
 //		TimeLeech::addTimes('seq::start()?'.rand());
-		$l1 = explode(PHP_EOL, $t1);
-		$l2 = explode(PHP_EOL, $t2);
-//		TimeLeech::addTimes('seq::explode()?'.rand());
-		unset($t1);
-		unset($t2);
 		$c1 = count($l1);
 		$c2 = count($l2);
-//		debug(array($c1, $c2));
+//		debug2(array($c1, $c2));
 		$h = array();
 		$h1 = array();
 		$h2 = array();
@@ -141,7 +140,7 @@ class DiffSubsplitter {
 			}
 
 			// array_search() has VERY LOW performance for searching string's (access via array keys is 20 times faster, e.g. 0.05 msec versus 1.0 sec)
-			$m = crc32($line); // why hash? hash consumes ~32bit, while text line can be > 4 bytes long (most of the time)
+			$m = crc32(trim($line)); // why hash? hash consumes ~32bit, while text line can be > 4 bytes long (most of the time)
 			$idx = isset($u[$m]) ? intval($u[$m]) : 0;
 			if (!$idx) {
 				$idx = $i++;
@@ -153,7 +152,7 @@ class DiffSubsplitter {
 		}
 //		TimeLeech::addTimes('seq::hash1()?'.rand());
 		foreach ($l2 as $j => $line) {
-			$m = crc32($line);
+			$m = crc32(trim($line));
 			$idx = isset($u[$m]) ? intval($u[$m]) : 0;
 			if (!$idx) {
 				$idx = $i++;
@@ -168,120 +167,90 @@ class DiffSubsplitter {
 		$c2 = count($h2);
 //		TimeLeech::addTimes('seq::hash2()?'.rand());
 //		debug2(array($c1, $c2));
-		$n1 = array();
-		$n2 = array();
-		foreach ($h1 as $hash) $n1[$hash] = isset($n1[$hash]) ? intval($n1[$hash]) + 1 : 1;
-		foreach ($h2 as $hash) $n2[$hash] = isset($n2[$hash]) ? intval($n2[$hash]) + 1 : 1;
-//		debug(array($c1, $c2, $n1, $n2));
+		$n1 = array_count_values($h1);
+		$n2 = array_count_values($h2);
 
-		arsort($n1);
-		$d = array();
-		foreach ($n1 as $key => $count) if ($count <> 1) $d[] = $key;
-		foreach ($n2 as $key => $count) if ($count <> 1) $d[] = $key;
-		foreach ($d as $key) {
-			unset($n1[$key]);
-			unset($n2[$key]);
-		}
+		foreach (array_keys($n1) as $key) if ($n1[$key] > 1) unset($n1[$key]);
+		foreach (array_keys($n2) as $key) if ($n2[$key] > 1) unset($n2[$key]);
 
-//		debug(array($n1, $n2));
+		$n = array_unique(array_merge(array_keys($n1), array_keys($n2)));
+//		debug2(array($c1, $c2, $n1, $n2));
 
-		$n = array_intersect($n1, $n2);
-		$n = array_keys($n);
+//		debug2(array($n, $n1, $n2));die();
 		unset($n1, $n2);
-//		TimeLeech::addTimes('seq::uniques()?'.rand());
-		$l = array();
-		$k = array_flip($n);
-//		debug(array($n, $k));
-//		return;
-		for ($i = 0; $i < count($n); $i++) {
-			$hash = $n[$i];
-			if (!$hash) continue;
-			$i1 = $i3 = array_search($hash, $h1);
-			$i2 = $i4 = array_search($hash, $h2);
-			$c = 0;
-			while (($i1 < $c1) && ($h1[$i1++] == $h2[$i2++]))
-				$c++;
-			if ($c >= 2) {
-				while (($i3 < $c1) && (($t = $h1[$i3++]) == $h2[$i4++]))
-					$n[isset($k[$t]) ? $k[$t] : 0] = 0;
 
-				$l[$hash] = $c;
-			}
-		}
-//		TimeLeech::addTimes('seq::lengths()?'.rand());
-		arsort($l);
+//		debug2($n);die();
+//		TimeLeech::addTimes('seq::uniques()?'.rand());
+		asort($n);
 		$s = array();
-		$k = array_keys($l);
-		while (count($k)) {
-			$hash = array_shift($k);
-//			if ($l[$hash] < 2) continue;
-			$i1 = array_search($hash, $h1);
-			$i2 = array_search($hash, $h2);
-			if ($i1 === false || $i2 === false)
+		$k = array_flip($n); // hash => index
+//		debug2(array($n, $k)); die();
+
+		for ($i = 0; $i < count($n); $i++) {
+			$hash = isset($n[$i]) ? $n[$i] : 0;
+			if (!$hash)
 				continue;
 
-			$s[$hash] = array();
-			while (($i1 < $c1) && ($i2 < $c2) && (($t = $h1[$i1]) == $h2[$i2])) {
-				$s[$hash][] = $t;
-				$i = array_search($t, $k);
-				unset($k[$i]);
-				$i1++;
-				$i2++;
+			$i1 = array_search($hash, $h1);
+			$i2 = array_search($hash, $h2);
+			if (($i1 == false) || ($i2 == false))
+				continue;
+
+			$c = 0;
+			$i3 = $i1;
+			while (($i1 < $c1) && ($i2 < $c2) && (($hash2 = $h1[$i1++]) == $h2[$i2++]))
+				$c++;
+
+			if ($c > 0) {
+				$s[$hash] = array();
+				while ($i3 < $i1 - 1) {
+					$t = $h1[$i3++];
+					$s[$hash][] = $t;
+					if (isset($k[$t]) && (($idx = $k[$t]) > $i))
+						$n[$idx] = 0;
+				}
 			}
 		}
-		unset($l);
-//		TimeLeech::addTimes('seq::sequences()?'.rand());
-//			debug($s);
-/*
-		$u = array();
-		foreach ($s as &$seq)
-			$u = array_merge($u, $seq);
 
-		$c = array_count_values($u);
-		arsort($c);
-		foreach ($c as $hash => $cnt)
-			if ($cnt > 1)
-				echo "[<b>" . htmlspecialchars(mb_convert_encoding($h[$hash], 'UTF8', 'CP1251')) . "</b>] sequenced for $cnt times...<br />";
-/**/
-//			debug($s);
-/*
-		$o1 = array();
-		foreach ($h1 as $hash)
-			$o1[] = $h[$hash];
-		$o2 = array();
-		foreach ($h2 as $hash)
-			$o2[] = $h[$hash];
-/**/
+//		TimeLeech::addTimes('seq::lengths()?'.rand());
 
+//		debug2(array($h1, $h2));
 		$u1 = $this->_merge($c1, $h1, $h, $s);
 //		TimeLeech::addTimes('seq::merge_h1()?'.rand());
 		$u2 = $this->_merge($c2, $h2, $h, $s);
 //		TimeLeech::addTimes('seq::merge_h2()?'.rand());
 
-		unset($h, $h1, $h2);
+		unset($h, $h1, $h2, $s);
 //		debug(array(count($u1), count($u2)));
 		return array($u1, $u2);
 	}
 
-	function _merge($c, &$_h, &$h, &$s) {
-		$u1 = array();
+	function _merge($linesCount, &$linesAsHash, &$hashedLines, &$sequences) {
+//	debug2(array($linesCount));
+
+		$u = array();
+		$z = array();
 		$i = 0;
-		while ($i < $c) {
-			if (!($e = $_h[$i++])) continue;
-			if ($sequence = &$s[$e]) {
+		while ($i < $linesCount) {
+			if (!($hash = $linesAsHash[$i++])) continue;
+
+			if ($sequence = &$sequences[$hash]) {
 				$t = '';
+				$c = count($sequence);
+				$z[count($u)] = $c;
+				$j = 0;
 				$i--;
-				foreach ($sequence as $hash) {
-					if ($e != $hash) break;
-					$_h[$i] = 0;
-					$e = (++$i < $c) ? $_h[$i] : null;
-					$t .= PHP_EOL . $h[$hash];
+				while ($j < $c) {
+					$seqHash = $sequence[$j++];
+					$t .= $hashedLines[$seqHash];
+					$i++;
 				}
-				$u1[] = $t;
+				$u[] = $t;
 			} else
-				$u1[] = PHP_EOL . $h[$e];
+				$u[] = $hashedLines[$hash];
 		}
-		return $u1;
+//		debug2(array($u), 'u'); die();
+		return array($u, $z);
 	}
 }
 
@@ -294,6 +263,13 @@ class DiffBuilder {
 		$this->splitter = new DiffSubsplitter();
 		$this->repl = $repl ? $repl : array();
 		$this->io = $io ? $io : new DiffIO(100);
+	}
+
+	function subDiff($t1, $t2, $stage) {
+		$db = new DiffBuilder($this->io, $this->repl);
+		$db->diff($t1, $t2, $stage + 1);
+		$this->repl = $db->repl;
+		unset($db);
 	}
 
 	function diff($t1, $t2, $stage = 0) {
@@ -320,15 +296,74 @@ class DiffBuilder {
 			$split = $this->splitter->split($t1, $t2, $stage);
 //		TimeLeech::addTimes('diff::split()?'.rand());
 			if (is_array($split)) {
-				$this->l1 = $split[0];
-				$this->l2 = $split[1];
-				$this->c1 = count($this->l1);
-				$this->c2 = count($this->l2);
+				$u1 = &$split[0];
+				$u2 = &$split[1];
 
-				$this->buildHash();
-				$this->lcs();
-				$this->sequence();
-				$this->merge($stage);
+				$l1 = &$u1[0];
+				$l2 = &$u2[0];
+
+				$c1 = count($l1);
+				$c2 = count($l2);
+
+//				header('Content-Type: text/html; charset=win-1251');
+				if (count($u1[1])) {
+					$i1 = 0;
+					$i2 = 0;
+
+//	ob_end_flush();
+//					debug2(array($u1[1], $u2[1]));die();
+//					debug2(array($u1[1], $u2[1]));die();
+					$same = '';
+					$cc = 0;
+					while (($i1 < $c1) && ($i2 < $c2)) {
+						$i3 = $i1;
+						$i4 = $i2;
+						while (($i1 < $c1) && !isset($u1[1][$i1])) $r1[] = $l1[$i1++];
+						while (($i2 < $c2) && !isset($u2[1][$i2])) $r2[] = $l2[$i2++];
+						$r1 = array_slice($l1, $i3, $i1 - $i3);
+						$r2 = array_slice($l2, $i4, $i2 - $i4);
+
+//						debug2(array($r1, $r2, $i1 - $i3, $i2 - $i4));//die();
+						if (($rc1 = count($r1)) + ($rc2 = count($r2))) {
+							$r1 = join($r1);
+							$r2 = join($r2);
+//						debug2(array($r1, $r2));die();
+							if (trim($r1) == trim($r2))
+								$same .= $r1;
+							else {
+								if ($same) $this->io->same($same);
+//								debug2(array('same'=>$same, 'r1'=>$r1, 'r2'=>$r2, 'rc1'=>$rc1, 'rc2'=>$rc2));
+								$same = '';
+								switch (($rc1 ? -1 : 0) + ($rc2 ? 1 : 0)) {
+								case -1: $this->io->left($r1); break;
+								case  0: $this->subDiff($r1, $r2, $stage); break;
+								case  1: $this->io->right($r2); break;
+								}
+							}
+//							debug2("i1=$i1 : i2=$i2", 'diff'); if (($cc++>300)) die();
+						} else {
+							$same .= $l1[$i1];
+							$i1++;
+							$i2++;
+
+//							debug2("$i1:$i2", 'same');// die();
+						}
+					}
+
+					if ($same) $this->io->same($same);
+
+				} else {
+					$this->l1 = $l1;
+					$this->l2 = $l2;
+
+					$this->c1 = $c1;
+					$this->c2 = $c2;
+
+					$this->buildHash();
+					$this->lcs();
+					$this->sequence();
+					$this->merge($stage);
+				}
 			} else
 				$this->io->replace($this, $t1, $t2);
 		} else
@@ -355,7 +390,7 @@ class DiffBuilder {
 		$i = 1;
 		$u = array();
 		foreach ($this->l1 as $entity) {
-			$m = crc32($entity); // why hash? hash consumes ~32bit, while text line can be > 4 bytes long (most of the time)
+			$m = crc32(trim($entity)); // why hash? hash consumes ~32bit, while text line can be > 4 bytes long (most of the time)
 			$idx = isset($u[$m]) ? intval($u[$m]) : 0;
 			if (!$idx) {
 				$this->hash[$idx = $i++] = $entity;
@@ -364,7 +399,7 @@ class DiffBuilder {
 			$this->h1[] = $idx;
 		}
 		foreach ($this->l2 as $entity) {
-			$m = crc32($entity); // why hash? hash consumes ~32bit, while text line can be > 4 bytes long (most of the time)
+			$m = crc32(trim($entity)); // why hash? hash consumes ~32bit, while text line can be > 4 bytes long (most of the time)
 			$idx = isset($u[$m]) ? intval($u[$m]) : 0;
 			if (!$idx) {
 				$this->hash[$idx = $i++] = $entity;

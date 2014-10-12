@@ -354,3 +354,10 @@ tr:hover .act {
 	display: inline;
 }
 
+/**********************/
+
+.context-sep {
+	border: 0;
+	border-top: 1px dotted #666;
+	margin: 20px 0;
+}

@@ -314,7 +314,7 @@
 				$content = PageUtils::getPageContents($page, $version);
 				if (!$content)
 					throw new Exception('Version not found!');
-				$content = PageUtils::prepareForGrammar($content, true);
+
 				$content = mb_convert_encoding($content, 'UTF-8', 'CP1251');
 
 				View::addKey('preview', $content);
@@ -686,24 +686,22 @@
 			$t1 = PageUtils::getPageContents($page, $old);
 			$t2 = PageUtils::getPageContents($page, $cur);
 
-			$t1 = str_replace(array('&nbsp;', PHP_EOL), array("\t", ''), $t1);
-			$t2 = str_replace(array('&nbsp;', PHP_EOL), array("\t", ''), $t2);
-			$t1 = str_replace(array('<dd/>', '<br />', '<br/>'), PHP_EOL, $t1);
-			$t2 = str_replace(array('<dd/>', '<br />', '<br/>'), PHP_EOL, $t2);
-			$t1 = preg_replace('/ {3,}/', ' ', $t1);
-			$t2 = preg_replace('/ {3,}/', ' ', $t2);
+			$t1 = str_replace(PHP_EOL, '', $t1);
+			$t2 = str_replace(PHP_EOL, '', $t2);
+			$t1 = str_replace(array('<dd>'), PHP_EOL, $t1);
+			$t2 = str_replace(array('<dd>'), PHP_EOL, $t2);
 			require_once 'core_diff.php';
-			$io = new DiffIO(500);
+			$io = new DiffIOClean(500);
 			$io->show_new = !$show_old;
 			$db = new DiffBuilder($io);
 			$h = $db->diff($t1, $t2);
 			$c = join($io->output, '');
-			$c = str_replace("\t", '  ', $c);
+			$c = preg_replace('/ {2,}/', '    ', $c);
 			$c = mb_convert_encoding($c, 'UTF8', 'cp1251');
 
 			$old = array();
 			foreach ($h[0] as $oldText)
-				$old[] = str_replace(array(PHP_EOL, '\n'), '<br/>', $oldText);
+				$old[] = str_replace(array(PHP_EOL, '\n'), '<p>', $oldText);
 			$old = mb_convert_encoding(join($old, '", "'), 'UTF8', 'cp1251');;
 
 //			$new = count($h[1]) ? str_replace(array(PHP_EOL, '\n'), '<br />', join('", "', $h[1])) : '';

@@ -18,10 +18,11 @@
 
 				if ($clean)
 					$contents = (self::prepareForGrammar($contents, true));
-			} else
-				return false;
 
-			return $contents;
+				return $contents;
+			}
+
+			return false;
 		}
 
 		public static function prepareForGrammar($c, $cleanup = false) {
@@ -33,39 +34,29 @@
 				$c = preg_replace('"(</?(td|tr|table)[^>]*>)'.PHP_EOL.'"', '\1', $c);
 				$c = preg_replace('"'.PHP_EOL.'(</?(td|tr|table)[^>]*>)"', '\1', $c);
 				$c = str_replace(array(PHP_EOL, "\r", "\n", '</dd>'), '', $c);
-				$c = str_replace(array('<dd>', '<br>', '<br/>', '<br />'), PHP_EOL, $c);
-				$c = preg_replace('"<p\s*>([^<]*)</p>"i', '<p/>\1', $c);
+				$c = str_replace(array('<dd>', '<br>', '<br/>', '<br />', '<p>'), PHP_EOL, $c);
+				$c = preg_replace('"<p\s*>([^<]*)</p>"i', '<p>\1', $c);
 				$c = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $c);
 				$c = preg_replace('"<(\w+)[^>]*>((\s|\&nbsp;)*)</\1>"', '\2', $c);
 				$c = preg_replace('"</(\w+)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
 				$c = preg_replace('"<font([^<]*)color=\"?black\"?([^<]*)>"i', '<font\1\2>', $c);
 				$c = preg_replace('"<(font|span)\s*(lang=\"?[^\"]+\"?)\s*>([^<]*)</\1>"i', '\3', $c);
 				$c = preg_replace('"<font\s*>(?>((?>(?!</?font).)+)|(?R))*</font>"sxi', '\1', $c);
-				$c = preg_replace('"<p\s*>(?>((?>(?!</?p).)+)|(?R))*</p>"sxi', '<p/>\1', $c);
+				$c = preg_replace('"<p\s*>(?>((?>(?!</?p).)+)|(?R))*</p>"sxi', '<p>\1', $c);
 //				$c = preg_replace('"<(b|i|font)[^>]*></\1>"i', '', $c);
 				$c = preg_replace('"</(b|i)><\1>"i', '', $c);
 				$c = preg_replace('"([^ ])&nbsp;([^ ])"', '\1 \2', $c);
 
+				$c = preg_replace('/&nbsp;?/', ' ', $c);
+				$c = str_replace("\t", '  ', $c);
 				$c = preg_replace('/ {3,}/', '  ', $c);
 
-			} else
+				$c = preg_replace('/ {2,}/', '    ', $c);
+			} else {
 				$c = str_replace('<br />', PHP_EOL, $c);
+				$c = str_replace('<p>', PHP_EOL, $c);
+			}
 
-/*			$idx = 0;
-			$p = 0;
-			while (preg_match('"<(([\w\d]+)([^>]*))>"', substr($c, $p), $m, PREG_OFFSET_CAPTURE)) {
-				$p += intval($m[0][1]);
-				$sub = $m[0][0];
-				if (strpos($sub, 'class="pin"') === false) {
-					$idx++;
-					$tag = $m[2][0];
-					$attr = $m[3][0];
-					$u = "<$tag node=\"$idx\"$attr>";
-					$c = substr_replace($c, $u, $p, strlen($sub));
-					$p += strlen($u);
-				} else
-					$p += strlen($sub);
-			}*/
 			$p = 0;
 			while (preg_match('|<img [^>]*(src=(["\']?))/[^\2>]+\2[^>]*(>)|i', substr($c, $p), $m, PREG_OFFSET_CAPTURE)) {
 				$p += intval($m[1][1]);
@@ -73,7 +64,7 @@
 				$c = substr_replace($c, $u, $p, strlen($m[1][0]));
 				$p += strlen($u) + intval($m[3][1]) - intval($m[1][1]) - 5;
 			}
-			return /*$cleanup ? $c : */str_replace(PHP_EOL, PHP_EOL . '<dd/>', $c);
+			return /*$cleanup ? $c : */str_replace(PHP_EOL, PHP_EOL . '<dd>', $c);
 		}
 
 		public static function traceMark($uid, $trace, $page, $author) {
