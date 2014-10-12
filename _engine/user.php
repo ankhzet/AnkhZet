@@ -365,4 +365,43 @@
 			return $sent;
 		}
 
+		static function tryToLogin($login, $password) {
+			require_once "dbengine.php";
+			$s = Ses::get(SAM::SAM_COOKIES);
+			if ($login && $password) {
+				$login = str_replace("'", '', $login);
+				$password = md5(str_replace("'", '', $password) . User::PASS_SALT);
+				$d = msqlDB::o();
+//				echo "[" . md5($p . User::PASS_SALT) . "]<br>";
+				$e = $d->select('users', "`login` = '$login' and `password` = '$password'");
+				$r = $d->fetchrows($e);
+				$ok = count($r) == 1;
+				if (!$ok) return false;
+
+				$uid = intval($r[0]['id']);
+
+				$db = msqlDB::o();
+				$q = $db->select('sessions', "`user` = $uid", '`id`');
+				$id = $q ? mysql_result($q, 0) : null;
+
+				if ($id) {
+					$s->uid = $id;
+					$s->linked = $uid;
+				} else
+					$s->gen($uid);
+
+				$s->write(SAM::SAM_COOKIES, false);
+				return $s->linked;
+			}
+
+			return false;
+		}
+
+		static function tryToLogout() {
+			$s = Ses::get(SAM::SAM_COOKIES);
+			Loc::Locale();
+			$s->read(null, null, Loc::$locid);
+			$s->write(SAM::SAM_COOKIES);
+		}
+
 	}

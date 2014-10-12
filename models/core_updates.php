@@ -519,7 +519,7 @@
 					);
 
 //					echo "&gt; U@{$q_id}, ID#{$page}: {$row['link']}...<br />";
-					$timings = array();
+					$timings = $time;
 					$size = $c->compare($page, "{$row['author']}/{$row['link']}", $timings);
 
 					/* reconnect mysql DB (preventing "MySQL server has gone away") */
@@ -547,7 +547,11 @@
 							$q->dbc->delete($q->TBL_DELETE, '`id` = ' . $q_id);
 						else
 							$q->dbc->update($q->TBL_INSERT, array('state' => QUEUE_PROCESS, 'updated' => time()), '`id` = ' . $q_id);
-						$result[$deleted ? 'deleted' : 'fail'][] = array('page-id' => $page, 'link' => $row['link'], 'author' => $row['author-id']);
+						$result[$deleted ? 'deleted' : 'fail'][] = array(
+						'page-id' => $page, 'link' => $row['link'], 'author' => $row['author-id']
+						, 'reason' => $timings['reason']
+						, 'rcode' => $timings['RCode']
+						);
 //						echo_log('page_request_failed');
 						$done++;
 //						return $result;

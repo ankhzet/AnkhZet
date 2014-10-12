@@ -10,9 +10,7 @@
 			$author = uri_frag($params, 'author');
 			$group = uri_frag($params, 'group');
 			$page = uri_frag($params, 'page');
-			$limit = uri_frag($params, 'last');
-
-			$limit = $limit ? $limit : 30;
+			$limit = uri_frag($params, 'newer-than', 24 * 7); // one week by def
 
 			$pageIDs = null;
 			switch (true) {
@@ -73,7 +71,8 @@
 					$delta = intval($row['size']) - intval($row['size_old']);
 					$old_version_date = date('d-m-Y/H-i-s', $row['time_old']);
 					$i[$hID] = array(
-						'uid' => $row[0]
+						'uid' => intval($row[0])
+					, 'kind' => intval($row[1])
 					, 'authorID' => $author
 					, 'groupID' => $group
 					, 'pageID' => $pageId
@@ -101,7 +100,7 @@
 					, 'samlib' => "$alink/$link"
 					, 'link' => $i[$hID]['link']
 					, 'link2' => "/pages/id/{$pageId}"
-					, 'pubdate' => date('d.m.Y H:i:s', $row['time'])
+					, 'pubdate' => date('d.m.Y H:i', $row['time'])
 					, 'description' => &$d[$pageId]
 					);
 				}
@@ -166,12 +165,13 @@
 		}
 		static function fetchWithFilter($filter = "1", &$pages, $limit) {
 			require_once 'core_updates.php';
+			$limit = time() - $limit * (60 * 60);
 			$dbc = msqlDB::o();
-			$f1 = array(UPKIND_SIZE, UPKIND_DELETE, UPKIND_ADDED, UPKIND_DELETED);
+			$f1 = array(UPKIND_SIZE, UPKIND_DELETE, UPKIND_ADDED, UPKIND_DELETED, UPKIND_RENAMED);
 			$f1 = join(',', $f1);
 			$s = $dbc->select('pages p, updates u'
-			, "{$filter} and u.kind in ($f1) and u.page = p.id order by u.time desc limit $limit"
-			, 'u.id as `0`, p.id as `page`, p.`description`, p.`size`, u.`time`, p.`title`, u.`value` as `delta`, u.`time` as `time_old`'
+			, "{$filter} and u.kind in ($f1) and u.page = p.id and u.time >= $limit order by u.time desc"
+			, 'u.id as `0`, u.kind as `1`, p.id as `page`, p.`description`, p.`size`, u.`time`, p.`title`, u.`value` as `delta`, u.`time` as `time_old`'
 			);
 			$f = $dbc->fetchrows($s);
 			$pages = array();

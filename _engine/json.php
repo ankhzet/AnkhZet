@@ -14,6 +14,9 @@
 		switch (true) {
 		case is_bool($data):
 			break;
+		case is_string($data):
+			$data = '"' . addslashes(str_replace(array("'", '"'), array('&#39;', '&quot;'), $data)) . '"';
+			break;
 		case is_numeric($data):
 			$data = intval($data);
 			break;
@@ -40,6 +43,9 @@
 	function format2 ($tab, $data, $name = null) {
 		$delim = '=';
 		switch (true) {
+		case is_string($data):
+			$data = '"' . addslashes(str_replace("'", '&#39;', $data)) . '"';
+			break;
 		case is_bool($data):
 		case is_numeric($data):
 			break;
@@ -58,6 +64,7 @@
 				? "{\n$tab\t" . join(";\n$tab\t", $e) . ";\n$tab\t}"
 				: "{\n$tab" . join(";\n$tab", $e) . ";\n$tab}";
 			break;
+		case is_string($data):
 		default:
 			$data = '"' . addslashes(str_replace("'", '&#39;', $data)) . '"';
 		}

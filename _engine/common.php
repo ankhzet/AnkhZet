@@ -2,6 +2,8 @@
 	define('THUMB_ROOT', '/data/thumbnails');
 
 	mb_internal_encoding('UTF-8');
+	if (!defined('USE_TIMELEECH'))
+		define('USE_TIMELEECH', 0);
 
 	function post($field) {
 		return isset($_REQUEST[$field]) ? $_REQUEST[$field] : null;
@@ -22,11 +24,27 @@
 	function fetch_field(&$array, $field, $index = null) {
 		$result = array();
 		if ($index)
-			foreach ($array as &$row)
-				$result[$row[$index]] = $row[$field];
+			if (is_array($field))
+				foreach ($array as &$row) {
+					$r = array();
+					foreach ($field as $f)
+						$r[$f] = $row[$f];
+					$result[$row[$index]] = $r;
+				}
+			else
+				foreach ($array as &$row)
+					$result[$row[$index]] = $row[$field];
 		else
-			foreach ($array as &$row)
-				$result[] = $row[$field];
+			if (is_array($field))
+				foreach ($array as &$row) {
+					$r = array();
+					foreach ($field as $f)
+						$r[$f] = $row[$f];
+					$result[] = $r;
+				}
+			else
+				foreach ($array as &$row)
+					$result[] = $row[$field];
 
 		return $result;
 	}
@@ -99,7 +117,7 @@
 	}
 
 	function cleanup_dir($dir) {
-		if (is_file($path = SUB_DOMEN . $dir))
+		if (is_file($path = ((strpos($dir, 'cms:') === false) ? SUB_DOMEN . $dir : $dir)))
 			return unlink($path);
 		else {
 			$d = dir($path);
@@ -463,22 +481,21 @@
 		if (!(is_file($log_file) && filesize($log_file))) {
 			$line = "<?php \n\theader(\"Content-Type: text/html\");?><pre>\n{$line}";
 		}
-		if ($f = fopen($log_file, 'a')) {
-			fwrite($f, $line);
-			fclose($f);
-			$log_file = URIStream::real($log_file, &$log_file);
-			@chmod($log_file, 0662);
-		} else
-			echo $line;
+		error_log($line, 3, $log_file);
 	}
 
 /* ---------- Pattern templates handling -----------------
  */
 
 	function patt_key($value) { return '{%' . $value . '}'; }
+	function patt_key_loc($matches) { return Loc::lget(strtolower($matches[1])); }
 
 	function patternize($pattern, &$data) {
-		return str_replace(array_map('patt_key', array_keys($data)), $data, $pattern);
+		$pattern = str_replace(array_map('patt_key', array_keys($data)), $data, $pattern);
+		if (strpos($pattern, '{%l:') !== false)
+			$pattern = preg_replace_callback('"\{\%l:([^}]+)}"', 'patt_key_loc', $pattern);
+
+		return $pattern;
 	}
 
 	function html_escape(&$row, $fields) {

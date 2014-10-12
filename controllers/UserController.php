@@ -101,52 +101,25 @@
 		}
 
 		public function actionLogout($r) {
-			require_once "session.php";
-			$s = Ses::get(SAM::SAM_COOKIES);
-			Loc::Locale();
-			$s->read(null, null, Loc::$locid);
-			$s->write(SAM::SAM_COOKIES);
+			User::tryToLogout();
 		}
 
 		public function actionLogin($r) {
-			require_once "session.php";
-			require_once "dbengine.php";
-			$s = Ses::get(SAM::SAM_COOKIES);
 			$l = post('login');
 			$p = post('pass');
-			if ($l && $p) {
-				$d = msqlDB::o();
-//				echo "[" . md5($p . User::PASS_SALT) . "]<br>";
-				$e = $d->select('users', '`login` = \'' . $l . '\' and `password` = \'' . md5($p . User::PASS_SALT) . '\'');
-				$r = $d->fetchrows($e);
-				$ok = count($r) == 1;
-				if (!$ok) {
+
+			$uid = intval(User::tryToLogin($l, $p));
+			if (!$uid) {
+				if ($l && $p) {
 					$this->view->errors = true;
-					$this->view->renderTPL('user/login');
 					sleep(1);
-					return;
 				}
-
-				$uid = intval($r[0]['id']);
-
-				$db = msqlDB::o();
-				$q = $db->select('sessions', "`user` = $uid", '`id`');
-				$id = $q ? mysql_result($q, 0) : null;
-
-				if ($id) {
-					$s->uid = $id;
-					$s->linked = $uid;
-				} else
-					$s->gen($uid);
-
-				$s->write(SAM::SAM_COOKIES, false);
+				$this->view->renderTPL('user/login');
+			} else {
 				$location = uri_frag($_REQUEST, 'url', '', 0);
 				locate_to(preg_match('-^/-', $location) ? $location : "/$location");
-				return;
 			}
-			$this->view->renderTPL('user/login');
+
 		}
 
-
 	}
-?>

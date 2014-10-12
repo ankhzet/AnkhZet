@@ -48,8 +48,10 @@
 				}
 
 				return array(strlen($html1), strlen($html2), $size);
-			} else
+			} else {
+				$time['reason'] = 'Get contents failed.';
 				return false;
+			}
 		}
 
 	}

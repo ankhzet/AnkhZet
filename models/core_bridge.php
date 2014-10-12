@@ -1,12 +1,12 @@
 <?php
-	/**/$r_default_context = stream_context_get_default(array(
+	/** /$r_default_context = stream_context_get_default(array(
 		'http' => array(
 			'proxy' => 'http://localhost:8080',
 			'request_fulluri' => true
 		)
 	));/**/
 
-	define('CURL_TIMEOUT', 360);
+	define('CURL_TIMEOUT', 60);
 	define('CURL_BOT_UA', 'AnkhZet Cache Sync Bot v0.1');
 
 	static $curl;
@@ -26,7 +26,7 @@
 			if ($params && isset($params['referer']))
 				curl_setopt($c, CURLOPT_HTTPHEADER, array('Referer' => $params['referer']));
 			curl_setopt($c, CURLOPT_TIMEOUT, CURL_TIMEOUT);
-			/**/
+			/** /
 			curl_setopt($c, CURLOPT_PROXY, "http://localhost:8080");
 			curl_setopt($c, CURLOPT_PROXYPORT, 8080);
 			/**/
@@ -34,9 +34,17 @@
 
 			$response = curl_exec($c);
 			$code = curl_getinfo($c, CURLINFO_HTTP_CODE);
-			if ($code == 404) {
+			$params['RCode'] = $code;
+			switch ($code) {
+			case 200:
+			case 206:
+			case 301:
+			case 302:
+				break;
+			case 404:
 				$response = false;
 				$params[404] = true;
+				break;
 			}
 
 			$t = getmicrotime() - $t;
@@ -45,7 +53,8 @@
 			$len = fs($len);
 			$t = intval($t * 1000) / 1000;
 		} catch (Exception $e) {
-			debug2($e);
+//			debug2($e);
+			$params['exception'] = (string)$e;
 			return false;
 		}
 //		if (1) {
