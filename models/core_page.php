@@ -58,11 +58,11 @@
 			return self::$instance;
 		}
 
-		public function fetch(array $params) {
+		public function fetch(array $params, $count = false) {
 			$params['filter'] = 'c.`page` = p.`id` and p.`group` = g.`id` and p.`author` = a.`id`' . (isset($params['filter']) ? " and ({$params['filter']})" : '');
 			$params['order'] = isset($params['order']) ? str_replace('`time`', 'c.`time`', $params['order']) : 'c.`time`';
 			$params['desc'] = ($params['desc'] === 0) ? 0 : false;
-			return parent::fetch($params);
+			return parent::fetch($params, $count);
 		}
 
 		function genComposition($pages) {

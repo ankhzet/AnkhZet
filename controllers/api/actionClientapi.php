@@ -119,8 +119,9 @@
 
 			$c = uri_frag($params, 'collumns', null, false);
 			$c = $c ? explode(',', $c) : null;
-			foreach ($c as &$collumn)
-				$collumn = preg_replace('/[^\w\d_]/i', '', $collumn);
+			if ($c)
+				foreach ($c as &$collumn)
+					$collumn = preg_replace('/[^\w\d_]/i', '', $collumn);
 
 			$collumns = $c ? '`' . join('`,`', $c) . '`' : '*';
 

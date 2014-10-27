@@ -98,10 +98,12 @@
 				return $s ? intval(@mysql_result($s, 0)) : 0;
 
 			$ids = array();
-			$row = 0;
-			if ($s)
-				while ($id = intval(@mysql_result($s, $row++)))
-					$ids[] = $id;
+			if ($s) {
+				$row = 0;
+				$rows = mysql_num_rows($s);
+				while ($row < $rows)
+					$ids[] = intval(@mysql_result($s, $row++));
+			}
 
 			return $ids;
 		}
