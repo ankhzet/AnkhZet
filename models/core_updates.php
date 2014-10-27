@@ -1,4 +1,6 @@
 <?php
+	if (ROOT == 'ROOT') die('oO');
+
 	require_once 'core_bridge.php';
 	require_once 'aggregator.php';
 
@@ -22,6 +24,18 @@
 	function echo_log($text, $postfix = '') {
 		echo Loc::lget($text) . $postfix . '<br />' . PHP_EOL;
 		return false;
+	}
+
+	function normalizeQuotedStr($str) {
+		$trans_tbl = get_html_translation_table (HTML_ENTITIES);
+		$trans_tbl2 = array_flip ($trans_tbl);
+
+		$s1 = str_replace('&#039;', '\'', $str);
+		$s2 = strtr($s1, $trans_tbl2);
+		$s3 = htmlspecialchars($s2);
+		$s4 = str_replace('\'', '&#039;', $s3);
+
+		return $s4;
 	}
 
 	class AuthorWorker {
@@ -228,9 +242,6 @@
 					$page_titles[$link] = $data[1];
 				}
 
-			$trans_tbl = get_html_translation_table (HTML_ENTITIES);
-			$trans_tbl = array_flip ($trans_tbl);
-
 			if (count($check)) { // ok, there are smth to check
 				$diff = array();
 				$link_filter = join('", "', array_keys($check));
@@ -251,10 +262,10 @@
 
 						$page_id = intval($row['id']);
 
-						$quoted = addslashes(htmlspecialchars(strtr(str_replace('&#039;', '\'', $row['title']), $trans_tbl), ENT_QUOTES));
-						$new_quoted = htmlspecialchars($data[1], ENT_QUOTES);
+						$quoted = normalizeQuotedStr($row['title']);
+						$new_quoted = normalizeQuotedStr($data[1]);
 						if ($quoted <> $new_quoted) {
-							$pa->update(array('title' => $new_quoted), $page_id);
+							$pa->update(array('title' => addslashes($new_quoted)), $page_id);
 							$ua->changed($page_id, UPKIND_RENAMED, 0);
 							$result['pages-changed-title'][] = array_merge($row, array('new-title' => $new_quoted));
 						}
@@ -290,12 +301,12 @@
 					foreach ($check as $link => &$data) { // each new page
 						$idx = $data[0]; // group local id (IDX)
 						$gid = array_search($idx, $gi); // group global id (GUID)
-						$title = addslashes(htmlspecialchars($data[1], ENT_QUOTES));
+						$title = normalizeQuotedStr($data[1]);
 						$pid = $pa->add(array(
 							'author' => $author_id
 						, 'group' => $gid
 						, 'link' => $link
-						, 'title' => $title
+						, 'title' => addslashes($title)
 						, 'description' => addslashes(htmlspecialchars($data[3], ENT_QUOTES))
 						, 'size' => 0 // later it will be updated with version checker
 						));
@@ -357,8 +368,6 @@
 					$check[$link] = $data;
 			}
 
-			$trans_tbl = get_html_translation_table (HTML_ENTITIES);
-			$trans_tbl = array_flip ($trans_tbl);
 			if (count($check)) { // ok, there are smth to check
 				$link_filter = join('", "', array_keys($check));
 				$ua = UpdatesAggregator::getInstance();
@@ -376,10 +385,10 @@
 
 						$page_id = $row['id'];
 
-						$quoted = addslashes(htmlspecialchars(strtr(str_replace('&#039;', '\'', $row['title']), $trans_tbl), ENT_QUOTES));
-						$new_quoted = htmlspecialchars($data[0], ENT_QUOTES);
+						$quoted = normalizeQuotedStr($row['title']);
+						$new_quoted = normalizeQuotedStr($data[0]);
 						if ($quoted <> $new_quoted) {
-							$pa->update(array('title' => $new_quoted), $page_id);
+							$pa->update(array('title' => addslashes($new_quoted)), $page_id);
 							$ua->changed($page_id, UPKIND_RENAMED, 0);
 							$result['pages-changed-title'][] = array_merge($row, array('new-title' => $new_quoted));
 						}
@@ -405,16 +414,17 @@
 				if (count($check)) {
 //					echo_log('pages_new');
 					foreach ($check as $link => &$data) { // new pages
+						$page_title = normalizeQuotedStr($data[0]);
 						$pid = $pa->add(array(
 							'author' => $author_id
 						, 'group' => $group_id
 						, 'link' => $link
-						, 'title' => ($ptitle = addslashes(htmlspecialchars($data[0], ENT_QUOTES)))
+						, 'title' => addslashes($page_title)
 						, 'description' => addslashes(htmlspecialchars($data[2], ENT_QUOTES))
 						, 'size' => 0 // later it will be updated with diff checker
 						));
 						$diff[$pid] = $link;
-						$result['pages-new'][] = array('page-id' => $pid, 'link' => $link, 'title' => $ptitle);
+						$result['pages-new'][] = array('page-id' => $pid, 'link' => $link, 'title' => $page_title);
 					}
 				}
 
