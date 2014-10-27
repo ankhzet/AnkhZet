@@ -16,7 +16,7 @@
 		$e->append($cnt);
 	}
 
-	function debug2($var, $msg = 'dumping var') {
+	function debug2($var, $msg = 'dumping var', $nl = '<br/>') {
 		ob_start();
 		var_dump($var);
 		$cnt = ob_get_contents();
@@ -36,6 +36,7 @@
 		, '/([\n\40]+\[[0-9]+\]=> \"0\")/'
 		, '/data[^\{]*\{[\n\40]*\}/i'
 		, '/ /'
+		, '/\r/'
 		),
 		array(
 			' ('
@@ -50,11 +51,12 @@
 		, '$1'
 		, ''
 		, 'data => &lt;nulls&gt;'
-		, '&nbsp;'
+		, ' '
+		, ''
 		), $cnt);
 		$cnt = preg_replace_callback('/<=quot=>(.*?)<=quot=>[\r\n]+/mDs', 'debug_pr', $cnt);
-		$cnt = str_replace(array(htmlspecialchars('<=quot=>'), "\n"), array('&quot;', '<dd>'), $cnt);
-		echo '<b>' . $msg . '</b>:<BR><br /><span style="white-space: pre-line; line-height: 12px; font-family: Consolas; font-size: 10px">' . $cnt . '</span><br>';
+		$cnt = str_replace(array(htmlspecialchars('<=quot=>'), "\n"), array('&quot;', $nl), $cnt);
+		echo '<b>' . $msg . '</b>:<BR><br /><span style="white-space: pre; line-height: 12px; font-family: Consolas; font-size: 10px">' . $cnt . '</span><br>';
 	}
 
 	function debug_pr($v1) {

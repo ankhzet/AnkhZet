@@ -5,7 +5,7 @@
 			return 'cms://cache/pages/' . $page;
 		}
 
-		public static function getPageContents($page, $version = 'last', $clean = true) {
+		public static function getPageContents($page, $version = 'last', $clean = true, $deep = 2) {
 			$storage = self::getPageStorage($page);
 			$file = "$storage/$version.html";
 			$contents = file_exists($file) ? @file_get_contents($file) : false;
@@ -22,13 +22,14 @@
 				return $contents;
 			}
 
-			return false;
+			return $deep
+			? self::getPageContents($page, $version + 3600 * ($deep > 1 ? 1 : (-2)), $clean, $deep - 1)
+			: false;
 		}
 
 		public static function prepareForGrammar($c, $cleanup = false) {
 			if ($cleanup) {
 				$c = preg_replace('"<([^\/[:alpha:]])"i', '&lt;\1', $c);
-//				$c = str_replace('&nbsp;', ' ', $c);
 
 				$c = preg_replace('"<p([^>]*)?>(.*?)<dd>"i', '<p\1>\2<dd>', $c);
 				$c = preg_replace('"(</?(td|tr|table)[^>]*>)'.PHP_EOL.'"', '\1', $c);
@@ -38,19 +39,19 @@
 				$c = preg_replace('"<p\s*>([^<]*)</p>"i', '<p>\1', $c);
 				$c = preg_replace('/'.PHP_EOL.'{3,}/', PHP_EOL.PHP_EOL, $c);
 				$c = preg_replace('"<(\w+)[^>]*>((\s|\&nbsp;)*)</\1>"', '\2', $c);
-				$c = preg_replace('"</(\w+)>((\s|\&nbsp;)*)?<\1>"i', '\2', $c);
+				$c = preg_replace('"</(\w+)>([^'.PHP_EOL.']*)<\1>"i', '\2', $c);
 				$c = preg_replace('"<font([^<]*)color=\"?black\"?([^<]*)>"i', '<font\1\2>', $c);
 				$c = preg_replace('"<(font|span)\s*(lang=\"?[^\"]+\"?)\s*>([^<]*)</\1>"i', '\3', $c);
 				$c = preg_replace('"<font\s*>(?>((?>(?!</?font).)+)|(?R))*</font>"sxi', '\1', $c);
-				$c = preg_replace('"<p\s*>(?>((?>(?!</?p).)+)|(?R))*</p>"sxi', '<p>\1', $c);
-//				$c = preg_replace('"<(b|i|font)[^>]*></\1>"i', '', $c);
-				$c = preg_replace('"</(b|i)><\1>"i', '', $c);
+				$c = str_replace('</p>', '', $c);
+/** /				$c = preg_replace('"<p\s*>(?>((?>(?!</?p).)+)|(?R))*</p>"sxi', '<p>\1', $c);/**/
+//				$c = preg_replace('"</(b|i)><\1>"i', '', $c);
+				$c = str_replace(array('</b><b>','</i><i>','</B><B>','</I><I>'), '', $c);
 				$c = preg_replace('"([^ ])&nbsp;([^ ])"', '\1 \2', $c);
-
-				$c = preg_replace('/&nbsp;?/', ' ', $c);
+				$c = str_replace('&nbsp;', ' ', $c);
+				$c = str_replace('&nbsp', ' ', $c);
 				$c = str_replace("\t", '  ', $c);
 				$c = preg_replace('/ {3,}/', '  ', $c);
-
 				$c = preg_replace('/ {2,}/', '    ', $c);
 			} else {
 				$c = str_replace('<br />', PHP_EOL, $c);
